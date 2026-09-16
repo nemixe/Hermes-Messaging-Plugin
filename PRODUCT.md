@@ -6,7 +6,7 @@ product
 
 ## Users and purpose
 
-Hermes operators manage a shared GitLab bot on a Mac Mini. One project maps to
+Hermes operators manage a shared GitLab bot. One project maps to
 one Hermes profile, with several GitLab repositories sharing that profile's knowledge.
 Hermes Desktop is the management surface; the selected backend owns configuration.
 

@@ -6,7 +6,7 @@ Desktop and manages repository-to-profile mappings.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
-keeps one conversation across comments and discussions. One default-profile gateway on the Mac Mini owns the shared
+keeps one conversation across comments and discussions. One default-profile gateway owns the shared
 GitLab connection and uses Hermes's native multiplex router.
 
 This replaces the earlier webhook transport. **No webhook secret, per-repository
@@ -49,7 +49,7 @@ answer the project request directly and skip generic onboarding invitations.
 
 ## Install
 
-### Backend on the Mac Mini
+### Backend
 
 Extract the release into the default Hermes plugins directory. Back up an
 existing `hermes-gitlab` directory before upgrading.
@@ -68,7 +68,7 @@ plugin backend support. This is a native Hermes plugin.
 
 ### Configure the bot
 
-In **Messaging → GitLab** on the default Mac Mini backend, enter:
+In **Messaging → GitLab** on the default backend, enter:
 
 - **GITLAB_URL**: self-hosted GitLab HTTPS base URL, including any installation subpath.
 - **GITLAB_TOKEN**: bot account PAT with `api` scope.
@@ -115,10 +115,10 @@ store if needed. HTTP is allowed only for loopback local testing.
 
 ### Desktop interface
 
-If Desktop runs **on the Mac Mini**, the unified package contributes its Desktop
+If Desktop runs **on the same machine as the backend**, the unified package contributes its Desktop
 half automatically. Enable **GitLab Projects** in **Capabilities → Plugins**.
 
-If Desktop runs **on another Mac**, also copy the extracted package's UI file there:
+If Desktop runs **on a different machine**, also copy the extracted package's UI file there:
 
 ```sh
 mkdir -p ~/.hermes/desktop-plugins/hermes-gitlab
@@ -126,10 +126,10 @@ cp hermes-gitlab/desktop/plugin.js ~/.hermes/desktop-plugins/hermes-gitlab/plugi
 ```
 
 Enable it in **Capabilities → Plugins**; use **Reload desktop plugins** from the
-command palette if necessary. Select the **Mac Mini connection and its default profile** in Desktop.
+command palette if necessary. Select the **backend connection and its default profile** in Desktop.
 Calls use the active backend's authenticated connection. The Desktop UI stores no PAT.
 
-Restart/reconnect the Mac Mini's Hermes Desktop backend after installing the Python
+Restart/reconnect the Hermes Desktop backend after installing the Python
 package so it mounts the plugin API. This backend is separate from the messaging
 gateway. A missing API error usually means the backend needs restarting or the
 plugin has not been enabled in its default profile. A standalone backend launched
@@ -418,7 +418,7 @@ Tests use loopback fake GitLab servers, temporary Hermes homes, and local respon
 handlers. They exercise native auth/plugin loading, profile creation and routing,
 repository edits, typed deletion and native teardown of temporary profiles, polling,
 durable retries, pagination, and comment delivery.
-They do not call a real GitLab instance or model. Live Mac Mini deployment has not
+They do not call a real GitLab instance or model. Live deployment has not
 been verified with your GitLab URL/PAT.
 
 The Desktop check uses the installed Hermes checkout's React controls and SDK.

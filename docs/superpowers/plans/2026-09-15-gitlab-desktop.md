@@ -1,7 +1,7 @@
 # GitLab Desktop and Polling Implementation Plan
 
 **Goal:** Manage GitLab repository/profile mappings below Kanban in Hermes Desktop,
-and receive GitLab requests through outbound polling on the Mac Mini.
+and receive GitLab requests through outbound polling.
 
 **Architecture:** A unified native Hermes plugin: `desktop/plugin.js` supplies the
 page, `dashboard/plugin_api.py` exposes authenticated management routes, and the
@@ -31,4 +31,4 @@ creation and multiplex routes remain authoritative. No Hermes core changes.
 - Independent review confirmed native busy/startup refusals stay retryable while
   completed agent execution and successful delivery acknowledge inbox items.
 - Release ZIP contains nine runtime/documentation files; CRC and version checks pass.
-- Real GitLab credentials and live Mac Mini deployment remain untested.
+- Real GitLab credentials and live deployment remain untested.
