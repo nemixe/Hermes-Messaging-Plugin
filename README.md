@@ -244,6 +244,10 @@ startup backfills existing registered profiles, clears disabled mappings from th
 inventories and updates only the marked orientation block, preserving custom SOUL
 text and memories. It also adds this block to existing `project-egg` starters.
 For a manual refresh after editing routes, run `hermes -p default gitlab sync-knowledge`.
+For local terminals, setup and sync set an unset/default working directory to the
+profile's absolute root, beside `SOUL.md`, `PROJECT.yaml` and `memories/`. New profiles
+rebase the starter's directory to their own root. Old `workspace/` defaults are
+migrated; other explicit directories and non-local terminal backends are preserved.
 Use a new conversation to ensure the updated startup instructions are loaded.
 The block and `PROJECT.yaml` are plugin-managed; keep custom instructions outside
 the `hermes-gitlab:orientation` markers and learned facts in `memories/`.

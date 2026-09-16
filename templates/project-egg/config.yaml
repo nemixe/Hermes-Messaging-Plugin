@@ -1,6 +1,10 @@
 # Starter configuration copied into the project-egg profile on first activation.
 # An omitted model inherits the default profile's model selection at that time.
 # Add your project-wide Hermes settings here before installing the plugin.
+# The installer resolves this placeholder to each profile's own absolute root,
+# alongside SOUL.md, PROJECT.yaml and memories/ (not its workspace/ subdirectory).
+terminal:
+  cwd: .
 skills:
   external_dirs:
     - ../global-project/skills

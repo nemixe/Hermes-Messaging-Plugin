@@ -74,6 +74,27 @@ class ProjectSetup(unittest.TestCase):
         self.assertIn("commerce", self.run_command("projects"))
         self.assertIn("103", self.run_command("projects"))
 
+    def test_project_terminal_starts_at_profile_root_and_preserves_custom_cwd(self):
+        from tools.terminal_scope import build_profile_terminal_scope
+
+        egg = self.root / "profiles" / "project-egg"
+        self.assertEqual(Path(build_profile_terminal_scope(egg)["TERMINAL_CWD"]).resolve(), egg.resolve())
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles" / "commerce"
+        self.assertEqual(Path(build_profile_terminal_scope(profile)["TERMINAL_CWD"]).resolve(), profile.resolve())
+        self.assertTrue((profile / "SOUL.md").is_file())
+        self.assertTrue((profile / "memories").is_dir())
+        config = yaml.safe_load((profile / "config.yaml").read_text())
+        for cwd in (".", str(profile / "workspace")):
+            config["terminal"]["cwd"] = cwd
+            (profile / "config.yaml").write_text(yaml.safe_dump(config))
+            self.run_command("sync-knowledge")
+            self.assertEqual(Path(build_profile_terminal_scope(profile)["TERMINAL_CWD"]).resolve(), profile.resolve())
+        config["terminal"]["cwd"] = str(profile / "workspace" / "custom")
+        (profile / "config.yaml").write_text(yaml.safe_dump(config))
+        self.run_command("sync-knowledge")
+        self.assertEqual(build_profile_terminal_scope(profile)["TERMINAL_CWD"], config["terminal"]["cwd"])
+
     def test_repository_knowledge_tracks_mapping_and_preserves_custom_content(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         config = yaml.safe_load(self.config_path.read_text())

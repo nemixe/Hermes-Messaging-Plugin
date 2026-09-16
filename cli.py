@@ -26,6 +26,30 @@ RESERVED_PROFILES = {"default", TEMPLATE_PROFILE, SHARED_PROFILE}
 PROJECT_MARKER = "hermes_gitlab_project"
 
 
+def configure_project_directory(profile, *, destination=None):
+    """Materialize the local terminal default per profile, including cloned starters."""
+    from tools.terminal_scope import build_profile_terminal_scope
+
+    path = profile / "config.yaml"
+    if path.is_symlink():
+        raise ValueError("Project config.yaml must not be symlinked")
+    config = yaml.safe_load(path.read_text())
+    if not isinstance(config, dict) or not isinstance(config.get("terminal", {}), dict):
+        raise ValueError("Project config.yaml and terminal settings must be mappings")
+    terminal = config.setdefault("terminal", {})
+    if build_profile_terminal_scope(profile).get("TERMINAL_ENV", "local") != "local":
+        return
+    target = destination or profile
+    egg = get_profile_dir(TEMPLATE_PROFILE)
+    cwd = terminal.get("cwd")
+    inherited = {p.resolve() for p in (target / "workspace", egg, egg / "workspace")}
+    if (cwd in (None, "", ".", "auto", "cwd", "workspace") or
+            isinstance(cwd, str) and Path(cwd).is_absolute() and Path(cwd).resolve() in inherited) and cwd != str(target):
+        terminal["cwd"] = str(target)
+        backup_config(path, "gitlab-project-directory")
+        atomic_yaml_write(path, config, create_mode=0o600)
+
+
 def public_url(value):
     """Only publish credential-free HTTP(S) locations in agent-visible knowledge."""
     if not value:
@@ -69,6 +93,7 @@ def sync_project_knowledge(profile, config=None):
                                  "clone_path": f"workspace/{ident}"})
         data = {"profile": profile.name, "gitlab_url": public_url(extra_or_secret(extra, "url", "GITLAB_URL")),
                 "repositories": repositories}
+    configure_project_directory(profile)
     if after != before:
         atomic_write_text(soul, after, preserve_mode=True, create_mode=0o600)
     if data is not None:
@@ -187,6 +212,7 @@ def ensure_template():
                 config["model"] = seeded["model"]
             atomic_yaml_write(staging / "config.yaml", config, create_mode=0o600)
             link_shared_skills(staging)
+            configure_project_directory(staging, destination=profile)
             _finish_profile_layout(staging, no_skills=False, clone_all=True,
                                    description="Starter template for new GitLab projects")
             os.rename(staging, profile)
