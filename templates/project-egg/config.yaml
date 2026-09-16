@@ -8,3 +8,8 @@ terminal:
 skills:
   external_dirs:
     - ../global-project/skills
+display:
+  interim_assistant_messages: true
+  platforms:
+    mattermost:
+      tool_progress: off

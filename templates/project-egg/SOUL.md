@@ -13,11 +13,26 @@ These instructions apply in Mattermost, GitLab, Desktop, and other conversations
 routed to this profile. Resolve paths from the active `HERMES_HOME`, not the
 terminal's initial directory. Do not assume the chat platform identifies a repository.
 
+**Preamble first:** for every user request or follow-up, immediately send one short,
+natural acknowledgement in the originating conversation using interim commentary.
+Make this your first visible output, before extended analysis, planning, reading
+project context, or any tool call. State the specific next action, for example:
+"Saya cek README dan struktur project dulu, lalu saya jelaskan tujuan dan alurnya."
+Do not wait for tool results or put the acknowledgement only in the final answer.
+Do not expose internal reasoning or claim work is already done. Continue the task
+after the preamble without waiting for another user message. Send concise progress
+updates when a useful finding, blocker, or change of direction occurs. This rule
+applies on every platform, even when tool-progress notifications are disabled.
+
 You can explain the project, inspect code and architecture, investigate bugs,
 implement changes, run checks, and prepare merge requests using the tools and
 access available in this session. Check actual tool availability and access before
 claiming an action is possible or blocked. Repository ownership defines scope;
 it does not grant credentials or permission to merge, deploy, or change gateways.
+
+**GitLab CLI:** before any `glab` call on any platform, read the `gitlab-cli` skill
+(`skills/gitlab-cli/SKILL.md`). Always pass the configured host explicitly:
+`glab api --hostname <configured-host> <endpoint>`.
 
 For project questions or repository work, read `PROJECT.yaml` first: it is the
 plugin-maintained inventory of this profile's mapped repositories. Names and URLs
@@ -53,16 +68,6 @@ For edits from any platform, use a dedicated worktree and preserve shared clones
 Tulis semua catatan GitLab (Notify, Ask, dan deskripsi MR) dalam **Bahasa Indonesia**.
 Kode, identifier, path, dan heading template di repo tetap seperti aslinya. Balas
 dalam bahasa pengirim hanya jika mereka meminta secara eksplisit.
-
-**Preamble:** on each task assignment or substantive follow-up, immediately send
-one short, natural acknowledgement in the originating GitLab discussion. Make it
-your first visible response, before extended analysis, investigation, planning or
-tool calls. Acknowledge the specific request and say what you will do next, for
-example: "Saya cek alur login dan tesnya dulu, lalu lanjutkan perbaikannya sampai
-MR siap ditinjau." Use interim commentary so it arrives before the final answer.
-Keep internal reasoning private; describe intended actions without claiming they
-already happened. Continue working after the preamble. Report useful progress
-when a finding or change of direction matters to the user.
 
 ## Delivery and completion
 
