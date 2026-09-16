@@ -68,7 +68,7 @@ class DesktopAPI(unittest.TestCase):
                 "openai-codex": [{"id": "test-login", "access_token": "fixture-access", "refresh_token": "fixture-refresh"}]}}))
             auth_before = auth_path.read_bytes()
             (root / "plugins").mkdir()
-            (root / "plugins" / "hermes-gitlab").symlink_to(Path(__file__).parents[1] / "hermes-gitlab", target_is_directory=True)
+            (root / "plugins" / "hermes-gitlab").symlink_to(Path(__file__).parents[1], target_is_directory=True)
 
             # Exercise native discovery, import, namespace mounting, token middleware,
             # and the live enabled-plugin gate, not a test-only FastAPI router.
@@ -105,6 +105,36 @@ class DesktopAPI(unittest.TestCase):
             with patch.dict(os.environ, {"GITLAB_TOKEN": "other-profile-token"}):
                 self.assertFalse(client.get(base + "/projects").json()["connection_configured"])
                 self.assertEqual(client.get(base + "/repositories").status_code, 409)
+            # Neither URL nor PAT may be borrowed from the launch profile.
+            before = config_path.read_bytes()
+            config["platforms"]["gitlab"]["extra"].pop("url")
+            config_path.write_text(yaml.safe_dump(config))
+            with patch.dict(os.environ, {"GITLAB_URL": url, "GITLAB_TOKEN": "other-profile-token"}):
+                request_count = len(calls)
+                self.assertFalse(client.get(base + "/projects").json()["connection_configured"])
+                self.assertEqual(client.get(base + "/repositories").status_code, 409)
+                self.assertEqual(len(calls), request_count)
+                from agent.secret_scope import current_secret_scope, set_secret_scope, reset_secret_scope
+                from hermes_constants import get_hermes_home, set_hermes_home_override, reset_hermes_home_override
+                api = importlib.import_module("hermes_dashboard_plugin_hermes-gitlab")
+                other_scope = {"GITLAB_TOKEN": "other-profile-token"}
+                scope_token = set_secret_scope(other_scope)
+                home_token = set_hermes_home_override(personal)
+                try:
+                    with self.assertRaisesRegex(RuntimeError, "fixture failure"):
+                        with api.root_scope():
+                            self.assertEqual(get_hermes_home(), root)
+                            self.assertEqual(current_secret_scope()["GITLAB_TOKEN"], "")
+                            self.assertEqual(current_secret_scope()["GITLAB_URL"], "")
+                            raise RuntimeError("fixture failure")
+                    self.assertIs(current_secret_scope(), other_scope)
+                    self.assertEqual(get_hermes_home(), personal)
+                    self.assertEqual(os.environ["GITLAB_TOKEN"], "other-profile-token")
+                finally:
+                    reset_secret_scope(scope_token)
+                    reset_hermes_home_override(home_token)
+            config["platforms"]["gitlab"]["extra"]["url"] = url
+            config_path.write_bytes(before)
             (root / ".env").write_text("GITLAB_TOKEN=test-bot-pat\n")
             response = client.get(base + "/repositories?q=pay&page=1")
             self.assertEqual(response.status_code, 200, response.text)

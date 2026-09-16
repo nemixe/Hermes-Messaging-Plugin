@@ -14,7 +14,7 @@ const require = createRequire(join(hermesRoot, 'package.json'))
 const { build } = require('esbuild')
 const ts = require('typescript')
 const { JSDOM } = require('jsdom')
-const sourcePath = fileURLToPath(new URL('../hermes-gitlab/desktop/plugin.js', import.meta.url))
+const sourcePath = fileURLToPath(new URL('../desktop/plugin.js', import.meta.url))
 const source = await readFile(sourcePath, 'utf8')
 const sdkSource = ts.createSourceFile('sdk.ts', await readFile(join(native, 'sdk/index.ts'), 'utf8'), ts.ScriptTarget.Latest, true)
 const sdkExports = new Set()
@@ -38,7 +38,7 @@ for (const statement of ts.createSourceFile('plugin.js', source, ts.ScriptTarget
 
 const temp = await mkdtemp(join(tmpdir(), 'hermes-gitlab-ui-'))
 const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { url: 'http://localhost/' })
-for (const key of ['window', 'document', 'HTMLElement', 'Element', 'Node', 'MutationObserver', 'Event', 'CustomEvent', 'MouseEvent', 'HTMLInputElement', 'getComputedStyle']) {
+for (const key of ['window', 'document', 'HTMLElement', 'Element', 'Node', 'MutationObserver', 'Event', 'CustomEvent', 'MouseEvent', 'HTMLInputElement', 'HTMLButtonElement', 'HTMLFormElement', 'HTMLDivElement', 'DocumentFragment', 'getComputedStyle']) {
   globalThis[key] = key === 'getComputedStyle' ? dom.window.getComputedStyle.bind(dom.window) : dom.window[key]
 }
 Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true })
@@ -57,6 +57,7 @@ try {
     export { Codicon } from '${native}/components/ui/codicon.tsx';
     export { Input } from '${native}/components/ui/input.tsx';
     export { SearchField } from '${native}/components/ui/search-field.tsx';
+    export { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '${native}/components/ui/select.tsx';
     export { Skeleton } from '${native}/components/ui/skeleton.tsx';
     export { EmptyState } from '${native}/components/ui/empty-state.tsx';
     export { ErrorState } from '${native}/components/ui/error-state.tsx';

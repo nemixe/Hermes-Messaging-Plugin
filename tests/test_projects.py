@@ -22,7 +22,7 @@ class ProjectSetup(unittest.TestCase):
         self.env = patch.dict(os.environ, {"HERMES_HOME": self.tmp.name, "GATEWAY_MULTIPLEX_PROFILES": ""})
         self.env.start()
         self.addCleanup(self.env.stop)
-        plugin = Path(__file__).parents[1] / "hermes-gitlab"
+        plugin = Path(__file__).parents[1]
         manager = PluginManager()
         manifest = parse_manifest_file(plugin / "plugin.yaml", plugin, "user", "")
         self.config_path = self.root / "config.yaml"
@@ -117,7 +117,7 @@ class ProjectSetup(unittest.TestCase):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         egg = self.root / "profiles" / "project-egg"
         self.assertTrue((egg / "config.yaml").is_file())
-        bundle = Path(__file__).parents[1] / "hermes-gitlab" / "templates" / "project-egg"
+        bundle = Path(__file__).parents[1] / "templates" / "project-egg"
         self.assertEqual((egg / "SOUL.md").read_bytes(), (bundle / "SOUL.md").read_bytes())
         config = yaml.safe_load((egg / "config.yaml").read_text())
         self.assertEqual(config["model"]["default"], "example-model")

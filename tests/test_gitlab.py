@@ -21,7 +21,7 @@ from hermes_cli.plugins_manifest import parse_manifest_file
 
 class GitLabFlow(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        path = Path(__file__).parents[1] / "hermes-gitlab" / "adapter.py"
+        path = Path(__file__).parents[1] / "adapter.py"
         spec = importlib.util.spec_from_file_location("gitlab_adapter", path)
         self.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(self.module)

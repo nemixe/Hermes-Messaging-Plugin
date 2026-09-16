@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.14
+# Hermes GitLab messaging · 0.3.15
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -53,20 +53,38 @@ answer the project request directly and skip generic onboarding invitations.
 
 ### Backend
 
-Extract the release into the default Hermes plugins directory. Back up an
-existing `hermes-gitlab` directory before upgrading.
+Install from GitHub so the plugin directory is a git checkout (required for
+`hermes plugins update hermes-gitlab`):
 
 ```sh
-mkdir -p ~/.hermes/plugins
-unzip hermes-gitlab-0.3.14.zip -d ~/.hermes/plugins
-hermes -p default plugins enable hermes-gitlab
+hermes -p default plugins install nemixe/Hermes-Messaging-Plugin --force --enable
 hermes -p default config set gateway.multiplex_profiles true
+hermes -p default gateway restart
 ```
 
-For a source checkout, copy the `hermes-gitlab` folder there instead. No additional
-dependencies are required in the tested Hermes runtime (`a55c972e09`, Desktop
-source version `0.17.3`). Older versions need the runtime Desktop SDK and unified
-plugin backend support. This is a native Hermes plugin.
+`plugin.yaml` is at the repository root. Do not append `/hermes-gitlab` or
+`#hermes-gitlab` — those install only a subdirectory and drop `.git`, so update
+cannot pull.
+
+After installing or updating, fully quit and reopen Hermes Desktop to reload its
+backend API and UI. If you previously copied a standalone Desktop UI, refresh it:
+
+```sh
+cp ~/.hermes/plugins/hermes-gitlab/desktop/plugin.js ~/.hermes/desktop-plugins/hermes-gitlab/plugin.js
+```
+
+Later:
+
+```sh
+hermes -p default plugins update hermes-gitlab
+hermes -p default gateway restart
+```
+
+For a source checkout, clone this repository into `~/.hermes/plugins/hermes-gitlab`.
+No additional dependencies are required in the tested unmodified Hermes runtime
+(`64a9b43261`). Desktop must include upstream route fix `6fc7032aac` (#109063);
+the version label alone is insufficient because different builds share it.
+This is a native Hermes plugin and does not require edits to Hermes core.
 
 ### Configure the bot
 
@@ -124,7 +142,7 @@ If Desktop runs **on a different machine**, also copy the extracted package's UI
 
 ```sh
 mkdir -p ~/.hermes/desktop-plugins/hermes-gitlab
-cp hermes-gitlab/desktop/plugin.js ~/.hermes/desktop-plugins/hermes-gitlab/plugin.js
+cp desktop/plugin.js ~/.hermes/desktop-plugins/hermes-gitlab/plugin.js
 ```
 
 Enable it in **Capabilities → Plugins**; use **Reload desktop plugins** from the
@@ -175,7 +193,7 @@ Creating a project in Desktop cannot silently reuse an unrelated profile name.
 The editable starter ships inside the plugin at `templates/project-egg/`:
 
 ```text
-hermes-gitlab/templates/project-egg/
+templates/project-egg/
 ├── config.yaml
 ├── SOUL.md
 ├── TAXONOMY.md
@@ -302,12 +320,15 @@ runtime plugins load. The menu then highlights GitLab Projects while the workspa
 still shows a chat. This is a Desktop rendering bug; changing the PAT or reinstalling
 the GitLab plugin does not fix it.
 
-The accompanying `hermes-desktop-runtime-routes.patch` fixes the native route
-consumers to use the live subscription snapshot, including split-pane pages.
-Apply it to the matching Hermes source checkout and rebuild Desktop. The local
-Desktop installation used for this task has already been patched and rebuilt;
-existing windows need to reload to use that renderer. A later Desktop update may
-replace this local fix until it is included upstream.
+Update to a Desktop build containing upstream commit `6fc7032aac` (#109063),
+which fixes both the main workspace and split-pane routes. No local Hermes patch
+is needed on that build. `hermes-desktop-runtime-routes.patch` is an obsolete
+historical workaround; do not apply it to current Hermes.
+
+The plugin API uses Hermes's existing profile secret scope. Missing default-profile
+GitLab URL/token values are explicitly empty, so they cannot fall back to another
+profile's process environment. It does not require `set_multiplex_context` or change
+Hermes's global multiplexing state.
 
 ### CLI alternative
 

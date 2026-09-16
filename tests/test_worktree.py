@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = (Path(__file__).parents[1] / "hermes-gitlab/templates/project-egg/skills"
+SCRIPT = (Path(__file__).parents[1] / "templates/project-egg/skills"
           / "codev-gitlab/scripts/worktree.py")
 
 

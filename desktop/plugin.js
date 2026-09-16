@@ -1,5 +1,6 @@
 import {
-  Button, Checkbox, Codicon, EmptyState, ErrorState, Input, SearchField, Skeleton,
+  Button, Checkbox, Codicon, EmptyState, ErrorState, Input, Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue, Skeleton,
   host, ROUTES_AREA, SIDEBAR_NAV_AREA, usePluginI18n, useQuery, useQueryClient, useValue
 } from '@hermes/plugin-sdk'
 import { useEffect, useRef, useState } from 'react'
@@ -235,10 +236,8 @@ const css = `
 .hgl-panel { flex:1; min-height:0; display:flex; flex-direction:column; }
 .hgl-toolbar { flex-shrink:0; display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px 28px 16px; border-bottom:1px solid var(--ui-stroke-secondary); }
 .hgl-toolbar .hgl-search { flex:1; min-width:180px; max-width:360px; }
+.hgl-toolbar .hgl-select { min-width:11rem; max-width:16rem; }
 .hgl-toolbar .hgl-primary { margin-left:auto; }
-.hgl-seg { display:flex; gap:2px; }
-.hgl-seg button { appearance:none; border:0; background:transparent; color:var(--ui-text-secondary); font:inherit; padding:6px 10px; border-radius:4px; cursor:pointer; }
-.hgl-seg button[aria-pressed=true] { background:var(--ui-bg-quaternary); color:var(--ui-text-primary); font-weight:500; }
 .hgl-split { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr); }
 .hgl-split.draw { grid-template-columns:minmax(0,1fr) minmax(280px,36%); }
 .hgl-table-wrap { min-height:0; overflow:auto; }
@@ -249,10 +248,16 @@ const css = `
 .hgl-row:hover td { background:var(--ui-row-hover-background); }
 .hgl-row[aria-current=true] td { background:var(--ui-row-active-background); }
 .hgl-row:focus-visible { outline:2px solid var(--ui-accent); outline-offset:-2px; }
-.hgl-drawer { border-left:1px solid var(--ui-stroke-secondary); overflow:auto; padding:24px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.hgl-drawer { position:relative; border-left:1px solid var(--ui-stroke-secondary); overflow:auto; padding:24px; display:flex; flex-direction:column; gap:16px; min-width:0; }
+.hgl-drawer-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.hgl-drawer-head .hgl-stack { flex:1; min-width:0; padding-right:8px; }
+.hgl-drawer-close { flex:none; margin:-8px -8px 0 0; }
 .hgl-stack { display:flex; flex-direction:column; gap:12px; min-width:0; }
 .hgl-subtle { color:var(--ui-text-secondary); font-size:.75rem; }
 .hgl-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.hgl-drawer-actions { display:flex; gap:8px; width:100%; }
+.hgl-drawer-actions > * { flex:1 1 0; min-width:0; }
+.hgl-drawer-actions button { width:100%; justify-content:center; }
 .hgl-notice { flex-shrink:0; margin:16px 28px 0; padding:12px 14px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; display:flex; flex-direction:column; gap:8px; background:var(--ui-bg-quaternary); }
 .hgl-form { display:flex; flex-direction:column; gap:20px; padding:20px 28px 28px; overflow:auto; }
 .hgl-field { display:flex; flex-direction:column; gap:6px; max-width:560px; }
@@ -263,9 +268,7 @@ const css = `
 .hgl-repo-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:2px; overflow-wrap:anywhere; }
 .hgl-repo-copy label { cursor:pointer; }
 .hgl-repo-id { font-variant-numeric:tabular-nums; color:var(--ui-text-secondary); font-size:.6875rem; }
-.hgl-search { opacity:1!important; width:100%; }
-.hgl-search input { width:100%; field-sizing:fixed; }
-.hgl-search input::placeholder { color:var(--ui-text-secondary); opacity:1; }
+.hgl-search { width:100%; }
 .hgl-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 .hgl-footer { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; border-top:1px solid var(--ui-stroke-secondary); padding-top:16px; }
 .hgl-status { font-weight:500; }
@@ -282,16 +285,6 @@ const css = `
 .hgl-dl dt { color:var(--ui-text-secondary); }
 .hgl-dl dd { margin:0; overflow-wrap:anywhere; }
 .hgl-pre { padding:10px 12px; border:1px solid var(--ui-stroke-secondary); border-radius:6px; white-space:pre-wrap; }
-.hgl-picker { position:relative; display:flex; align-items:center; gap:2px; }
-.hgl-picker-btn { display:flex; align-items:center; gap:8px; min-width:196px; max-width:260px; padding:6px 8px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; background:var(--ui-bg-editor); color:inherit; cursor:pointer; font:inherit; text-align:left; }
-.hgl-picker-btn[aria-expanded=true] { outline:2px solid var(--ui-accent); }
-.hgl-picker-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
-.hgl-picker-pop { position:absolute; top:calc(100% + 4px); left:0; z-index:8; width:280px; background:var(--ui-bg-editor); border:1px solid var(--ui-stroke-secondary); border-radius:6px; box-shadow:var(--shadow-md, 0 10px 28px color-mix(in srgb, #000 12%, transparent)); display:flex; flex-direction:column; }
-.hgl-picker-pop .hgl-search { width:auto; margin:8px; }
-.hgl-picker-list { max-height:280px; overflow:auto; padding:0 0 6px; }
-.hgl-picker-list button { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; padding:7px 10px; cursor:pointer; color:inherit; font:inherit; text-align:left; }
-.hgl-picker-list button:hover, .hgl-picker-list button[aria-current=true] { background:var(--ui-row-active-background); }
-.hgl-picker-list .hgl-subtle { margin-left:auto; }
 .hgl-glyph { width:18px; height:18px; border-radius:4px; display:grid; place-items:center; font-size:.625rem; font-weight:700; text-transform:uppercase; background:var(--ui-bg-quaternary); color:var(--ui-text-secondary); flex-shrink:0; }
 .hgl-recent { display:flex; flex-direction:column; gap:2px; }
 .hgl-recent button { appearance:none; border:0; background:transparent; text-align:left; cursor:pointer; padding:8px; border-radius:5px; display:grid; grid-template-columns:1fr auto; gap:4px 8px; color:inherit; font:inherit; width:100%; }
@@ -381,8 +374,8 @@ function RepositoryPicker({ ctx, scope, projects, draft, setDraft, busy }) {
     }, repo.id)) }) : jsx('p', { className: 'hgl-subtle', children: t('noSelected') }),
     count >= 200 && jsx('p', { role: 'status', className: 'hgl-subtle', children: t('limit') }),
     jsx('h3', { children: t('searchResults') }),
-    jsx(SearchField, { 'aria-label': t('search'), placeholder: t('searchHint'), value: search, onChange: value => setSearch(value.slice(0, 200)),
-      containerClassName: 'hgl-search', loading: result.isFetching }),
+    jsx(Input, { 'aria-label': t('search'), placeholder: t('searchHint'), value: search, className: 'hgl-search',
+      onChange: event => setSearch(event.target.value.slice(0, 200)) }),
     result.isPending ? jsx(Skeleton, { className: 'hgl-skeleton' }) : result.isError ? jsxs('div', { role: 'alert', className: 'hgl-stack', children: [
       jsx('p', { className: 'hgl-error', children: `${t('searchError')}: ${errorText(result.error)}` }),
       jsx(Button, { type: 'button', variant: 'outline', onClick: () => result.refetch(), children: t('retry') })
@@ -425,8 +418,6 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const [mapQuery, setMapQuery] = useState('')
   const [mapFilter, setMapFilter] = useState('all')
   const [projectScope, setProjectScope] = useState('all')
-  const [scopeOpen, setScopeOpen] = useState(false)
-  const [scopeQuery, setScopeQuery] = useState('')
   const [eventStatus, setEventStatus] = useState('all')
   const [eventQuery, setEventQuery] = useState('')
   const [eventPage, setEventPage] = useState(1)
@@ -435,7 +426,6 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(null)
-  const picker = useRef(null)
   const mounted = useRef(true)
   const saving = useRef(false)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
@@ -489,14 +479,6 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       return ctx.rest(`/events?${params}`)
     }
   })
-  useEffect(() => {
-    if (!scopeOpen) return
-    const close = event => { if (!picker.current?.contains(event.target)) { setScopeOpen(false); setScopeQuery('') } }
-    const escape = event => { if (event.key === 'Escape') { setScopeOpen(false); setScopeQuery('') } }
-    document.addEventListener('mousedown', close)
-    document.addEventListener('keydown', escape)
-    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', escape) }
-  }, [scopeOpen])
   const start = row => {
     if (saving.current) return
     setDraft(makeDraft(row, data.revision)); setError(null); setSaved(null)
@@ -585,7 +567,6 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     if (locked) return
     setPane(next)
     setInspect(null)
-    setScopeOpen(false)
     setEventPage(1)
   }
   const lastCell = row => {
@@ -593,12 +574,6 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     if (!last) return jsx('span', { className: 'hgl-muted', children: t('noLastEvent') })
     return jsxs('span', { children: [pill(last.status, t(last.status)), ' ', jsx('span', { className: 'hgl-subtle', children: `${age(last.created_at, t)} · ${eventKind(last, t)} ${cardRef(last)}` })] })
   }
-  const pickerMatches = projects.filter(row => {
-    const q = scopeQuery.trim().toLowerCase()
-    return !q || row.profile.includes(q) || (row.description || '').toLowerCase().includes(q)
-      || row.repositories.some(repo => repo.name.toLowerCase().includes(q))
-  })
-  const scoped = projects.find(row => row.profile === projectScope)
   const editor = draft && jsxs('form', { className: 'hgl-form', onSubmit: save, children: [
     jsx('h2', { children: draft.isNew ? t('newProject') : draft.profile }),
     draft.isNew && jsxs('div', { className: 'hgl-field', children: [
@@ -645,12 +620,12 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     ] })
   ] })
   const projectDrawer = inspectProject && jsxs('aside', { className: 'hgl-drawer', children: [
-    jsxs('div', { className: 'hgl-actions', style: { justifyContent: 'space-between' }, children: [
+    jsxs('div', { className: 'hgl-drawer-head', children: [
       jsxs('div', { className: 'hgl-stack', children: [
         jsxs('div', { className: 'hgl-actions', children: [glyph(inspectProject.profile), jsx('h2', { children: inspectProject.profile })] }),
         (!inspectProject.available || !inspectProject.repositories.length) && jsx('p', { className: 'hgl-subtle', children: projectStatus(inspectProject, t) })
       ] }),
-      jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: '×' })
+      jsx(Button, { type: 'button', variant: 'ghost', size: 'icon-xs', className: 'hgl-drawer-close', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: jsx(Codicon, { name: 'close', size: '.875rem' }) })
     ] }),
     inspectProject.description ? jsx('p', { className: 'hgl-subtle', children: inspectProject.description }) : null,
     !inspectProject.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
@@ -670,7 +645,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
         setPane('activity'); setProjectScope(inspectProject.profile); setInspect(null)
       }, children: t('allActivity') })
     ] }) : jsx('p', { className: 'hgl-subtle', children: t('noEventsHint') }),
-    jsxs('div', { className: 'hgl-actions', children: [
+    jsxs('div', { className: 'hgl-drawer-actions', children: [
       jsx(Button, { type: 'button', variant: 'outline', disabled: locked || !data.connection_configured || !data.multiplex_enabled,
         onClick: () => start(inspectProject), children: t('edit') }),
       jsx(Button, { type: 'button', variant: 'outline', disabled: locked || RESERVED.includes(inspectProject.profile), onClick: () => {
@@ -679,12 +654,12 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     ] })
   ] })
   const eventDrawer = inspectEvent && jsxs('aside', { className: 'hgl-drawer', children: [
-    jsxs('div', { className: 'hgl-actions', style: { justifyContent: 'space-between', alignItems: 'flex-start' }, children: [
+    jsxs('div', { className: 'hgl-drawer-head', children: [
       jsxs('div', { className: 'hgl-stack', children: [
         jsx('p', { className: 'hgl-subtle', children: `${eventKind(inspectEvent, t)} · ${inspectEvent.repository?.name || ''} ${cardRef(inspectEvent)}` }),
         jsx('h2', { children: inspectEvent.title || eventKind(inspectEvent, t) })
       ] }),
-      jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: '×' })
+      jsx(Button, { type: 'button', variant: 'ghost', size: 'icon-xs', className: 'hgl-drawer-close', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: jsx(Codicon, { name: 'close', size: '.875rem' }) })
     ] }),
     jsxs('div', { className: 'hgl-actions', children: [
       pill(inspectEvent.status, t(inspectEvent.status)),
@@ -754,12 +729,15 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     inspectEvent ? eventDrawer : null
   ] })
   const mappingToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
-    jsx(SearchField, { containerClassName: 'hgl-search', value: mapQuery, placeholder: t('filterProjects'), 'aria-label': t('filterProjects'),
-      onChange: value => setMapQuery(value.slice(0, 200)) }),
-    jsxs('div', { className: 'hgl-seg', children: [
-      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'all', onClick: () => setMapFilter('all'), children: t('all') }),
-      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'empty', onClick: () => setMapFilter('empty'), children: t('unmapped') }),
-      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'issue', onClick: () => setMapFilter('issue'), children: t('needsAttention') })
+    jsx(Input, { className: 'hgl-search', value: mapQuery, placeholder: t('filterProjects'), 'aria-label': t('filterProjects'),
+      onChange: event => setMapQuery(event.target.value.slice(0, 200)) }),
+    jsxs(Select, { value: mapFilter, onValueChange: setMapFilter, children: [
+      jsx(SelectTrigger, { className: 'hgl-select', 'aria-label': t('all'), children: jsx(SelectValue, {}) }),
+      jsxs(SelectContent, { children: [
+        jsx(SelectItem, { value: 'all', children: t('all') }),
+        jsx(SelectItem, { value: 'empty', children: t('unmapped') }),
+        jsx(SelectItem, { value: 'issue', children: t('needsAttention') })
+      ] })
     ] }),
     jsxs('span', { className: 'hgl-primary', children: [
       jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || result.isFetching, onClick: () => result.refetch(), children: t('refresh') }),
@@ -768,37 +746,23 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     ] })
   ] })
   const activityToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
-    jsxs('div', { className: 'hgl-picker', ref: picker, children: [
-      jsxs('button', { type: 'button', className: 'hgl-picker-btn', 'aria-expanded': scopeOpen, 'aria-haspopup': 'listbox',
-        onClick: () => setScopeOpen(open => !open), children: [
-        scoped ? glyph(scoped.profile) : null,
-        jsx('span', { className: 'hgl-picker-label', children: scoped ? scoped.profile : t('allProjects') }),
-        jsx('span', { className: 'hgl-subtle', children: scoped ? '' : t('count', projects.length).replace(/^\d+\s*/, '') && `${projects.length}` }),
-        jsx('span', { 'aria-hidden': true, children: '▾' })
-      ] }),
-      scoped && jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('clearProject'), onClick: () => { setProjectScope('all'); setEventPage(1) }, children: '×' }),
-      scopeOpen && jsxs('div', { className: 'hgl-picker-pop', children: [
-        jsx(SearchField, { containerClassName: 'hgl-search', value: scopeQuery, placeholder: t('findProject'), 'aria-label': t('findProject'),
-          onChange: value => setScopeQuery(value.slice(0, 200)) }),
-        jsx('div', { className: 'hgl-picker-list', role: 'listbox', children: [
-          jsxs('button', { type: 'button', 'aria-current': projectScope === 'all', onClick: () => { setProjectScope('all'); setScopeOpen(false); setScopeQuery(''); setEventPage(1) }, children: [
-            t('allProjects'), jsx('span', { className: 'hgl-subtle', children: String(openCount) })
-          ] }),
-          ...pickerMatches.map(row => jsxs('button', { type: 'button', 'aria-current': projectScope === row.profile,
-            onClick: () => { setProjectScope(row.profile); setScopeOpen(false); setScopeQuery(''); setEventPage(1) }, children: [
-            glyph(row.profile), jsx('span', { children: row.profile })
-          ] }, row.profile)),
-          !pickerMatches.length && jsx('p', { className: 'hgl-subtle', style: { padding: '8px 10px' }, children: t('noProjectMatch') })
-        ] })
+    jsxs(Select, { value: projectScope, onValueChange: value => { setProjectScope(value); setEventPage(1) }, children: [
+      jsx(SelectTrigger, { className: 'hgl-select', 'aria-label': t('allProjects'), children: jsx(SelectValue, {}) }),
+      jsxs(SelectContent, { children: [
+        jsx(SelectItem, { value: 'all', children: t('allProjects') }),
+        ...projects.map(row => jsx(SelectItem, { value: row.profile, children: row.profile }, row.profile))
       ] })
     ] }),
-    jsx(SearchField, { containerClassName: 'hgl-search', value: eventQuery, placeholder: t('filterEvents'), 'aria-label': t('filterEvents'),
-      onChange: value => { setEventQuery(value.slice(0, 200)); setEventPage(1) } }),
-    jsxs('div', { className: 'hgl-seg', children: [
-      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'all', onClick: () => { setEventStatus('all'); setEventPage(1) }, children: t('all') }),
-      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'open', onClick: () => { setEventStatus('open'); setEventPage(1) }, children: t('openStatus') }),
-      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'retrying', onClick: () => { setEventStatus('retrying'); setEventPage(1) }, children: t('retrying') }),
-      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'delivered', onClick: () => { setEventStatus('delivered'); setEventPage(1) }, children: t('delivered') })
+    jsx(Input, { className: 'hgl-search', value: eventQuery, placeholder: t('filterEvents'), 'aria-label': t('filterEvents'),
+      onChange: event => { setEventQuery(event.target.value.slice(0, 200)); setEventPage(1) } }),
+    jsxs(Select, { value: eventStatus, onValueChange: value => { setEventStatus(value); setEventPage(1) }, children: [
+      jsx(SelectTrigger, { className: 'hgl-select', 'aria-label': t('status'), children: jsx(SelectValue, {}) }),
+      jsxs(SelectContent, { children: [
+        jsx(SelectItem, { value: 'all', children: t('all') }),
+        jsx(SelectItem, { value: 'open', children: t('openStatus') }),
+        jsx(SelectItem, { value: 'retrying', children: t('retrying') }),
+        jsx(SelectItem, { value: 'delivered', children: t('delivered') })
+      ] })
     ] }),
     jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || events.isFetching, onClick: () => events.refetch(), children: t('refresh') })
   ] })

@@ -15,8 +15,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 import yaml
 
-from agent.secret_scope import (build_profile_secret_scope, set_secret_scope, reset_secret_scope,
-                                set_multiplex_context, reset_multiplex_context)
+from agent.secret_scope import build_profile_secret_scope, set_secret_scope, reset_secret_scope
 from gateway.config import GatewayConfig, PlatformConfig
 from gateway.config_loader import merge_platform_sections
 from gateway.platforms._shared import extra_or_secret
@@ -34,15 +33,16 @@ router = APIRouter()
 def root_scope():
     root = get_default_hermes_root()
     home_token = set_hermes_home_override(root)
-    multiplex_token = set_multiplex_context(True)
     secret_token = None
     try:
-        secret_token = set_secret_scope(build_profile_secret_scope(root))
+        # A missing default-profile credential must not fall through to the
+        # backend process's environment, which may belong to another profile.
+        secret_token = set_secret_scope({"GITLAB_URL": "", "GITLAB_TOKEN": "",
+                                         **build_profile_secret_scope(root)})
         yield root
     finally:
         if secret_token is not None:
             reset_secret_scope(secret_token)
-        reset_multiplex_context(multiplex_token)
         reset_hermes_home_override(home_token)
 
 

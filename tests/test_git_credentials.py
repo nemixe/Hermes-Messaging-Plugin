@@ -15,7 +15,7 @@ import yaml
 
 class GitCredentials(unittest.TestCase):
     def test_live_pat_scope_rotation_revocation_and_worktree_inheritance(self):
-        script = Path(__file__).parents[1] / 'hermes-gitlab/git_credentials.py'
+        script = Path(__file__).parents[1] / 'git_credentials.py'
         self.assertTrue(script.exists(), 'The shared credential helper is missing')
         spec = importlib.util.spec_from_file_location('credential_test', script)
         helper = importlib.util.module_from_spec(spec)

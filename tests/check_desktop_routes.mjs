@@ -43,7 +43,7 @@ try {
     const latestChatActions=()=>({}),setStatusbarItemGroup=()=>{};
     const BUILTIN_PAGES={};
     export const ChatRoutesSurface=${component.initializer.getText(ast)};
-    export ${tile.getText(tileAst)}
+    export ${tile.getText(tileAst).replace(/^export\s+/, '')}
   `)
   await writeFile(join(temp, 'tree.ts'), 'export const noteActiveTreeGroup=()=>{},revealTreePane=()=>{};')
   await writeFile(join(temp, 'entry.jsx'), `
