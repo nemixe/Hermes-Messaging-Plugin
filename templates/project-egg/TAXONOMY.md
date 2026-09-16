@@ -14,6 +14,8 @@ Use Hermes's existing `memories/` directory. Create topic pages when useful know
 exists; this tree describes their homes, not a checklist of empty files.
 
 ```text
+PROJECT.yaml                       Generated repository inventory; edit mappings to refresh
+SOUL.md                            Startup capabilities and project discovery instructions
 TAXONOMY.md                         Knowledge organization and maintenance rules
 prompts/architecture.md             Workflow for architecture tasks
 memories/
@@ -62,7 +64,12 @@ full transcripts, raw logs, and generated output. Link to large source records.
 
 ## Retrieval
 
-Start with the startup pointers and `memories/INDEX.md`; read only relevant topics.
+Start with `PROJECT.yaml` for current repository scope, then `memories/INDEX.md`;
+read only relevant topics. The inventory is generated on mapping saves and plugin
+startup, not maintained by the agent. Missing topic pages mean discovery is needed,
+not that the user must provide repository context. Follow SOUL's project discovery
+instructions across chat platforms and save the verified overview in
+`memories/semantic/project.md`. Mappings identify repositories, not their purpose.
 Follow their sources or search the relevant repository/issue when the index has no
 answer. Check scope, status, and verification date: a proposal is not an accepted
 decision, and an observation is not an established fact.

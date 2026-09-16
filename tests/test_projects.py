@@ -74,6 +74,57 @@ class ProjectSetup(unittest.TestCase):
         self.assertIn("commerce", self.run_command("projects"))
         self.assertIn("103", self.run_command("projects"))
 
+    def test_repository_knowledge_tracks_mapping_and_preserves_custom_content(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        config = yaml.safe_load(self.config_path.read_text())
+        config["platforms"]["gitlab"]["extra"].update(url="https://gitlab.example/team", token="never-copy-this")
+        self.config_path.write_text(yaml.safe_dump(config))
+        cli.add_project(self.root, "commerce", ["101", "102"], None, repository_info={
+            "101": {"name": "team/shop", "url": "https://gitlab.example/team/team/shop"}})
+        profile = self.root / "profiles" / "commerce"
+        inventory = profile / "PROJECT.yaml"
+        self.assertTrue(inventory.is_file(), "Mapped repositories must be discoverable outside GitLab events")
+        data = yaml.safe_load(inventory.read_text())
+        self.assertEqual(data["profile"], "commerce")
+        self.assertEqual(data["gitlab_url"], "https://gitlab.example/team")
+        self.assertEqual(data["repositories"][0], {"id": "101", "name": "team/shop",
+            "url": "https://gitlab.example/team/team/shop", "clone_path": "workspace/101"})
+        self.assertEqual(data["repositories"][1]["id"], "102")
+        self.assertNotIn("never-copy-this", inventory.read_text())
+        (profile / "SOUL.md").write_text("Our custom instructions\n")
+        (profile / "memories" / "INDEX.md").write_text("Our verified project notes\n")
+        self.run_command("add-project", "finance", "--repos", "103")
+        cli.add_project(self.root, "commerce", ["102"], None, replace=True)
+        self.assertEqual([r["id"] for r in yaml.safe_load(inventory.read_text())["repositories"]], ["102"])
+        self.assertTrue((profile / "SOUL.md").read_text().startswith("Our custom instructions\n"))
+        self.assertIn("PROJECT.yaml", (profile / "SOUL.md").read_text())
+        self.assertEqual((profile / "memories" / "INDEX.md").read_text(), "Our verified project notes\n")
+        revision = hashlib.sha256(self.config_path.read_bytes()).hexdigest()
+        cli.remove_project_registration(self.root, "commerce", revision=revision, confirmation="commerce")
+        self.assertEqual(yaml.safe_load(inventory.read_text())["repositories"], [])
+
+    def test_plugin_reload_backfills_legacy_profiles_and_clears_disabled_mappings(self):
+        self.run_command("add-project", "commerce", "--repos", "101,102")
+        profile = self.root / "profiles" / "commerce"
+        (profile / "SOUL.md").write_text("Custom personality\n")
+        (profile / "profile.yaml").write_text("description: Legacy\n")
+        (profile / "PROJECT.yaml").unlink(missing_ok=True)
+        config = yaml.safe_load(self.config_path.read_text())
+        config["gateway"]["profile_routes"][-1]["enabled"] = False
+        self.config_path.write_text(yaml.safe_dump(config))
+        plugin = Path(__file__).parents[1]
+        manifest = parse_manifest_file(plugin / "plugin.yaml", plugin, "user", "")
+        PluginManager()._load_plugin(manifest)
+        inventory = profile / "PROJECT.yaml"
+        self.assertTrue(inventory.is_file(), "Plugin reload must upgrade existing profiles")
+        self.assertEqual([r["id"] for r in yaml.safe_load(inventory.read_text())["repositories"]], ["101"])
+        soul = (profile / "SOUL.md").read_text()
+        self.assertTrue(soul.startswith("Custom personality\n"))
+        self.assertIn("Mattermost", soul)
+        self.run_command("sync-knowledge")
+        self.assertEqual((profile / "SOUL.md").read_text(), soul)
+        self.assertFalse((self.root / "profiles" / "personal" / "PROJECT.yaml").exists())
+
     def test_project_marker_preserves_metadata_and_survives_empty_registration(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         path = self.root / "profiles" / "existing"
@@ -92,6 +143,49 @@ class ProjectSetup(unittest.TestCase):
         cli.remove_project_registration(self.root, "existing", revision=revision, confirmation="existing")
         self.assertTrue(cli.is_project_profile(path), "Keep project identity while native deletion may need retry")
         self.assertFalse(cli.is_project_profile(self.root / "profiles" / "project-egg"))
+
+    def test_knowledge_refresh_preserves_file_modes_and_rejects_unsafe_targets(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles" / "commerce"
+        soul = profile / "SOUL.md"
+        soul.write_text("Private custom instructions\n")
+        soul.chmod(0o640)
+        config = yaml.safe_load(self.config_path.read_text())
+        cli.sync_project_knowledge(profile, config)
+        self.assertEqual(soul.stat().st_mode & 0o777, 0o640)
+        before = soul.read_bytes()
+        inventory = profile / "PROJECT.yaml"
+        inventory.unlink()
+        outside = self.root / "unrelated.yaml"
+        outside.write_text("Keep unrelated content")
+        inventory.symlink_to(outside)
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            cli.sync_project_knowledge(profile, config)
+        self.assertEqual(outside.read_text(), "Keep unrelated content")
+        self.assertEqual(soul.read_bytes(), before)
+        inventory.unlink()
+        config["platforms"]["gitlab"]["extra"]["url"] = "https://user:secret@gitlab.example"
+        with self.assertRaises(ValueError):
+            cli.sync_project_knowledge(profile, config)
+        self.assertFalse(inventory.exists())
+        self.assertEqual(soul.read_bytes(), before)
+
+    def test_inventory_uses_scoped_gitlab_host_not_another_profiles_environment(self):
+        from agent.secret_scope import set_secret_scope, reset_secret_scope
+
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles" / "commerce"
+        config = yaml.safe_load(self.config_path.read_text())
+        with patch.dict(os.environ, {"GITLAB_URL": "https://another-profile.example"}):
+            for host in ("https://correct.example", ""):
+                token = set_secret_scope({"GITLAB_URL": host})
+                try:
+                    cli.sync_project_knowledge(profile, config)
+                    self.assertEqual(yaml.safe_load((profile / "PROJECT.yaml").read_text())["gitlab_url"], host or None)
+                finally:
+                    reset_secret_scope(token)
 
     def test_legacy_routes_identify_projects_and_metadata_symlinks_are_rejected(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
@@ -138,7 +232,8 @@ class ProjectSetup(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{}")
         cli.ensure_template()
-        self.assertEqual((egg / "SOUL.md").read_text(), files["SOUL.md"])
+        self.assertTrue((egg / "SOUL.md").read_text().startswith(files["SOUL.md"] + "\n\n"))
+        files["SOUL.md"] = (egg / "SOUL.md").read_text()
         self.run_command("add-project", "commerce", "--repos", "101", "--description", "Commerce project")
         project = self.root / "profiles" / "commerce"
         for relative in ("TAXONOMY.md", "prompts/architecture.md",
@@ -154,9 +249,9 @@ class ProjectSetup(unittest.TestCase):
         (project / "SOUL.md").write_text("Commerce personality")
         (egg / "SOUL.md").write_text("Next generation starter")
         self.run_command("add-project", "commerce", "--repos", "102")
-        self.assertEqual((project / "SOUL.md").read_text(), "Commerce personality")
+        self.assertTrue((project / "SOUL.md").read_text().startswith("Commerce personality\n\n"))
         self.run_command("add-project", "finance", "--repos", "103")
-        self.assertEqual((self.root / "profiles" / "finance" / "SOUL.md").read_text(), "Next generation starter")
+        self.assertTrue((self.root / "profiles" / "finance" / "SOUL.md").read_text().startswith("Next generation starter\n\n"))
         for name in ("default", "project-egg", "global-project"):
             with self.assertRaises(SystemExit):
                 self.run_command("add-project", name, "--repos", "104")

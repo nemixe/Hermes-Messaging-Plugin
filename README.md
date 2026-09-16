@@ -225,6 +225,29 @@ taxonomy. Only the index and a small memory pointer are seeded; topic pages are
 created when there is real knowledge to record. Repository documentation and GitLab
 remain authoritative, with profile memory holding concise evidence and links.
 
+Each registered project also gets a generated profile-root `PROJECT.yaml` with its
+active mapped repository IDs, known names/URLs, configured GitLab server and expected
+`workspace/<id>` clone paths. Registration does not clone code. CLI registrations
+may have unknown names/URLs until saved with repository metadata; the numeric ID
+and configured server let the agent discover them with available authenticated tools.
+Credentials are never included in this inventory.
+
+A managed **Project orientation and capabilities** block in `SOUL.md` tells the agent
+to read that inventory, consult saved knowledge, then inspect the README and code
+before asking the user for project context. It applies to Mattermost, GitLab and
+Desktop conversations routed to the profile, and distinguishes supported tasks from
+the tools, credentials and permissions actually available. Mattermost still needs
+to reach the correct profile; a GitLab repository mapping does not route a chat channel.
+
+Mapping saves and removals refresh the affected inventory. Default-backend plugin
+startup backfills existing registered profiles, clears disabled mappings from their
+inventories and updates only the marked orientation block, preserving custom SOUL
+text and memories. It also adds this block to existing `project-egg` starters.
+For a manual refresh after editing routes, run `hermes -p default gitlab sync-knowledge`.
+Use a new conversation to ensure the updated startup instructions are loaded.
+The block and `PROJECT.yaml` are plugin-managed; keep custom instructions outside
+the `hermes-gitlab:orientation` markers and learned facts in `memories/`.
+
 The bundled SOUL identifies the agent as **Codev**, starts work with a short, natural
 preamble through Hermes's native interim replies, and carries assigned development
 work through validation, branch push and a review-ready MR when possible. GitLab
@@ -268,7 +291,8 @@ Customize the bundled folder before installing, or select **project-egg** in Her
 normal profile selector and edit the installed starter. New projects clone the installed
 profile's current contents using Hermes's native full-clone operation. Additional prompt
 files, skill assets, configuration files, and starter memory are included. Later changes
-to the starter apply to future projects; existing projects keep their independent copies.
+to the starter apply to future projects; existing projects keep their independent copies,
+except for the plugin-managed orientation block and repository inventory described above.
 
 Hermes's native clone excludes prior conversations, scheduled jobs, and runtime state.
 Messaging connections and multiplexer routes belong to the default backend and are

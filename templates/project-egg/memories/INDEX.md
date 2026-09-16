@@ -9,8 +9,10 @@ Link the project overview and current architecture notes once captured.
 
 ## Repositories
 
-Record each repository's numeric GitLab project ID, namespace, URL, and
-`memories/semantic/repositories/<project-id>.md` page.
+Read profile-root `PROJECT.yaml` for current repository IDs, names, URLs and
+expected clone paths. Link verified repository understanding from
+`memories/semantic/repositories/<project-id>.md`; inventory entries alone do not
+describe the product or prove a clone exists.
 
 ## Decisions and workflows
 
