@@ -13,7 +13,7 @@ const locales = {
     projects: 'Projects', newProject: 'New project', edit: 'Edit registration', save: 'Save and activate', cancel: 'Cancel',
     refresh: 'Refresh', retry: 'Try again', messaging: 'Open Messaging', profile: 'Hermes profile', description: 'Description',
     nameHint: 'Use 1–64 lowercase letters, numbers, hyphens or underscores. Start with a letter or number.',
-    nameInvalid: 'Enter a valid project name; default and project-egg are reserved.',
+    nameInvalid: 'Enter a valid project name; default, project-egg and global-project are reserved.',
     nameExists: 'This profile already exists. Cancel and select it from Projects to edit its registration.',
     optional: 'Optional project context', repositories: 'Registered repositories', selected: n => `Selected repositories (${n}/200)`,
     count: n => `${n} ${n === 1 ? 'repository' : 'repositories'}`, unregistered: 'Not registered', missing: 'Profile missing',
@@ -46,7 +46,22 @@ const locales = {
     deleteProject: 'Delete project',
     deleteHint: name => `This permanently deletes the Hermes profile ${name}, including its memories, sessions, credentials, skills, and repository mappings. GitLab repositories are kept. Type ${name} to confirm.`,
     deleted: name => `Project ${name} deleted. Restart required.`,
-    deleteError: (name, removed) => removed ? `Registration removed, but Hermes profile ${name} was not deleted. Restart the gateway to apply the registration removal. Retry to delete the profile.` : `Project ${name} was not deleted.`
+    deleteError: (name, removed) => removed ? `Registration removed, but Hermes profile ${name} was not deleted. Restart the gateway to apply the registration removal. Retry to delete the profile.` : `Project ${name} was not deleted.`,
+    mappings: 'Mappings', activity: 'Activity', openEvents: n => `${n} open`,
+    filterProjects: 'Filter projects or repositories', filterEvents: 'Filter events',
+    allProjects: 'All projects', findProject: 'Find a project', noProjectMatch: 'No project matches.',
+    all: 'All', unmapped: 'Unmapped', needsAttention: 'Needs attention', openStatus: 'Open',
+    delivered: 'Delivered', pending: 'Pending', retrying: 'Retrying', failed: 'Failed',
+    when: 'When', event: 'Event', lastEvent: 'Last event', noLastEvent: 'No events',
+    noEvents: 'No events', noEventsHint: 'Mentions and assignments appear after the next poll.',
+    recentActivity: 'Recent activity', allActivity: 'All activity', request: 'Request', dispatch: 'Dispatch',
+    gitlabTodo: 'GitLab to-do', card: 'Card', session: 'Session', discussion: 'Discussion',
+    attempts: 'Attempts', polled: 'Polled', relatedIssue: 'related issue',
+    noDiscussion: 'None yet — assignment or description has no comment anchor.',
+    mention: 'Mention', assignment: 'Assigned', justNow: 'now',
+    ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
+    thisProject: 'This project', clearProject: 'Show all projects', selectEvent: 'Select an event to see its detail.',
+    loadEventsError: 'Could not load GitLab events', closeDetail: 'Close', routing: 'Routing', status: 'Status'
   },
   ja: {
     profileIdentifier: 'プロジェクトプロファイル ID',
@@ -54,7 +69,7 @@ const locales = {
     projects: 'プロジェクト', newProject: '新規プロジェクト', edit: '登録を編集', save: '保存して有効化', cancel: 'キャンセル',
     refresh: '更新', retry: '再試行', messaging: 'Messaging を開く', profile: 'Hermes プロファイル', description: '説明',
     nameHint: '小文字の英数字、ハイフン、アンダースコアで1〜64文字。英数字で始めてください。',
-    nameInvalid: '有効なプロジェクト名を入力してください。default と project-egg は予約済みです。',
+    nameInvalid: '有効なプロジェクト名を入力してください。default、project-egg、global-project は予約済みです。',
     nameExists: 'このプロファイルは既に存在します。キャンセルして一覧から選択してください。', optional: 'プロジェクトの説明（任意）',
     repositories: '登録済みリポジトリ', selected: n => `選択したリポジトリ（${n}/200）`, count: n => `${n} リポジトリ`,
     unregistered: '未登録', missing: 'プロファイルなし', missingHint: '保存すると、project-egg のテンプレートからプロファイルを作成します。',
@@ -85,14 +100,29 @@ const locales = {
     deleteProject: 'プロジェクトを削除',
     deleteHint: name => `Hermes プロファイル ${name} と、そのメモリ、セッション、認証情報、スキル、リポジトリの登録を完全に削除します。GitLab リポジトリは保持されます。確認のため ${name} と入力してください。`,
     deleted: name => `プロジェクト ${name} を削除しました。再起動が必要です。`,
-    deleteError: (name, removed) => removed ? `登録を削除しましたが、Hermes プロファイル ${name} は削除されませんでした。ゲートウェイを再起動して登録の削除を適用してください。再試行するとプロファイルを削除します。` : `プロジェクト ${name} は削除されませんでした。`
+    deleteError: (name, removed) => removed ? `登録を削除しましたが、Hermes プロファイル ${name} は削除されませんでした。ゲートウェイを再起動して登録の削除を適用してください。再試行するとプロファイルを削除します。` : `プロジェクト ${name} は削除されませんでした。`,
+    mappings: '登録', activity: 'アクティビティ', openEvents: n => `${n} 件未完了`,
+    filterProjects: 'プロジェクトまたはリポジトリを絞り込み', filterEvents: 'イベントを絞り込み',
+    allProjects: 'すべてのプロジェクト', findProject: 'プロジェクトを検索', noProjectMatch: '一致するプロジェクトはありません。',
+    all: 'すべて', unmapped: '未登録', needsAttention: '要対応', openStatus: '未完了',
+    delivered: '配信済み', pending: '保留', retrying: '再試行中', failed: '失敗',
+    when: '時刻', event: 'イベント', lastEvent: '最新イベント', noLastEvent: 'イベントなし',
+    noEvents: 'イベントはありません', noEventsHint: 'メンションとアサインは次回のポーリング後に表示されます。',
+    recentActivity: '最近のアクティビティ', allActivity: 'すべてのアクティビティ', request: 'リクエスト', dispatch: '配信',
+    gitlabTodo: 'GitLab To-do', card: 'カード', session: 'セッション', discussion: 'ディスカッション',
+    attempts: '試行', polled: '取得', relatedIssue: '関連イシュー',
+    noDiscussion: 'まだありません。アサインや説明にはコメントの起点がありません。',
+    mention: 'メンション', assignment: 'アサイン', justNow: 'たった今',
+    ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
+    thisProject: 'このプロジェクト', clearProject: 'すべてのプロジェクトを表示', selectEvent: 'イベントを選ぶと詳細が表示されます。',
+    loadEventsError: 'GitLab イベントを読み込めません', closeDetail: '閉じる', routing: 'ルーティング中', status: '状態'
   },
   zh: {
     profileIdentifier: '项目配置文件 ID',
     title: 'GitLab 项目', intro: '每个项目使用一个 Hermes 配置文件。已注册的仓库共享其知识。',
     projects: '项目', newProject: '新建项目', edit: '编辑注册', save: '保存并启用', cancel: '取消', refresh: '刷新', retry: '重试',
     messaging: '打开 Messaging', profile: 'Hermes 配置文件', description: '描述', nameHint: '使用1–64个小写字母、数字、连字符或下划线，以字母或数字开头。',
-    nameInvalid: '请输入有效的项目名称；default 和 project-egg 为保留名称。', nameExists: '此配置文件已存在。请取消并从项目列表选择它。', optional: '项目说明（可选）',
+    nameInvalid: '请输入有效的项目名称；default、project-egg 和 global-project 为保留名称。', nameExists: '此配置文件已存在。请取消并从项目列表选择它。', optional: '项目说明（可选）',
     repositories: '已注册仓库', selected: n => `已选仓库（${n}/200）`, count: n => `${n} 个仓库`, unregistered: '未注册', missing: '配置文件缺失',
     missingHint: '保存将从 project-egg 模板复制此配置文件。', disabled: '路由已禁用 · 保存将启用',
     search: '搜索 GitLab 仓库', searchHint: '按仓库名称搜索', searchResults: '可用仓库', assigned: name => `已注册到 ${name}`,
@@ -118,14 +148,29 @@ const locales = {
     deleteProject: '删除项目',
     deleteHint: name => `这将永久删除 Hermes 配置文件 ${name}，包括其记忆、会话、凭据、技能和仓库注册。GitLab 仓库将保留。请输入 ${name} 以确认。`,
     deleted: name => `项目 ${name} 已删除。需要重启。`,
-    deleteError: (name, removed) => removed ? `注册已移除，但 Hermes 配置文件 ${name} 未删除。请重启网关以应用注册移除。重试以删除配置文件。` : `项目 ${name} 未删除。`
+    deleteError: (name, removed) => removed ? `注册已移除，但 Hermes 配置文件 ${name} 未删除。请重启网关以应用注册移除。重试以删除配置文件。` : `项目 ${name} 未删除。`,
+    mappings: '注册', activity: '动态', openEvents: n => `${n} 条未完成`,
+    filterProjects: '筛选项目或仓库', filterEvents: '筛选事件',
+    allProjects: '全部项目', findProject: '查找项目', noProjectMatch: '没有匹配的项目。',
+    all: '全部', unmapped: '未注册', needsAttention: '需处理', openStatus: '未完成',
+    delivered: '已送达', pending: '待处理', retrying: '重试中', failed: '失败',
+    when: '时间', event: '事件', lastEvent: '最近事件', noLastEvent: '无事件',
+    noEvents: '暂无事件', noEventsHint: '提及和指派会在下次轮询后出现。',
+    recentActivity: '最近动态', allActivity: '全部动态', request: '请求', dispatch: '投递',
+    gitlabTodo: 'GitLab 待办', card: '卡片', session: '会话', discussion: '讨论',
+    attempts: '尝试', polled: '采集', relatedIssue: '相关议题',
+    noDiscussion: '尚无讨论。指派或描述没有评论锚点。',
+    mention: '提及', assignment: '指派', justNow: '刚刚',
+    ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
+    thisProject: '此项目', clearProject: '显示全部项目', selectEvent: '选择事件以查看详情。',
+    loadEventsError: '无法加载 GitLab 事件', closeDetail: '关闭', routing: '路由中', status: '状态'
   },
   'zh-hant': {
     profileIdentifier: '專案設定檔 ID',
     title: 'GitLab 專案', intro: '每個專案使用一個 Hermes 設定檔。已註冊的儲存庫共用其知識。',
     projects: '專案', newProject: '新增專案', edit: '編輯註冊', save: '儲存並啟用', cancel: '取消', refresh: '重新整理', retry: '重試',
     messaging: '開啟 Messaging', profile: 'Hermes 設定檔', description: '說明', nameHint: '使用1–64個小寫字母、數字、連字號或底線，以字母或數字開頭。',
-    nameInvalid: '請輸入有效的專案名稱；default 和 project-egg 為保留名稱。', nameExists: '此設定檔已存在。請取消並從專案清單選取。', optional: '專案說明（選填）',
+    nameInvalid: '請輸入有效的專案名稱；default、project-egg 與 global-project 為保留名稱。', nameExists: '此設定檔已存在。請取消並從專案清單選取。', optional: '專案說明（選填）',
     repositories: '已註冊儲存庫', selected: n => `已選儲存庫（${n}/200）`, count: n => `${n} 個儲存庫`, unregistered: '未註冊', missing: '設定檔不存在',
     missingHint: '儲存將從 project-egg 範本複製此設定檔。', disabled: '路由已停用 · 儲存將啟用',
     search: '搜尋 GitLab 儲存庫', searchHint: '依儲存庫名稱搜尋', searchResults: '可用儲存庫', assigned: name => `已註冊至 ${name}`,
@@ -151,7 +196,22 @@ const locales = {
     deleteProject: '刪除專案',
     deleteHint: name => `這將永久刪除 Hermes 設定檔 ${name}，包括其記憶、工作階段、憑證、技能與儲存庫註冊。GitLab 儲存庫將保留。請輸入 ${name} 以確認。`,
     deleted: name => `專案 ${name} 已刪除。需要重新啟動。`,
-    deleteError: (name, removed) => removed ? `註冊已移除，但 Hermes 設定檔 ${name} 未刪除。請重新啟動閘道以套用註冊移除。重試以刪除設定檔。` : `專案 ${name} 未刪除。`
+    deleteError: (name, removed) => removed ? `註冊已移除，但 Hermes 設定檔 ${name} 未刪除。請重新啟動閘道以套用註冊移除。重試以刪除設定檔。` : `專案 ${name} 未刪除。`,
+    mappings: '註冊', activity: '活動', openEvents: n => `${n} 筆未完成`,
+    filterProjects: '篩選專案或儲存庫', filterEvents: '篩選事件',
+    allProjects: '全部專案', findProject: '尋找專案', noProjectMatch: '沒有符合的專案。',
+    all: '全部', unmapped: '未註冊', needsAttention: '需處理', openStatus: '未完成',
+    delivered: '已送達', pending: '待處理', retrying: '重試中', failed: '失敗',
+    when: '時間', event: '事件', lastEvent: '最近事件', noLastEvent: '無事件',
+    noEvents: '尚無事件', noEventsHint: '提及與指派會在下次輪詢後出現。',
+    recentActivity: '最近活動', allActivity: '全部活動', request: '請求', dispatch: '投遞',
+    gitlabTodo: 'GitLab 待辦', card: '卡片', session: '工作階段', discussion: '討論',
+    attempts: '嘗試', polled: '擷取', relatedIssue: '相關議題',
+    noDiscussion: '尚無討論。指派或說明沒有留言錨點。',
+    mention: '提及', assignment: '指派', justNow: '剛剛',
+    ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
+    thisProject: '此專案', clearProject: '顯示全部專案', selectEvent: '選取事件以查看詳細資料。',
+    loadEventsError: '無法載入 GitLab 事件', closeDetail: '關閉', routing: '路由中', status: '狀態'
   }
 }
 
@@ -159,32 +219,42 @@ const css = `
 .hgl { height:100%; min-height:0; display:flex; flex-direction:column; overflow:hidden; container-type:inline-size; color:var(--ui-text-primary); font-size:.8125rem; line-height:1.5; }
 .hgl *, .hgl *::before, .hgl *::after { box-sizing:border-box; }
 .hgl h1,.hgl h2,.hgl h3,.hgl p { margin:0; }
-.hgl h1 { font-size:1.125rem; font-weight:600; }
+.hgl h1 { font-size:1.25rem; font-weight:600; letter-spacing:-.02em; }
 .hgl h2 { font-size:1rem; font-weight:600; overflow-wrap:anywhere; }
 .hgl h3 { font-size:.8125rem; font-weight:600; }
 .hgl p { max-width:72ch; text-wrap:pretty; }
-.hgl-header { flex-shrink:0; padding:24px 28px 20px; border-bottom:1px solid var(--ui-stroke-secondary); display:flex; gap:16px; align-items:flex-start; justify-content:space-between; }
+.hgl-head { flex-shrink:0; padding:22px 28px 0; }
+.hgl-tabs { display:flex; gap:4px; margin-top:18px; border-bottom:1px solid var(--ui-stroke-secondary); }
+.hgl-tab { appearance:none; border:0; background:transparent; color:var(--ui-text-secondary); font:inherit; font-weight:500; padding:10px 4px 12px; margin-right:16px; margin-bottom:-1px; border-bottom:2px solid transparent; cursor:pointer; }
+.hgl-tab[aria-selected=true] { color:var(--ui-text-primary); border-bottom-color:var(--ui-accent); }
+.hgl-tab:focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
+.hgl-tab:disabled { opacity:.55; cursor:default; }
+.hgl-tab-count { margin-left:6px; color:var(--ui-text-secondary); font-weight:400; font-variant-numeric:tabular-nums; }
 /* Native checkboxes include absolute hidden inputs; contain them in the scrolling body. */
-.hgl-body { position:relative; flex:1; min-height:0; overflow:auto; overscroll-behavior:none; display:flex; flex-direction:column; }
+.hgl-body { position:relative; flex:1; min-height:0; overflow:hidden; overscroll-behavior:none; display:flex; flex-direction:column; }
+.hgl-panel { flex:1; min-height:0; display:flex; flex-direction:column; }
+.hgl-toolbar { flex-shrink:0; display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:14px 28px 16px; border-bottom:1px solid var(--ui-stroke-secondary); }
+.hgl-toolbar .hgl-search { flex:1; min-width:180px; max-width:360px; }
+.hgl-toolbar .hgl-primary { margin-left:auto; }
+.hgl-seg { display:flex; gap:2px; }
+.hgl-seg button { appearance:none; border:0; background:transparent; color:var(--ui-text-secondary); font:inherit; padding:6px 10px; border-radius:4px; cursor:pointer; }
+.hgl-seg button[aria-pressed=true] { background:var(--ui-bg-quaternary); color:var(--ui-text-primary); font-weight:500; }
+.hgl-split { flex:1; min-height:0; display:grid; grid-template-columns:minmax(0,1fr); }
+.hgl-split.draw { grid-template-columns:minmax(0,1fr) minmax(280px,36%); }
+.hgl-table-wrap { min-height:0; overflow:auto; }
+.hgl-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
+.hgl-table th { text-align:left; font-size:.6875rem; font-weight:600; color:var(--ui-text-secondary); padding:12px 20px; border-bottom:1px solid var(--ui-stroke-secondary); position:sticky; top:0; background:var(--ui-bg-editor); }
+.hgl-table td { padding:14px 20px; border-bottom:1px solid var(--ui-stroke-secondary); vertical-align:middle; }
+.hgl-row { cursor:pointer; }
+.hgl-row:hover td { background:var(--ui-row-hover-background); }
+.hgl-row[aria-current=true] td { background:var(--ui-row-active-background); }
+.hgl-row:focus-visible { outline:2px solid var(--ui-accent); outline-offset:-2px; }
+.hgl-drawer { border-left:1px solid var(--ui-stroke-secondary); overflow:auto; padding:24px; display:flex; flex-direction:column; gap:16px; min-width:0; }
 .hgl-stack { display:flex; flex-direction:column; gap:12px; min-width:0; }
 .hgl-subtle { color:var(--ui-text-secondary); font-size:.75rem; }
-.hgl-context { display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:8px; font-size:.75rem; color:var(--ui-text-secondary); overflow-wrap:anywhere; }
 .hgl-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.hgl-layout { flex:1 0 auto; display:grid; grid-template-columns:220px minmax(0,1fr); min-height:360px; }
-.hgl-master { padding:20px 12px; border-right:1px solid var(--ui-stroke-secondary); background:var(--ui-bg-quinary); }
-.hgl-master-title { margin:0 8px 12px; }
-.hgl-projects { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
-.hgl-project { appearance:none; width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; text-align:left; padding:10px 8px; border:0; border-radius:4px; background:transparent; color:inherit; cursor:pointer; font:inherit; }
-.hgl-project:hover { background:var(--ui-row-hover-background); }
-.hgl-project[aria-current=page] { background:var(--ui-row-active-background); }
-.hgl-project:focus-visible { outline:2px solid var(--ui-accent); outline-offset:1px; }
-.hgl-project:disabled { cursor:default; opacity:.55; }
-.hgl-project-name { display:block; font-weight:500; overflow-wrap:anywhere; }
-.hgl-detail { min-width:0; padding:24px 28px; display:flex; flex-direction:column; gap:20px; }
-.hgl-heading { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:12px; }
-.hgl-notice { flex-shrink:0; margin:20px 28px 0; padding:12px 14px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; display:flex; flex-direction:column; gap:8px; background:var(--ui-bg-quaternary); }
-.hgl-detail .hgl-notice { margin:0; }
-.hgl-form { display:flex; flex-direction:column; gap:20px; }
+.hgl-notice { flex-shrink:0; margin:16px 28px 0; padding:12px 14px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; display:flex; flex-direction:column; gap:8px; background:var(--ui-bg-quaternary); }
+.hgl-form { display:flex; flex-direction:column; gap:20px; padding:20px 28px 28px; overflow:auto; }
 .hgl-field { display:flex; flex-direction:column; gap:6px; max-width:560px; }
 .hgl-field label { font-size:.75rem; font-weight:500; }
 .hgl-field input { width:100%; }
@@ -203,7 +273,37 @@ const css = `
 .hgl-center { padding:36px 28px; }
 .hgl-skeleton { height:24px; margin:12px 0; }
 .hgl code { overflow-wrap:anywhere; font-size:.75rem; }
-@container (max-width:650px) { .hgl-header { flex-direction:column; padding:20px; } .hgl-layout { grid-template-columns:1fr; } .hgl-master { border-right:0; border-bottom:1px solid var(--ui-stroke-secondary); padding:16px 20px; } .hgl-projects { max-height:170px; overflow:auto; } .hgl-detail { padding:20px; } .hgl-notice { margin:16px 20px 0; } }
+.hgl-pill { display:inline-flex; align-items:center; padding:2px 7px; border-radius:3px; font-size:.6875rem; font-weight:500; background:var(--ui-bg-quaternary); color:var(--ui-text-secondary); }
+.hgl-pill-ok { background:color-mix(in srgb, #10b981 16%, transparent); color:#0b7a56; }
+.hgl-pill-warn { background:color-mix(in srgb, #f59e0b 16%, transparent); color:#b45309; }
+.hgl-pill-bad { background:color-mix(in srgb, var(--destructive) 16%, transparent); color:var(--destructive); }
+.hgl-muted { color:var(--ui-text-secondary); }
+.hgl-dl { display:grid; grid-template-columns:118px minmax(0,1fr); gap:6px 12px; font-size:.75rem; }
+.hgl-dl dt { color:var(--ui-text-secondary); }
+.hgl-dl dd { margin:0; overflow-wrap:anywhere; }
+.hgl-pre { padding:10px 12px; border:1px solid var(--ui-stroke-secondary); border-radius:6px; white-space:pre-wrap; }
+.hgl-picker { position:relative; display:flex; align-items:center; gap:2px; }
+.hgl-picker-btn { display:flex; align-items:center; gap:8px; min-width:196px; max-width:260px; padding:6px 8px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; background:var(--ui-bg-editor); color:inherit; cursor:pointer; font:inherit; text-align:left; }
+.hgl-picker-btn[aria-expanded=true] { outline:2px solid var(--ui-accent); }
+.hgl-picker-label { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
+.hgl-picker-pop { position:absolute; top:calc(100% + 4px); left:0; z-index:8; width:280px; background:var(--ui-bg-editor); border:1px solid var(--ui-stroke-secondary); border-radius:6px; box-shadow:var(--shadow-md, 0 10px 28px color-mix(in srgb, #000 12%, transparent)); display:flex; flex-direction:column; }
+.hgl-picker-pop .hgl-search { width:auto; margin:8px; }
+.hgl-picker-list { max-height:280px; overflow:auto; padding:0 0 6px; }
+.hgl-picker-list button { display:flex; align-items:center; gap:8px; width:100%; border:0; background:transparent; padding:7px 10px; cursor:pointer; color:inherit; font:inherit; text-align:left; }
+.hgl-picker-list button:hover, .hgl-picker-list button[aria-current=true] { background:var(--ui-row-active-background); }
+.hgl-picker-list .hgl-subtle { margin-left:auto; }
+.hgl-glyph { width:18px; height:18px; border-radius:4px; display:grid; place-items:center; font-size:.625rem; font-weight:700; text-transform:uppercase; background:var(--ui-bg-quaternary); color:var(--ui-text-secondary); flex-shrink:0; }
+.hgl-recent { display:flex; flex-direction:column; gap:2px; }
+.hgl-recent button { appearance:none; border:0; background:transparent; text-align:left; cursor:pointer; padding:8px; border-radius:5px; display:grid; grid-template-columns:1fr auto; gap:4px 8px; color:inherit; font:inherit; width:100%; }
+.hgl-recent button:hover { background:var(--ui-row-hover-background); }
+@container (max-width:650px) {
+  .hgl-head { padding:16px 20px 0; }
+  .hgl-toolbar, .hgl-form { padding-left:20px; padding-right:20px; }
+  .hgl-notice { margin:12px 20px 0; }
+  .hgl-split.draw { grid-template-columns:1fr; }
+  .hgl-drawer { border-left:0; border-top:1px solid var(--ui-stroke-secondary); max-height:50%; }
+  .hgl-table th, .hgl-table td { padding-left:16px; padding-right:16px; }
+}
 @media (prefers-reduced-motion:reduce) { .hgl * { animation:none!important; transition:none!important; } }
 `
 
@@ -213,6 +313,22 @@ const makeDraft = (project, revision) => ({
   profile: project?.profile || '', description: project?.description || '', revision,
   repositories: Object.fromEntries((project?.repositories || []).map(repo => [repo.id, repo])), isNew: !project
 })
+const RESERVED = ['default', 'project-egg', 'global-project']
+const projectStatus = (row, t) => !row.available ? t('missing') : row.repositories.length ? t('count', row.repositories.length) : t('unregistered')
+const eventKind = (event, t) => event.command || (event.action === 'assigned' || event.kind === 'assignment' ? t('assignment') : t('mention'))
+const cardRef = event => event.iid ? `${event.target_type === 'MergeRequest' ? '!' : '#'}${event.iid}` : ''
+const age = (iso, t) => {
+  const ms = Date.now() - Date.parse(iso)
+  if (!Number.isFinite(ms)) return ''
+  const minutes = Math.max(0, Math.round(ms / 60000))
+  if (minutes < 1) return t('justNow')
+  if (minutes < 60) return t('ageMin', minutes)
+  const hours = Math.round(minutes / 60)
+  if (hours < 48) return t('ageHr', hours)
+  return t('ageDay', Math.round(hours / 24))
+}
+const pill = (status, label) => jsx('span', { className: `hgl-pill${{ delivered: ' hgl-pill-ok', pending: ' hgl-pill-warn', retrying: ' hgl-pill-warn', failed: ' hgl-pill-bad' }[status] || ''}`, children: label })
+const glyph = name => jsx('span', { className: 'hgl-glyph', 'aria-hidden': true, children: (name || '?')[0] })
 
 function Repository({ ctx, repo, children }) {
   const t = usePluginI18n(ID)
@@ -304,11 +420,22 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     return ctx.rest('/projects')
   } })
   const [selected, setSelected] = useState(null)
+  const [inspect, setInspect] = useState(null)
+  const [pane, setPane] = useState('mappings')
+  const [mapQuery, setMapQuery] = useState('')
+  const [mapFilter, setMapFilter] = useState('all')
+  const [projectScope, setProjectScope] = useState('all')
+  const [scopeOpen, setScopeOpen] = useState(false)
+  const [scopeQuery, setScopeQuery] = useState('')
+  const [eventStatus, setEventStatus] = useState('all')
+  const [eventQuery, setEventQuery] = useState('')
+  const [eventPage, setEventPage] = useState(1)
   const [draft, setDraft] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [saved, setSaved] = useState(null)
+  const picker = useRef(null)
   const mounted = useRef(true)
   const saving = useRef(false)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
@@ -341,18 +468,42 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   }
   const data = result.data
   const projects = data?.projects || []
-  const project = projects.find(row => row.profile === selected) || projects[0]
+  const project = projects.find(row => row.profile === (draft && !draft.isNew ? draft.profile : selected))
   const name = draft?.profile.trim().toLowerCase() || ''
   const nameError = draft?.isNew && name ?
-    (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name) || ['default', 'project-egg'].includes(name) ? t('nameInvalid') :
+    (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name) || RESERVED.includes(name) ? t('nameInvalid') :
       projects.some(row => row.profile === name) ? t('nameExists') : null) : null
+  const eventsKey = [ID, scope, 'events', pane === 'activity' ? projectScope : selected, pane === 'activity' ? eventStatus : 'all',
+    pane === 'activity' ? eventQuery : '', pane === 'activity' ? eventPage : 1]
+  const events = useQuery({
+    queryKey: eventsKey, retry: false,
+    enabled: Boolean(data) && (pane === 'activity' || inspect?.type === 'project'),
+    queryFn: () => {
+      if (scopeNow() !== scope) throw new Error('Backend changed')
+      const params = new URLSearchParams()
+      const profile = pane === 'activity' ? projectScope : selected
+      if (profile && profile !== 'all') params.set('profile', profile)
+      if (pane === 'activity' && eventStatus !== 'all') params.set('status', eventStatus)
+      if (pane === 'activity' && eventQuery.trim()) params.set('q', eventQuery.trim())
+      if (pane === 'activity') params.set('page', String(eventPage))
+      return ctx.rest(`/events?${params}`)
+    }
+  })
+  useEffect(() => {
+    if (!scopeOpen) return
+    const close = event => { if (!picker.current?.contains(event.target)) { setScopeOpen(false); setScopeQuery('') } }
+    const escape = event => { if (event.key === 'Escape') { setScopeOpen(false); setScopeQuery('') } }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', escape) }
+  }, [scopeOpen])
   const start = row => {
     if (saving.current) return
     setDraft(makeDraft(row, data.revision)); setError(null); setSaved(null)
   }
   const remove = async event => {
     event.preventDefault()
-    if (saving.current || !current() || !deleting || deleting.confirmation !== deleting.profile || ['default', 'project-egg'].includes(deleting.profile)) return
+    if (saving.current || !current() || !deleting || deleting.confirmation !== deleting.profile || RESERVED.includes(deleting.profile)) return
     const target = { ...deleting, scope: scopeNow() }
     saving.current = true
     setBusy(true)
@@ -372,7 +523,9 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       setSaved({ ...response, deleted: true })
       setDeleting(null)
       setSelected(null)
+      setInspect(null)
       await client.invalidateQueries({ queryKey })
+      await client.invalidateQueries({ queryKey: [ID, scope, 'events'] })
     } catch (failure) {
       if (!current()) return
       setError(`${t('deleteError', target.profile, removed)} ${errorText(failure)}`)
@@ -397,8 +550,11 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       if (!current()) return
       setSaved({ ...response, restartAt: Date.now() })
       setSelected(response.profile)
+      setInspect({ type: 'project', profile: response.profile })
+      setPane('mappings')
       setDraft(null)
       await client.invalidateQueries({ queryKey })
+      await client.invalidateQueries({ queryKey: [ID, scope, 'events'] })
     } catch (failure) {
       if (current()) setError(errorText(failure))
     } finally {
@@ -414,18 +570,246 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     setError(null)
   }
   const messaging = jsx(Button, { type: 'button', variant: 'outline', onClick: () => host.navigate('/messaging'), children: t('messaging') })
-  return jsxs('div', { className: 'hgl', children: [
-    jsxs('header', { className: 'hgl-header', children: [
-      jsxs('div', { className: 'hgl-stack', children: [jsx('h1', { children: t('title') }), jsx('p', { className: 'hgl-subtle', children: t('intro') }),
-        jsxs('div', { className: 'hgl-context', children: [
-          jsx('span', { children: `${t('backend')}: ${connectionId || 'local'}` }),
-          jsx('span', { children: `${t('activeProfile')}: ${connectionProfile || 'default'}` }),
-          data?.connection_configured && jsx('span', { children: t('polling', data.poll_interval) })
-        ] })] }),
+  const locked = busy || Boolean(draft || deleting)
+  const needle = mapQuery.trim().toLowerCase()
+  const visible = projects.filter(row => {
+    if (mapFilter === 'empty' && row.repositories.length) return false
+    if (mapFilter === 'issue' && row.available && !row.repositories.some(repo => repo.enabled === false)) return false
+    return !needle || row.profile.includes(needle) || row.repositories.some(repo => repo.name.toLowerCase().includes(needle))
+  })
+  const eventRows = events.data?.events || []
+  const inspectProject = inspect?.type === 'project' ? projects.find(row => row.profile === inspect.profile) : null
+  const inspectEvent = inspect?.type === 'event' ? inspect.event : null
+  const openCount = data?.open_count || events.data?.open_count || 0
+  const switchPane = next => {
+    if (locked) return
+    setPane(next)
+    setInspect(null)
+    setScopeOpen(false)
+    setEventPage(1)
+  }
+  const lastCell = row => {
+    const last = row.last_event
+    if (!last) return jsx('span', { className: 'hgl-muted', children: t('noLastEvent') })
+    return jsxs('span', { children: [pill(last.status, t(last.status)), ' ', jsx('span', { className: 'hgl-subtle', children: `${age(last.created_at, t)} · ${eventKind(last, t)} ${cardRef(last)}` })] })
+  }
+  const pickerMatches = projects.filter(row => {
+    const q = scopeQuery.trim().toLowerCase()
+    return !q || row.profile.includes(q) || (row.description || '').toLowerCase().includes(q)
+      || row.repositories.some(repo => repo.name.toLowerCase().includes(q))
+  })
+  const scoped = projects.find(row => row.profile === projectScope)
+  const editor = draft && jsxs('form', { className: 'hgl-form', onSubmit: save, children: [
+    jsx('h2', { children: draft.isNew ? t('newProject') : draft.profile }),
+    draft.isNew && jsxs('div', { className: 'hgl-field', children: [
+      jsx('label', { htmlFor: 'hgl-profile', children: t('profile') }),
+      jsx(Input, { id: 'hgl-profile', value: draft.profile, autoFocus: true, required: true, maxLength: 64, disabled: busy,
+        'aria-invalid': Boolean(nameError), 'aria-describedby': 'hgl-name-hint', onChange: event => setDraft(value => ({ ...value, profile: event.target.value })) }),
+      jsx('p', { id: 'hgl-name-hint', className: nameError ? 'hgl-error' : 'hgl-subtle', children: nameError || t('nameHint') })
+    ] }),
+    !draft.isNew && !project?.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
+    (draft.isNew || !project?.available) && jsxs('div', { className: 'hgl-field', children: [
+      jsx('label', { htmlFor: 'hgl-description', children: t('description') }),
+      jsx(Input, { id: 'hgl-description', value: draft.description, maxLength: 1000, disabled: busy, placeholder: t('optional'),
+        onChange: event => setDraft(value => ({ ...value, description: event.target.value })) })
+    ] }),
+    jsx('p', { className: 'hgl-subtle', children: t('autoHint') }),
+    jsx(RepositoryPicker, { ctx, scope, projects, draft, setDraft, busy }),
+    error && jsxs('div', { role: 'alert', className: 'hgl-stack', children: [
+      jsx('p', { className: 'hgl-error', children: `${t('saveError')}: ${error}` }),
+      jsx('p', { className: 'hgl-subtle', children: t('reloadHint') }),
+      jsx('div', { className: 'hgl-actions', children: jsx(Button, { type: 'button', variant: 'outline', disabled: busy || result.isFetching,
+        onClick: reloadDraft, children: t('reload') }) })
+    ] }),
+    jsxs('div', { className: 'hgl-footer', children: [jsx('p', { className: 'hgl-subtle', children: t('preserve') }),
       jsxs('div', { className: 'hgl-actions', children: [
-        jsx(Button, { type: 'button', variant: 'ghost', disabled: busy || Boolean(draft || deleting) || result.isFetching, onClick: () => result.refetch(), children: t('refresh') }),
-        jsx(Button, { type: 'button', disabled: busy || Boolean(draft || deleting) || !data?.connection_configured || !data?.multiplex_enabled,
-          onClick: () => start(null), children: t('newProject') })
+        jsx(Button, { type: 'button', variant: 'ghost', disabled: busy, onClick: () => { setDraft(null); setError(null) }, children: t('cancel') }),
+        jsx(Button, { type: 'submit', loading: busy, disabled: !name || Boolean(nameError) || !data.connection_configured || !data.multiplex_enabled, children: t('save') })
+      ] })]
+    })
+  ] })
+  const deleter = deleting && jsxs('form', { className: 'hgl-form', onSubmit: remove, children: [
+    jsx('h2', { children: t('deleteProject') }),
+    jsx('p', { id: 'hgl-delete-hint', children: t('deleteHint', deleting.profile) }),
+    jsxs('div', { className: 'hgl-field', children: [
+      jsx('label', { htmlFor: 'hgl-delete-confirmation', children: t('profile') }),
+      jsx(Input, { id: 'hgl-delete-confirmation', value: deleting.confirmation, autoFocus: true, autoComplete: 'off',
+        disabled: busy, 'aria-describedby': 'hgl-delete-hint',
+        onChange: event => setDeleting(value => ({ ...value, confirmation: event.target.value })) })
+    ] }),
+    error && jsx('p', { role: 'alert', className: 'hgl-error', children: error }),
+    jsxs('div', { className: 'hgl-actions', children: [
+      jsx(Button, { type: 'button', variant: 'ghost', disabled: busy, onClick: () => { setDeleting(null); setError(null) }, children: t('cancel') }),
+      jsx(Button, { type: 'submit', variant: 'destructive', loading: busy,
+        disabled: busy || !deleting.revision || deleting.confirmation !== deleting.profile, children: t('deleteProject') })
+    ] })
+  ] })
+  const projectDrawer = inspectProject && jsxs('aside', { className: 'hgl-drawer', children: [
+    jsxs('div', { className: 'hgl-actions', style: { justifyContent: 'space-between' }, children: [
+      jsxs('div', { className: 'hgl-stack', children: [
+        jsxs('div', { className: 'hgl-actions', children: [glyph(inspectProject.profile), jsx('h2', { children: inspectProject.profile })] }),
+        (!inspectProject.available || !inspectProject.repositories.length) && jsx('p', { className: 'hgl-subtle', children: projectStatus(inspectProject, t) })
+      ] }),
+      jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: '×' })
+    ] }),
+    inspectProject.description ? jsx('p', { className: 'hgl-subtle', children: inspectProject.description }) : null,
+    !inspectProject.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
+    jsx('h3', { children: t('repositories') }),
+    inspectProject.repositories.length ? jsx('ul', { className: 'hgl-list', children: inspectProject.repositories.map(repo => jsx(Repository, { ctx, repo }, repo.id)) }) :
+      jsx(EmptyState, { title: t('noRepositories'), description: t('noRepositoriesHint') }),
+    jsx('h3', { children: t('recentActivity') }),
+    eventRows.length ? jsxs('div', { className: 'hgl-stack', children: [
+      jsx('div', { className: 'hgl-recent', children: eventRows.slice(0, 3).map(event => jsxs('button', { type: 'button', onClick: () => {
+        setPane('activity'); setProjectScope(event.profile || 'all'); setInspect({ type: 'event', event })
+      }, children: [
+        jsx('span', { children: `${eventKind(event, t)} ${cardRef(event)}` }),
+        pill(event.status, t(event.status)),
+        jsx('span', { className: 'hgl-subtle', children: age(event.created_at, t) })
+      ] }, event.id)) }),
+      jsx(Button, { type: 'button', variant: 'ghost', onClick: () => {
+        setPane('activity'); setProjectScope(inspectProject.profile); setInspect(null)
+      }, children: t('allActivity') })
+    ] }) : jsx('p', { className: 'hgl-subtle', children: t('noEventsHint') }),
+    jsxs('div', { className: 'hgl-actions', children: [
+      jsx(Button, { type: 'button', variant: 'outline', disabled: locked || !data.connection_configured || !data.multiplex_enabled,
+        onClick: () => start(inspectProject), children: t('edit') }),
+      jsx(Button, { type: 'button', variant: 'outline', disabled: locked || RESERVED.includes(inspectProject.profile), onClick: () => {
+        setDeleting({ profile: inspectProject.profile, revision: data.revision, confirmation: '' }); setError(null); setSaved(null)
+      }, children: t('deleteProject') })
+    ] })
+  ] })
+  const eventDrawer = inspectEvent && jsxs('aside', { className: 'hgl-drawer', children: [
+    jsxs('div', { className: 'hgl-actions', style: { justifyContent: 'space-between', alignItems: 'flex-start' }, children: [
+      jsxs('div', { className: 'hgl-stack', children: [
+        jsx('p', { className: 'hgl-subtle', children: `${eventKind(inspectEvent, t)} · ${inspectEvent.repository?.name || ''} ${cardRef(inspectEvent)}` }),
+        jsx('h2', { children: inspectEvent.title || eventKind(inspectEvent, t) })
+      ] }),
+      jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: '×' })
+    ] }),
+    jsxs('div', { className: 'hgl-actions', children: [
+      pill(inspectEvent.status, t(inspectEvent.status)),
+      inspectEvent.created_at && jsx('span', { className: 'hgl-pill', children: age(inspectEvent.created_at, t) }),
+      inspectEvent.command && jsx('span', { className: 'hgl-pill', children: inspectEvent.command })
+    ] }),
+    inspectEvent.author && jsx('p', { children: `@${inspectEvent.author}` }),
+    jsx('h3', { children: t('request') }),
+    jsx('div', { className: 'hgl-pre', children: inspectEvent.body || '—' }),
+    inspectEvent.last_error && jsx('p', { className: 'hgl-error', children: inspectEvent.last_error }),
+    jsx('h3', { children: t('dispatch') }),
+    jsxs('dl', { className: 'hgl-dl', children: [
+      jsx('dt', { children: t('profile') }), jsxs('dd', { children: [glyph(inspectEvent.profile || '?'), ' ', inspectEvent.profile || '—'] }),
+      jsx('dt', { children: t('gitlabTodo') }), jsx('dd', { children: `#${inspectEvent.id}` }),
+      jsx('dt', { children: t('card') }), jsx('dd', { children: inspectEvent.card || '—' }),
+      jsx('dt', { children: t('session') }), jsxs('dd', { children: [inspectEvent.conversation || '—', inspectEvent.conversation && inspectEvent.card && inspectEvent.conversation !== inspectEvent.card ? ` · ${t('relatedIssue')}` : ''] }),
+      jsx('dt', { children: t('discussion') }), jsx('dd', { children: inspectEvent.discussion || t('noDiscussion') }),
+      jsx('dt', { children: t('attempts') }), jsx('dd', { children: String(inspectEvent.attempts || 0) }),
+      jsx('dt', { children: t('polled') }), jsx('dd', { children: inspectEvent.created_at || '—' })
+    ] }),
+    jsxs('div', { className: 'hgl-actions', children: [
+      inspectEvent.repository?.url && jsx(Button, { type: 'button', variant: 'outline', onClick: async () => {
+        try { if (!await ctx.os.openExternal(inspectEvent.repository.url)) host.notify({ kind: 'error', message: t('openFailed') }) }
+        catch { host.notify({ kind: 'error', message: t('openFailed') }) }
+      }, children: t('openRepo', inspectEvent.repository.name) }),
+      inspectEvent.profile && jsx(Button, { type: 'button', variant: 'outline', onClick: () => {
+        setProjectScope(inspectEvent.profile); setInspect(null)
+      }, children: t('thisProject') })
+    ] })
+  ] })
+  const mappingTable = jsxs('div', { className: `hgl-split${inspectProject || deleting ? ' draw' : ''}`, children: [
+    jsx('div', { className: 'hgl-table-wrap', children: visible.length ? jsxs('table', { className: 'hgl-table', children: [
+      jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('projects') }), jsx('th', { children: t('repositories') }), jsx('th', { children: t('lastEvent') })] })] }),
+      jsx('tbody', { children: visible.map(row => {
+        const status = projectStatus(row, t)
+        return jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button', 'aria-label': `${row.profile} ${status}`,
+          'aria-current': inspectProject?.profile === row.profile, onClick: () => { if (!locked) { setSelected(row.profile); setInspect({ type: 'project', profile: row.profile }) } },
+          onKeyDown: event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (!locked) { setSelected(row.profile); setInspect({ type: 'project', profile: row.profile }) } } },
+          children: [
+            jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(row.profile), jsx('strong', { children: row.profile }),
+              status !== t('count', row.repositories.length) && jsx('span', { className: `hgl-pill${row.available ? '' : ' hgl-pill-bad'}`, children: status }) ] })] }),
+            jsx('td', { className: 'hgl-muted', children: row.repositories.length ? t('count', row.repositories.length) : t('unregistered') }),
+            jsx('td', { children: lastCell(row) })
+          ] }, row.profile)
+      }) })
+    ] }) : jsx(EmptyState, { title: t('noProjects'), description: t('noProjectsHint') }) }),
+    deleting ? jsx('aside', { className: 'hgl-drawer', children: deleter }) : inspectProject ? projectDrawer : null
+  ] })
+  const activityTable = jsxs('div', { className: `hgl-split${inspectEvent ? ' draw' : ''}`, children: [
+    jsx('div', { className: 'hgl-table-wrap', children: events.isError ? jsx(ErrorState, { className: 'hgl-center', title: t('loadEventsError'), description: errorText(events.error),
+      children: jsx(Button, { type: 'button', onClick: () => events.refetch(), children: t('retry') }) }) :
+      events.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
+      eventRows.length ? jsxs('table', { className: 'hgl-table', children: [
+        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('event') }), jsx('th', { children: t('projects') }), jsx('th', { children: t('status') })] })] }),
+        jsx('tbody', { children: eventRows.map(event => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
+          'aria-label': `${eventKind(event, t)} ${cardRef(event)} ${event.profile || ''} ${t(event.status)}`,
+          'aria-current': inspectEvent?.id === event.id,
+          onClick: () => setInspect({ type: 'event', event }),
+          onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'event', event }) } },
+          children: [
+            jsx('td', { className: 'hgl-muted', children: age(event.created_at, t) }),
+            jsxs('td', { children: [jsx('div', { children: `${eventKind(event, t)} ${cardRef(event)}` }), jsx('div', { className: 'hgl-subtle', children: event.title })] }),
+            jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(event.profile || '?'), event.profile || '—'] })] }),
+            jsx('td', { children: pill(event.status, t(event.status)) })
+          ] }, event.id)) })
+      ] }) : jsx(EmptyState, { title: t('noEvents'), description: t('noEventsHint') }) }),
+    inspectEvent ? eventDrawer : null
+  ] })
+  const mappingToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
+    jsx(SearchField, { containerClassName: 'hgl-search', value: mapQuery, placeholder: t('filterProjects'), 'aria-label': t('filterProjects'),
+      onChange: value => setMapQuery(value.slice(0, 200)) }),
+    jsxs('div', { className: 'hgl-seg', children: [
+      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'all', onClick: () => setMapFilter('all'), children: t('all') }),
+      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'empty', onClick: () => setMapFilter('empty'), children: t('unmapped') }),
+      jsx('button', { type: 'button', 'aria-pressed': mapFilter === 'issue', onClick: () => setMapFilter('issue'), children: t('needsAttention') })
+    ] }),
+    jsxs('span', { className: 'hgl-primary', children: [
+      jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || result.isFetching, onClick: () => result.refetch(), children: t('refresh') }),
+      jsx(Button, { type: 'button', disabled: locked || !data?.connection_configured || !data?.multiplex_enabled,
+        onClick: () => start(null), children: t('newProject') })
+    ] })
+  ] })
+  const activityToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
+    jsxs('div', { className: 'hgl-picker', ref: picker, children: [
+      jsxs('button', { type: 'button', className: 'hgl-picker-btn', 'aria-expanded': scopeOpen, 'aria-haspopup': 'listbox',
+        onClick: () => setScopeOpen(open => !open), children: [
+        scoped ? glyph(scoped.profile) : null,
+        jsx('span', { className: 'hgl-picker-label', children: scoped ? scoped.profile : t('allProjects') }),
+        jsx('span', { className: 'hgl-subtle', children: scoped ? '' : t('count', projects.length).replace(/^\d+\s*/, '') && `${projects.length}` }),
+        jsx('span', { 'aria-hidden': true, children: '▾' })
+      ] }),
+      scoped && jsx(Button, { type: 'button', variant: 'ghost', 'aria-label': t('clearProject'), onClick: () => { setProjectScope('all'); setEventPage(1) }, children: '×' }),
+      scopeOpen && jsxs('div', { className: 'hgl-picker-pop', children: [
+        jsx(SearchField, { containerClassName: 'hgl-search', value: scopeQuery, placeholder: t('findProject'), 'aria-label': t('findProject'),
+          onChange: value => setScopeQuery(value.slice(0, 200)) }),
+        jsx('div', { className: 'hgl-picker-list', role: 'listbox', children: [
+          jsxs('button', { type: 'button', 'aria-current': projectScope === 'all', onClick: () => { setProjectScope('all'); setScopeOpen(false); setScopeQuery(''); setEventPage(1) }, children: [
+            t('allProjects'), jsx('span', { className: 'hgl-subtle', children: String(openCount) })
+          ] }),
+          ...pickerMatches.map(row => jsxs('button', { type: 'button', 'aria-current': projectScope === row.profile,
+            onClick: () => { setProjectScope(row.profile); setScopeOpen(false); setScopeQuery(''); setEventPage(1) }, children: [
+            glyph(row.profile), jsx('span', { children: row.profile })
+          ] }, row.profile)),
+          !pickerMatches.length && jsx('p', { className: 'hgl-subtle', style: { padding: '8px 10px' }, children: t('noProjectMatch') })
+        ] })
+      ] })
+    ] }),
+    jsx(SearchField, { containerClassName: 'hgl-search', value: eventQuery, placeholder: t('filterEvents'), 'aria-label': t('filterEvents'),
+      onChange: value => { setEventQuery(value.slice(0, 200)); setEventPage(1) } }),
+    jsxs('div', { className: 'hgl-seg', children: [
+      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'all', onClick: () => { setEventStatus('all'); setEventPage(1) }, children: t('all') }),
+      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'open', onClick: () => { setEventStatus('open'); setEventPage(1) }, children: t('openStatus') }),
+      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'retrying', onClick: () => { setEventStatus('retrying'); setEventPage(1) }, children: t('retrying') }),
+      jsx('button', { type: 'button', 'aria-pressed': eventStatus === 'delivered', onClick: () => { setEventStatus('delivered'); setEventPage(1) }, children: t('delivered') })
+    ] }),
+    jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || events.isFetching, onClick: () => events.refetch(), children: t('refresh') })
+  ] })
+  return jsxs('div', { className: 'hgl', children: [
+    jsxs('header', { className: 'hgl-head', children: [
+      jsx('h1', { children: t('title') }),
+      jsxs('div', { className: 'hgl-tabs', role: 'tablist', children: [
+        jsx('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'mappings', disabled: locked, onClick: () => switchPane('mappings'), children: t('mappings') }),
+        jsxs('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'activity', disabled: locked, onClick: () => switchPane('activity'), children: [
+          t('activity'), openCount ? jsx('span', { className: 'hgl-tab-count', children: t('openEvents', openCount) }) : null
+        ] })
       ] })
     ] }),
     result.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children:
@@ -450,78 +834,10 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             disabled: busy, onClick: retryRestart, children: t('retryRestart') }), messaging
         ] })
       ] }),
-      jsxs('div', { className: 'hgl-layout', children: [
-        jsxs('nav', { className: 'hgl-master', 'aria-label': t('projects'), children: [jsx('h3', { className: 'hgl-master-title', children: t('projects') }),
-          jsx('ul', { className: 'hgl-projects', children: projects.map(row => jsx('li', { children: jsx('button', {
-            type: 'button', className: 'hgl-project', disabled: busy || Boolean(draft || deleting), 'aria-current': project?.profile === row.profile ? 'page' : undefined,
-            onClick: () => setSelected(row.profile), children: jsxs('span', { children: [
-              jsx('span', { className: 'hgl-project-name', children: row.profile }),
-              jsx('span', { className: 'hgl-subtle', children: !row.available ? t('missing') : row.repositories.length ? t('count', row.repositories.length) : t('unregistered') })
-            ] })
-          }) }, row.profile)) })
-        ] }),
-        jsx('main', { className: 'hgl-detail', children: draft ? jsxs('form', { className: 'hgl-form', onSubmit: save, children: [
-          jsx('h2', { children: draft.isNew ? t('newProject') : draft.profile }),
-          draft.isNew && jsxs('div', { className: 'hgl-field', children: [
-            jsx('label', { htmlFor: 'hgl-profile', children: t('profile') }),
-            jsx(Input, { id: 'hgl-profile', value: draft.profile, autoFocus: true, required: true, maxLength: 64, disabled: busy,
-              'aria-invalid': Boolean(nameError), 'aria-describedby': 'hgl-name-hint', onChange: event => setDraft(value => ({ ...value, profile: event.target.value })) }),
-            jsx('p', { id: 'hgl-name-hint', className: nameError ? 'hgl-error' : 'hgl-subtle', children: nameError || t('nameHint') })
-          ] }),
-          !draft.isNew && !project?.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
-          (draft.isNew || !project?.available) && jsxs('div', { className: 'hgl-field', children: [
-            jsx('label', { htmlFor: 'hgl-description', children: t('description') }),
-            jsx(Input, { id: 'hgl-description', value: draft.description, maxLength: 1000, disabled: busy, placeholder: t('optional'),
-              onChange: event => setDraft(value => ({ ...value, description: event.target.value })) })
-          ] }),
-          jsx('p', { className: 'hgl-subtle', children: t('autoHint') }),
-          jsx(RepositoryPicker, { ctx, scope, projects, draft, setDraft, busy }),
-          error && jsxs('div', { role: 'alert', className: 'hgl-stack', children: [
-            jsx('p', { className: 'hgl-error', children: `${t('saveError')}: ${error}` }),
-            jsx('p', { className: 'hgl-subtle', children: t('reloadHint') }),
-            jsx('div', { className: 'hgl-actions', children: jsx(Button, { type: 'button', variant: 'outline', disabled: busy || result.isFetching,
-              onClick: reloadDraft, children: t('reload') }) })
-          ] }),
-          jsxs('div', { className: 'hgl-footer', children: [jsx('p', { className: 'hgl-subtle', children: t('preserve') }),
-            jsxs('div', { className: 'hgl-actions', children: [
-              jsx(Button, { type: 'button', variant: 'ghost', disabled: busy, onClick: () => { setDraft(null); setError(null) }, children: t('cancel') }),
-              jsx(Button, { type: 'submit', loading: busy, disabled: !name || Boolean(nameError) || !data.connection_configured || !data.multiplex_enabled, children: t('save') })
-            ] })]
-          })
-        ] }) : deleting ? jsxs('form', { className: 'hgl-form', onSubmit: remove, children: [
-          jsx('h2', { children: t('deleteProject') }),
-          jsx('p', { id: 'hgl-delete-hint', children: t('deleteHint', deleting.profile) }),
-          jsxs('div', { className: 'hgl-field', children: [
-            jsx('label', { htmlFor: 'hgl-delete-confirmation', children: t('profile') }),
-            jsx(Input, { id: 'hgl-delete-confirmation', value: deleting.confirmation, autoFocus: true, autoComplete: 'off',
-              disabled: busy, 'aria-describedby': 'hgl-delete-hint',
-              onChange: event => setDeleting(value => ({ ...value, confirmation: event.target.value })) })
-          ] }),
-          error && jsx('p', { role: 'alert', className: 'hgl-error', children: error }),
-          jsxs('div', { className: 'hgl-actions', children: [
-            jsx(Button, { type: 'button', variant: 'ghost', disabled: busy, onClick: () => { setDeleting(null); setError(null) }, children: t('cancel') }),
-            jsx(Button, { type: 'submit', variant: 'destructive', loading: busy,
-              disabled: busy || !deleting.revision || deleting.confirmation !== deleting.profile, children: t('deleteProject') })
-          ] })
-        ] }) : project ? jsxs('div', { className: 'hgl-stack', children: [
-          jsxs('div', { className: 'hgl-heading', children: [jsxs('div', { className: 'hgl-stack', children: [
-            jsx('h2', { children: project.profile }),
-            jsx('p', { className: 'hgl-subtle', children: `${t('profileIdentifier')}: ${project.profile}` }),
-            project.description && jsx('p', { className: 'hgl-subtle', children: project.description })
-          ] }), jsxs('div', { className: 'hgl-actions', children: [
-            jsx(Button, { type: 'button', variant: 'outline', disabled: busy || !data.connection_configured || !data.multiplex_enabled,
-              onClick: () => start(project), children: t('edit') }),
-            jsx(Button, { type: 'button', variant: 'outline', disabled: busy || project.profile === 'default', onClick: () => {
-              setDeleting({ profile: project.profile, revision: data.revision, confirmation: '' }); setError(null); setSaved(null)
-            }, children: t('deleteProject') })
-          ] })] }),
-          !project.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
-          jsx('h3', { children: t('repositories') }),
-          project.repositories.length ? jsx('ul', { className: 'hgl-list', children: project.repositories.map(repo => jsx(Repository, { ctx, repo }, repo.id)) }) :
-            jsx(EmptyState, { title: t('noRepositories'), description: t('noRepositoriesHint') }),
-          jsx('p', { className: 'hgl-subtle', children: t('savedHint') })
-        ] }) : jsx(EmptyState, { title: t('noProjects'), description: t('noProjectsHint') }) })
-      ] })
+      jsx('div', { className: 'hgl-panel', children: draft ? editor : jsxs('div', { className: 'hgl-panel', children: [
+        pane === 'activity' ? activityToolbar : mappingToolbar,
+        pane === 'activity' ? activityTable : mappingTable
+      ] }) })
     ] })
   ] })
 }

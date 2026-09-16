@@ -13,7 +13,8 @@ Hermes Desktop is the management surface; the selected backend owns configuratio
 ## Design principles
 
 - Reuse Hermes Desktop's existing sidebar, controls, typography and theme tokens.
-- Show registered repositories next to their owning profile.
+- Show registered repositories next to their owning profile in a registry table; open detail only after a row is selected.
+- Show the poller's durable inbox as Activity — globally or for one project — with event detail on select.
 - The plugin bundles project-egg; new profiles copy its current prompts, skills, SOUL and configuration through native profile cloning.
 - Save and activate restarts the shared gateway; show model setup and restart outcomes separately.
 - Preserve profile knowledge when removing a repository mapping.

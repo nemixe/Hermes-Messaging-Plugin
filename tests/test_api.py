@@ -5,6 +5,7 @@ import importlib
 import json
 import os
 from pathlib import Path
+import sqlite3
 import tempfile
 import threading
 import time
@@ -78,6 +79,7 @@ class DesktopAPI(unittest.TestCase):
             stack.callback(client.close)
             base = "/api/plugins/hermes-gitlab"
             self.assertEqual(client.get(base + "/projects").status_code, 401)
+            self.assertEqual(client.get(base + "/events").status_code, 401)
             self.assertEqual(client.put(base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.request("DELETE", base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.post(base + "/gateway/restart").status_code, 401)
@@ -94,6 +96,8 @@ class DesktopAPI(unittest.TestCase):
             self.assertTrue(personal.is_dir())
             self.assertTrue(state["connection_configured"])
             self.assertEqual(state["transport"], "polling")
+            self.assertEqual(state["open_count"], 0)
+            self.assertEqual(client.get(base + "/events").json(), {"events": [], "next_page": None, "open_count": 0})
             self.assertNotIn("test-bot-pat", response.text)
             # A Desktop backend may have been launched in another profile. A
             # missing default PAT must not fall back to that process's credentials.
@@ -136,6 +140,54 @@ class DesktopAPI(unittest.TestCase):
             self.assertIs(yaml.safe_load((profile / "profile.yaml").read_text())["hermes_gitlab_project"], True)
             self.assertEqual(state["projects"][0]["repositories"][0]["name"], "team/payments")
             self.assertEqual(state["projects"][0]["description"], "Commerce knowledge")
+            self.assertIsNone(state["projects"][0]["last_event"])
+            inbox = root / "gitlab"
+            inbox.mkdir()
+            database = sqlite3.connect(inbox / "state.sqlite3")
+            with database:
+                database.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+                database.execute("""CREATE TABLE inbox (
+                    id INTEGER PRIMARY KEY, payload TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0,
+                    attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT)""")
+                mention = {"id": 101, "project": {"id": 42, "path_with_namespace": "team/payments"},
+                           "author": {"id": 7, "username": "alice"}, "action_name": "mentioned",
+                           "target_type": "Issue", "target": {"iid": 3, "title": "Fix login"},
+                           "body": "@hermes-bot please help", "created_at": "2026-09-16T10:12:00Z"}
+                assigned = {"id": 102, "project": {"id": 42, "path_with_namespace": "team/payments"},
+                            "author": {"id": 7, "username": "mei"}, "action_name": "assigned",
+                            "target_type": "Issue", "target": {"iid": 8, "title": "Export invoices"},
+                            "body": "assigned", "created_at": "2026-09-16T09:00:00Z"}
+                command = {"id": 103, "project": {"id": 42, "path_with_namespace": "team/payments"},
+                           "author": {"id": 7, "username": "alice"}, "action_name": "mentioned",
+                           "target_type": "Issue", "target": {"iid": 3, "title": "Fix login"},
+                           "body": "@hermes-bot /status", "created_at": "2026-09-16T08:00:00Z"}
+                database.execute("INSERT INTO inbox VALUES (101, ?, 1, 1, NULL)", (json.dumps(mention),))
+                database.execute("INSERT INTO inbox VALUES (102, ?, 0, 0, NULL)", (json.dumps(assigned),))
+                database.execute("INSERT INTO inbox VALUES (103, ?, 0, 2, 'context or dispatch failed')",
+                                 (json.dumps(command),))
+                database.execute("INSERT INTO meta VALUES ('delivery:todo:101', ?)", (json.dumps({
+                    "card": "42:issues:3", "discussion": "abc", "conversation": "42:issues:3",
+                    "profile": "commerce"}),))
+            database.close()
+            listed = client.get(base + "/events").json()
+            self.assertEqual([event["id"] for event in listed["events"]], ["103", "102", "101"])
+            self.assertEqual(listed["open_count"], 2)
+            self.assertEqual(listed["events"][0]["status"], "retrying")
+            self.assertEqual(listed["events"][0]["kind"], "/status")
+            self.assertEqual(listed["events"][0]["command"], "/status")
+            self.assertEqual(listed["events"][1]["status"], "pending")
+            self.assertEqual(listed["events"][1]["kind"], "assignment")
+            self.assertEqual(listed["events"][2]["status"], "delivered")
+            self.assertEqual(listed["events"][2]["profile"], "commerce")
+            self.assertEqual(listed["events"][2]["discussion"], "abc")
+            self.assertNotIn("test-bot-pat", json.dumps(listed))
+            self.assertEqual(len(client.get(base + "/events?status=open").json()["events"]), 2)
+            self.assertEqual(client.get(base + "/events?q=invoices").json()["events"][0]["id"], "102")
+            self.assertEqual(client.get(base + "/events?profile=missing").json()["events"], [])
+            state = client.get(base + "/projects").json()
+            self.assertEqual(state["open_count"], 2)
+            self.assertEqual(state["projects"][0]["last_event"]["id"], "103")
+            self.assertEqual(state["projects"][0]["last_event"]["status"], "retrying")
             response = client.put(base + "/projects/finance", json={**body, "revision": state["revision"]})
             self.assertEqual(response.status_code, 409, response.text)
             self.assertFalse((root / "profiles" / "finance").exists())

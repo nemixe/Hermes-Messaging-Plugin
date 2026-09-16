@@ -1,8 +1,10 @@
-# Hermes GitLab messaging · 0.3.13
+# Hermes GitLab messaging · 0.3.14
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
-Desktop and manages repository-to-profile mappings.
+Desktop. **Mappings** registers repositories to Hermes project profiles.
+**Activity** is the poller's durable inbox — globally or for one project — with
+event detail when a row is selected.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
@@ -56,7 +58,7 @@ existing `hermes-gitlab` directory before upgrading.
 
 ```sh
 mkdir -p ~/.hermes/plugins
-unzip hermes-gitlab-0.3.13.zip -d ~/.hermes/plugins
+unzip hermes-gitlab-0.3.14.zip -d ~/.hermes/plugins
 hermes -p default plugins enable hermes-gitlab
 hermes -p default config set gateway.multiplex_profiles true
 ```
@@ -138,7 +140,10 @@ for this shared connection management page.
 
 ## Manage projects
 
-Open **GitLab Projects** below **Kanban**:
+Open **GitLab Projects** below **Kanban**. **Mappings** is the registry; click a
+row for repositories, recent activity, and edit/delete. **Activity** is the
+poller's inbox (mentions, assignments, commands) for all projects or one project;
+click a row for request text, dispatch status, card, and session.
 
 1. Select an existing profile, or create a new project/profile with a name and description.
 2. Search repositories accessible to the bot and select **Save and activate**.
