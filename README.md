@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.15
+# Hermes GitLab messaging · 0.3.16
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes

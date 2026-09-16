@@ -3,7 +3,7 @@
   "label": "GitLab Projects",
   "description": "Manage GitLab repository and Hermes profile mappings.",
   "icon": "GitBranch",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "tab": { "path": "/gitlab-projects", "hidden": true },
   "entry": "index.js",
   "api": "plugin_api.py"

@@ -61,7 +61,7 @@ const locales = {
     noDiscussion: 'None yet — assignment or description has no comment anchor.',
     mention: 'Mention', assignment: 'Assigned', justNow: 'now',
     ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
-    thisProject: 'This project', clearProject: 'Show all projects', selectEvent: 'Select an event to see its detail.',
+    clearProject: 'Show all projects', selectEvent: 'Select an event to see its detail.',
     loadEventsError: 'Could not load GitLab events', closeDetail: 'Close', routing: 'Routing', status: 'Status'
   },
   ja: {
@@ -115,7 +115,7 @@ const locales = {
     noDiscussion: 'まだありません。アサインや説明にはコメントの起点がありません。',
     mention: 'メンション', assignment: 'アサイン', justNow: 'たった今',
     ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
-    thisProject: 'このプロジェクト', clearProject: 'すべてのプロジェクトを表示', selectEvent: 'イベントを選ぶと詳細が表示されます。',
+    clearProject: 'すべてのプロジェクトを表示', selectEvent: 'イベントを選ぶと詳細が表示されます。',
     loadEventsError: 'GitLab イベントを読み込めません', closeDetail: '閉じる', routing: 'ルーティング中', status: '状態'
   },
   zh: {
@@ -163,7 +163,7 @@ const locales = {
     noDiscussion: '尚无讨论。指派或描述没有评论锚点。',
     mention: '提及', assignment: '指派', justNow: '刚刚',
     ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
-    thisProject: '此项目', clearProject: '显示全部项目', selectEvent: '选择事件以查看详情。',
+    clearProject: '显示全部项目', selectEvent: '选择事件以查看详情。',
     loadEventsError: '无法加载 GitLab 事件', closeDetail: '关闭', routing: '路由中', status: '状态'
   },
   'zh-hant': {
@@ -211,7 +211,7 @@ const locales = {
     noDiscussion: '尚無討論。指派或說明沒有留言錨點。',
     mention: '提及', assignment: '指派', justNow: '剛剛',
     ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
-    thisProject: '此專案', clearProject: '顯示全部專案', selectEvent: '選取事件以查看詳細資料。',
+    clearProject: '顯示全部專案', selectEvent: '選取事件以查看詳細資料。',
     loadEventsError: '無法載入 GitLab 事件', closeDetail: '關閉', routing: '路由中', status: '狀態'
   }
 }
@@ -680,14 +680,11 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       jsx('dt', { children: t('attempts') }), jsx('dd', { children: String(inspectEvent.attempts || 0) }),
       jsx('dt', { children: t('polled') }), jsx('dd', { children: inspectEvent.created_at || '—' })
     ] }),
-    jsxs('div', { className: 'hgl-actions', children: [
+    jsxs('div', { className: 'hgl-drawer-actions', children: [
       inspectEvent.repository?.url && jsx(Button, { type: 'button', variant: 'outline', onClick: async () => {
         try { if (!await ctx.os.openExternal(inspectEvent.repository.url)) host.notify({ kind: 'error', message: t('openFailed') }) }
         catch { host.notify({ kind: 'error', message: t('openFailed') }) }
-      }, children: t('openRepo', inspectEvent.repository.name) }),
-      inspectEvent.profile && jsx(Button, { type: 'button', variant: 'outline', onClick: () => {
-        setProjectScope(inspectEvent.profile); setInspect(null)
-      }, children: t('thisProject') })
+      }, children: t('openRepo', inspectEvent.repository.name) })
     ] })
   ] })
   const mappingTable = jsxs('div', { className: `hgl-split${inspectProject || deleting ? ' draw' : ''}`, children: [
