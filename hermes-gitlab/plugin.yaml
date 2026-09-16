@@ -1,0 +1,21 @@
+name: hermes-gitlab
+label: GitLab
+kind: platform
+version: 0.3.13
+description: Manage GitLab project profiles in Hermes Desktop and poll bot mentions and issue assignments.
+platforms:
+  - gitlab
+requires_env:
+  - name: GITLAB_URL
+    description: Self-hosted GitLab base URL, including any installation subpath
+    password: false
+  - name: GITLAB_TOKEN
+    description: Bot account personal access token with api scope
+    password: true
+  - name: GITLAB_ALLOWED_USERS
+    description: Numeric user IDs allowed to mention or assign the bot, separated by commas; * allows everyone in registered repositories
+    password: false
+optional_env:
+  - name: GITLAB_PROJECTS
+    description: Comma-separated numeric project IDs for single-profile mode; managed routing uses config.yaml
+    password: false

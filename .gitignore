@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+
+.DS_Store
+
+# Build / release artifacts
+dist/
+build/
+out/
+*.zip
+
+# Local tooling
+.serena/

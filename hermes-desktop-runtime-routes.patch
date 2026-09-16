@@ -1,0 +1,50 @@
+--- a/apps/desktop/src/app/routes.ts
++++ b/apps/desktop/src/app/routes.ts
+@@ -3,6 +3,7 @@
+ 
+ import { noteActiveTreeGroup, revealTreePane } from '@/components/pane-shell/tree/store'
+ import { registry } from '@/contrib/registry'
++import type { Contribution } from '@/contrib/types'
+ 
+ type NavigateLike = (to: string, options?: { replace?: boolean }) => void
+ 
+@@ -91,9 +92,10 @@
+   path: string
+ }
+ 
+-export function contributedRoutes(): Array<{ key: string; path: string; title?: string; render: () => ReactNode }> {
+-  return registry
+-    .getArea(ROUTES_AREA)
++export function contributedRoutes(
++  contributions: readonly Contribution[] = registry.getArea(ROUTES_AREA)
++): Array<{ key: string; path: string; title?: string; render: () => ReactNode }> {
++  return contributions
+     .map(c => ({
+       key: `${c.source ?? 'core'}:${c.id}`,
+       path: (c.data as RouteContribution | undefined)?.path ?? '',
+--- a/apps/desktop/src/app/contrib/surfaces.tsx
++++ b/apps/desktop/src/app/contrib/surfaces.tsx
+@@ -122,8 +122,8 @@
+   const activeGatewayProfile = useStore($activeGatewayProfile)
+   const gateway = useStore($gateway)
+   const gatewayState = useStore($gatewayState)
+-  useContributions(ROUTES_AREA)
+-  const routeContributions = contributedRoutes()
++  // Pass the snapshot so React Compiler invalidates routes when runtime plugins load.
++  const routeContributions = contributedRoutes(useContributions(ROUTES_AREA))
+ 
+   const modelMenuContent = useMemo(
+     () =>
+--- a/apps/desktop/src/app/chat/route-tile.tsx
++++ b/apps/desktop/src/app/chat/route-tile.tsx
+@@ -51,8 +51,8 @@
+   const builtin = BUILTIN_PAGES[path]
+ 
+   // Subscribe so a plugin page tile appears the moment its route registers.
+-  useContributions(ROUTES_AREA)
+-  const contrib = builtin ? null : contributedRoutes().find(r => r.path === path)
++  const routeContributions = contributedRoutes(useContributions(ROUTES_AREA))
++  const contrib = builtin ? null : routeContributions.find(r => r.path === path)
+ 
+   if (builtin) {
+     return (
