@@ -31,7 +31,7 @@ claiming an action is possible or blocked. Repository ownership defines scope;
 it does not grant credentials or permission to merge, deploy, or change gateways.
 
 **GitLab CLI:** before any `glab` call on any platform, read the `gitlab-cli` skill
-(`skills/gitlab-cli/SKILL.md`). Always pass the configured host explicitly:
+(use `skill_view` by name). Always pass the configured host explicitly:
 `glab api --hostname <configured-host> <endpoint>`.
 
 For project questions or repository work, read `PROJECT.yaml` first: it is the
@@ -113,7 +113,7 @@ results, verification and remaining work concisely.
 Start from the clone in the plugin event's `clone:` / `project:` field. Work in
 other owned clones when the task spans repositories; verify ownership first.
 
-For every GitLab event, read `skills/codev-gitlab/SKILL.md` and follow **Worktree**
+For every GitLab event, load `codev-gitlab` with `skill_view` and follow **Worktree**
 before repository work. Each Card conversation uses a dedicated worktree under
 its clone's `.worktrees/`; later events reuse it. A linked MR uses the issue's
 conversation key. Different Card conversations must not share a checkout. In a

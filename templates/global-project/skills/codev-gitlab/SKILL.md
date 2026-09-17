@@ -9,7 +9,8 @@ metadata:
 # Codev GitLab
 
 Use this skill for GitLab events delivered by the `hermes-gitlab` messaging plugin.
-Resolve profile files from `HERMES_HOME`. Follow this profile's SOUL for language
+This shared skill lives in `global-project`; `HERMES_HOME` stays set to the active
+project profile for repository work and knowledge. Resolve profile files from `HERMES_HOME`. Follow this profile's SOUL for language
 and scope. The plugin delivers the final answer to the triggering discussion,
 including when an MR shares an issue's conversation.
 
@@ -39,7 +40,7 @@ Done when repository commands and file edits use a verified dedicated worktree.
    Never adopt a checkout outside this profile or clone secrets from another profile.
 2. If no clone exists, resolve `http_url_to_repo` and `ssh_url_to_repo` from the
    configured GitLab host and numeric project ID using authenticated tools. Read
-   `skills/gitlab-cli/SKILL.md` before using glab. Choose the URL supported by the
+   the `gitlab-cli` skill with `skill_view` before using glab. Choose the URL supported by the
    current Hermes runtime's credentials: HTTPS with an existing credential helper
    or askpass setup, or SSH with a key available to that runtime user. An API token
    in `GITLAB_TOKEN` does not automatically authenticate Git over HTTPS or SSH.
@@ -59,7 +60,7 @@ Done when repository commands and file edits use a verified dedicated worktree.
    base commit (replace the example values):
 
    ```sh
-   python3 "$HERMES_HOME/skills/codev-gitlab/scripts/worktree.py" \
+   python3 "$HERMES_HOME/../global-project/skills/codev-gitlab/scripts/worktree.py" \
      --clone "$HERMES_HOME/workspace/42" --card '42:issues:3' --start '<verified-commit>'
    ```
 

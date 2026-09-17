@@ -4,6 +4,8 @@ import io
 import hashlib
 import importlib
 import os
+import json
+import shutil
 from pathlib import Path
 import tempfile
 import unittest
@@ -96,11 +98,20 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual(build_profile_terminal_scope(profile)["TERMINAL_CWD"], config["terminal"]["cwd"])
 
     def test_sync_knowledge_updates_bundled_skills_with_backups_only_on_explicit_sync(self):
+        from agent.skill_utils import _external_dirs_cache_clear
+        from tools.skills_tool import skill_view
+
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         self.run_command("add-project", "commerce", "--repos", "101")
-        bundle = Path(__file__).parents[1] / "templates/project-egg/skills"
+        bundle = Path(__file__).parents[1] / "templates/global-project/skills"
         profiles = [self.root / "profiles" / name for name in ("project-egg", "commerce")]
+        shared = self.root / "profiles/global-project"
+        shared_skill = shared / "skills/codev-gitlab/SKILL.md"
+        shared_skill.write_text("Shared custom instructions")
+        cli.ensure_template()
+        self.assertEqual(shared_skill.read_text(), "Shared custom instructions")
         for profile in profiles:
+            shutil.copytree(bundle, profile / "skills", dirs_exist_ok=True)
             (profile / "skills/codev-gitlab/SKILL.md").write_text("Local custom instructions")
             (profile / "skills/codev-gitlab/SKILL.md").chmod(0o640)
             (profile / "skills/codev-gitlab/scripts/worktree.py").write_text("# old helper")
@@ -108,32 +119,71 @@ class ProjectSetup(unittest.TestCase):
             (profile / "skills/custom").mkdir()
             (profile / "skills/custom/SKILL.md").write_text("Keep custom skill")
             (profile / "memories/INDEX.md").write_text("Keep learned knowledge")
+            config = yaml.safe_load((profile / "config.yaml").read_text())
+            config["skills"] = {"external_dirs": "../other-skills", "disabled": ["example"]}
+            (profile / "config.yaml").write_text(yaml.safe_dump(config))
         cli.refresh_project_knowledge(self.root)
         self.assertEqual((profiles[1] / "skills/codev-gitlab/SKILL.md").read_text(), "Local custom instructions")
         output = self.run_command("sync-knowledge")
+        shared_backup = list(shared.glob("backups/gitlab-skills/*/codev-gitlab/SKILL.md"))
+        self.assertEqual(len(shared_backup), 1)
+        self.assertEqual(shared_backup[0].read_text(), "Shared custom instructions")
         for profile in profiles:
             for relative in ("codev-gitlab/SKILL.md", "codev-gitlab/scripts/worktree.py", "gitlab-cli/SKILL.md"):
-                self.assertEqual((profile / "skills" / relative).read_bytes(), (bundle / relative).read_bytes())
-            self.assertEqual((profile / "skills/codev-gitlab/SKILL.md").stat().st_mode & 0o777, 0o640)
+                self.assertFalse((profile / "skills" / relative).exists())
+                self.assertEqual((shared / "skills" / relative).read_bytes(), (bundle / relative).read_bytes())
+            self.assertEqual(yaml.safe_load((profile / "config.yaml").read_text())["skills"], {
+                "external_dirs": ["../other-skills", "../global-project/skills"], "disabled": ["example"]})
             self.assertEqual((profile / "skills/custom/SKILL.md").read_text(), "Keep custom skill")
             self.assertEqual((profile / "memories/INDEX.md").read_text(), "Keep learned knowledge")
             backups = list((profile / "backups/gitlab-skills").glob("*/codev-gitlab/SKILL.md"))
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(), "Local custom instructions")
+            self.assertEqual(backups[0].stat().st_mode & 0o777, 0o640)
             self.assertEqual((backups[0].parent / "scripts/worktree.py").read_text(), "# old helper")
             self.assertIn(str(backups[0].parent.parent), output)
-        before = {p: p.stat().st_mtime_ns for profile in profiles for p in profile.rglob("*") if p.is_file()}
+            with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
+                _external_dirs_cache_clear()
+                viewed = json.loads(skill_view("codev-gitlab"))
+                self.assertEqual(Path(viewed["_source_path"]).resolve(),
+                                 (shared / "skills/codev-gitlab/SKILL.md").resolve())
+        before = {p: p.stat().st_mtime_ns for profile in [*profiles, shared] for p in profile.rglob("*") if p.is_file()}
         self.run_command("sync-knowledge")
         for path, mtime in before.items():
             self.assertEqual(path.stat().st_mtime_ns, mtime)
         self.assertEqual(len(list(profiles[1].glob("backups/gitlab-skills/*"))), 1)
-        self.assertFalse((self.root / "profiles/global-project/skills/codev-gitlab").exists())
+        self.run_command("add-project", "finance", "--repos", "102")
+        self.assertFalse((self.root / "profiles/finance/skills/codev-gitlab").exists())
         self.assertFalse((self.root / "profiles/personal/skills").exists())
+
+    def test_shared_skill_migration_preserves_legacy_files_on_failure(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles/commerce"
+        legacy = profile / "skills/codev-gitlab"
+        legacy.mkdir()
+        (legacy / "SKILL.md").write_text("Legacy custom skill")
+        (legacy / "notes.md").write_text("Custom supporting file")
+        outside = self.root / "outside"
+        outside.mkdir()
+        (profile / "backups/gitlab-skills").symlink_to(outside)
+        with self.assertRaisesRegex(ValueError, "symlink"):
+            cli.migrate_shared_skills(profile)
+        self.assertEqual(list(outside.iterdir()), [])
+        (profile / "backups/gitlab-skills").unlink()
+        with patch.object(Path, "rename", side_effect=OSError("Archive unavailable")):
+            with self.assertRaisesRegex(OSError, "Archive unavailable"):
+                cli.migrate_shared_skills(profile)
+        self.assertEqual((legacy / "SKILL.md").read_text(), "Legacy custom skill")
+        cli.migrate_shared_skills(profile)
+        self.assertFalse(legacy.exists())
+        self.assertEqual(next(profile.glob("backups/gitlab-skills/*/codev-gitlab/notes.md")).read_text(),
+                         "Custom supporting file")
 
     def test_skill_sync_rejects_symlinks_and_stops_when_backup_fails(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         self.run_command("add-project", "commerce", "--repos", "101")
-        profile = self.root / "profiles/commerce"
+        profile = self.root / "profiles/global-project"
         target = profile / "skills/codev-gitlab/SKILL.md"
         target.write_text("Keep local edits")
         outside = self.root / "outside"
@@ -321,8 +371,7 @@ class ProjectSetup(unittest.TestCase):
         files["SOUL.md"] = (egg / "SOUL.md").read_text()
         self.run_command("add-project", "commerce", "--repos", "101", "--description", "Commerce project")
         project = self.root / "profiles" / "commerce"
-        for relative in ("TAXONOMY.md", "prompts/architecture.md",
-                         "skills/codev-gitlab/SKILL.md", "skills/codev-gitlab/scripts/worktree.py"):
+        for relative in ("TAXONOMY.md", "prompts/architecture.md"):
             self.assertEqual((project / relative).read_bytes(), (bundle / relative).read_bytes())
         for relative, content in files.items():
             self.assertEqual((project / relative).read_text(), content)
@@ -368,8 +417,15 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual(skill.read_text(), "Shared team conventions")
         self.assertEqual(yaml.safe_load(after)["skills"], {
             "external_dirs": ["../other-skills", "../global-project/skills"], "disabled": ["example"]})
+        # An upgraded starter may still have local copies before explicit sync.
+        legacy = egg / "skills/codev-gitlab"
+        legacy.mkdir()
+        (legacy / "SKILL.md").write_text("Old starter customization")
         self.run_command("add-project", "commerce", "--repos", "101")
         project = self.root / "profiles" / "commerce"
+        self.assertFalse((project / "skills/codev-gitlab").exists())
+        self.assertEqual(next(project.glob("backups/gitlab-skills/*/codev-gitlab/SKILL.md")).read_text(),
+                         "Old starter customization")
         self.assertFalse((project / "skills" / "team-conventions").exists(), "Shared skills are referenced, not copied")
         with patch.dict(os.environ, {"HERMES_HOME": str(project)}):
             _external_dirs_cache_clear()

@@ -79,6 +79,9 @@ def sync_project_knowledge(profile, config=None):
         after = before[:before.index(start)] + block + before[before.index(end) + len(end):]
     else:
         after = before + ("\n\n" if before else "") + block + "\n"
+    after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
+    after = after.replace("read `skills/codev-gitlab/SKILL.md` and follow",
+                          "load `codev-gitlab` with `skill_view` and follow")
     data = None
     if config is not None:
         extra = PlatformConfig.from_dict(merge_platform_sections(config, config.get("gateway", {}), {})
@@ -102,22 +105,25 @@ def sync_project_knowledge(profile, config=None):
             atomic_write_text(inventory, content, preserve_mode=True, create_mode=0o600)
 
 
-def sync_project_skills(profile):
+def sync_project_skills(profile, *, overwrite=True):
     """Update bundled skill files, backing up changed copies before any replacement."""
-    bundle = Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "skills"
+    bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
     backup_root = profile / "backups" / "gitlab-skills"
     changes = []
     for skill in sorted(bundle.iterdir()):
         if not (skill / "SKILL.md").is_file():
             continue
         for source in sorted(skill.rglob("*")):
-            if not source.is_file() or "__pycache__" in source.parts or source.suffix in {".pyc", ".pyo"}:
+            if (not source.is_file() or source.name == ".DS_Store" or "__pycache__" in source.parts
+                    or source.suffix in {".pyc", ".pyo"}):
                 continue
             target = profile / "skills" / source.relative_to(bundle)
             for path in (target, *target.parents, backup_root, *backup_root.parents):
                 if path.is_relative_to(profile.parent) and path.is_symlink():
                     raise ValueError(f"Skill sync paths must not be symlinked: {path}")
             content = source.read_bytes()
+            if target.exists() and not overwrite:
+                continue
             if not target.exists() or target.read_bytes() != content:
                 changes.append((target, content, target.stat().st_mode & 0o777 if target.exists()
                                 else source.stat().st_mode & 0o777))
@@ -132,8 +138,27 @@ def sync_project_skills(profile):
             shutil.copy2(target, saved)
     for target, content, mode in changes:
         atomic_write_bytes(target, content, mode=mode)
-    if changes:
+    if changes and overwrite:
         print(f"Synced {len(changes)} bundled skill files: {profile.name}")
+
+
+def migrate_shared_skills(profile):
+    """Archive legacy local copies so Hermes resolves the shared skills by name."""
+    bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
+    backup_root = profile / "backups" / "gitlab-skills"
+    legacy = [profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
+              if (skill / "SKILL.md").is_file()]
+    for path in [backup_root, *backup_root.parents, *(p for skill in legacy for p in (skill, *skill.parents))]:
+        if path.is_relative_to(profile.parent) and path.is_symlink():
+            raise ValueError(f"Skill migration paths must not be symlinked: {path}")
+    link_shared_skills(profile)
+    legacy = [path for path in legacy if path.exists()]
+    if legacy:
+        backup_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        backup = Path(tempfile.mkdtemp(prefix="sync-", dir=backup_root))
+        print(f"Legacy skill backup: {backup}")
+        for path in legacy:
+            path.rename(backup / path.name)
 
 
 def refresh_project_knowledge(root, *, sync_skills=False):
@@ -144,7 +169,8 @@ def refresh_project_knowledge(root, *, sync_skills=False):
         fcntl.flock(lock, fcntl.LOCK_EX)
         config = read_config(root / "config.yaml")
         if sync_skills:
-            sync_project_skills(root / "profiles" / TEMPLATE_PROFILE)
+            sync_project_skills(root / "profiles" / SHARED_PROFILE)
+            migrate_shared_skills(root / "profiles" / TEMPLATE_PROFILE)
         mapped = {route.get("profile") for route in route_settings(config).get("profile_routes", [])
                   if managed_route(route)}
         for profile in sorted((root / "profiles").iterdir()):
@@ -152,7 +178,7 @@ def refresh_project_knowledge(root, *, sync_skills=False):
                 if (profile / "config.yaml").is_file():
                     sync_project_knowledge(profile, config)
                     if sync_skills:
-                        sync_project_skills(profile)
+                        migrate_shared_skills(profile)
                     mark_project_profile(profile)
 
 
@@ -187,18 +213,18 @@ def mark_project_profile(profile):
 def link_shared_skills(profile):
     path = profile / "config.yaml"
     if path.is_symlink():
-        raise ValueError("The project-egg config.yaml must not be symlinked")
+        raise ValueError("The profile config.yaml must not be symlinked")
     config = yaml.safe_load(path.read_text())
     if not isinstance(config, dict):
-        raise ValueError("project-egg config.yaml must be a mapping")
+        raise ValueError("Profile config.yaml must be a mapping")
     skills = config.setdefault("skills", {})
     if not isinstance(skills, dict):
-        raise ValueError("project-egg skills must be a mapping")
+        raise ValueError("Profile skills must be a mapping")
     entries = skills.get("external_dirs", [])
     if isinstance(entries, str):
         entries = [entries]
     if not isinstance(entries, list) or any(not isinstance(entry, str) for entry in entries):
-        raise ValueError("project-egg skills.external_dirs must be a path or list of paths")
+        raise ValueError("Profile skills.external_dirs must be a path or list of paths")
     shared = f"../{SHARED_PROFILE}/skills"
     if shared not in entries:
         skills["external_dirs"] = [*entries, shared]
@@ -227,6 +253,7 @@ def ensure_template():
         if not (shared / "config.yaml").is_file() or (shared / "skills").is_symlink():
             raise ValueError("The global-project profile is incomplete or its skills directory is symlinked")
         (shared / "skills").mkdir(exist_ok=True)
+        sync_project_skills(shared, overwrite=False)
         if profile.is_symlink() or profile.parent.is_symlink():
             raise ValueError("The project-egg template profile must not be symlinked")
         if profile.exists():
@@ -382,6 +409,7 @@ def add_project(root, profile, repositories, description, *, replace=False, revi
             # A valid empty config keeps the profile routable until provider setup.
             if not (profile_path / "config.yaml").exists():
                 atomic_yaml_write(profile_path / "config.yaml", {}, create_mode=0o600)
+            migrate_shared_skills(profile_path)
         if path.read_bytes() != before:
             raise ValueError("config.yaml changed during setup; profile is preserved, rerun the command")
         mark_project_profile(profile_path)

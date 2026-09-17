@@ -209,11 +209,14 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Put shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
+profile. Bundled `codev-gitlab` and `gitlab-cli` skills are seeded there from
+`templates/global-project/skills/`, including the worktree helper. Put additional
+shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
 `skills.external_dirs`, preserving other skill directories and settings. New
 projects inherit this reference, so shared skills stay in one place. Existing
-project configurations are not changed. The relative path resolves from each
+project configurations gain this reference when running `gitlab sync-knowledge`.
+The relative path resolves from each
 profile's home, including on another backend. Reloading preserves shared profile
 files and avoids duplicate entries. Neither starter nor shared profile can be
 registered or deleted through GitLab Projects.
@@ -241,16 +244,21 @@ to reach the correct profile; a GitLab repository mapping does not route a chat 
 
 Mapping saves and removals refresh the affected inventory. Default-backend plugin
 startup backfills existing registered profiles, clears disabled mappings from their
-inventories and updates only the marked orientation block, preserving custom SOUL
-text and memories. It also adds this block to existing `project-egg` starters.
+inventories and updates the marked orientation block, preserving custom SOUL
+text and memories. Legacy bundled skill references are migrated to lookup by name.
+It also adds this block to existing `project-egg` starters.
 For a manual refresh after editing routes or updating the plugin, run
-`hermes -p default gitlab sync-knowledge`. This also syncs bundled skills into the
-installed `project-egg` starter and all registered or retained GitLab project profiles.
-It replaces changed bundled files after backing them up under each profile's
-`backups/gitlab-skills/sync-*/`, printing the backup path. Local edits to those files
-can be recovered or merged from the backup. Additional skill files and learned
-knowledge stay intact; identical files are left alone. If a backup fails, skill
-replacement for that profile stops. Automatic plugin startup does not sync skills.
+`hermes -p default gitlab sync-knowledge`. This updates bundled skills once in
+`global-project`, backing up changed files under its `backups/gitlab-skills/sync-*/`.
+It links the installed `project-egg` starter and registered or retained GitLab
+profiles to the shared skills. Legacy local `codev-gitlab` and `gitlab-cli` folders
+are moved intact to each profile's `backups/gitlab-skills/sync-*/`, so they no longer
+shadow the shared versions. Printed backup paths retain customizations and supporting
+files for recovery. Other skills and learned knowledge stay in their profiles.
+Identical shared files are left alone; failed backups stop replacements. Automatic
+startup seeds missing shared files but preserves existing shared and local skills.
+New project creation also archives any bundled local skills inherited from an
+older starter, so the new project immediately uses the shared versions.
 For local terminals, setup and sync set an unset/default working directory to the
 profile's absolute root, beside `SOUL.md`, `PROJECT.yaml` and `memories/`. New profiles
 rebase the starter's directory to their own root. Old `workspace/` defaults are
@@ -315,8 +323,10 @@ hermes -p default gitlab sync-knowledge
 hermes -p default gateway restart
 ```
 
-Sync explicitly replaces bundled skill files in existing profiles with backup,
-as described above. It does not provision Git credentials. Verify repository access
+Sync updates shared skills and archives legacy local copies, as described above.
+Merge reusable customizations into `global-project/skills/`; keep project-specific
+instructions in that project's SOUL or knowledge. `HERMES_HOME` remains the active
+project profile when executing shared skills. Sync does not provision Git credentials. Verify repository access
 as the Hermes runtime user before retrying; a fresh bot mention can resume the
 blocked GitLab conversation.
 
