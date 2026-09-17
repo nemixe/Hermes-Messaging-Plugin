@@ -298,6 +298,17 @@ files, skill assets, configuration files, and starter memory are included. Later
 to the starter apply to future projects; existing projects keep their independent copies,
 except for the plugin-managed orientation block and repository inventory described above.
 
+To apply clone-authentication and Codex-review guidance to an existing installation,
+merge the bundled `templates/project-egg/skills/codev-gitlab/SKILL.md` changes into
+both the installed `project-egg/skills/codev-gitlab/SKILL.md` and the affected
+project profile's `skills/codev-gitlab/SKILL.md`, preserving local customizations.
+For example, the reported KPP runtime uses
+`/Users/macdev/.hermes/profiles/project_kpp/skills/codev-gitlab/SKILL.md`.
+`sync-knowledge` refreshes orientation and inventory; it does not update these skill
+copies or provision Git credentials. Verify repository access as the Hermes runtime
+user before retrying, then save successful setup/review commands in that profile's
+workflow knowledge. A fresh bot mention can resume the blocked GitLab conversation.
+
 Hermes's native clone excludes prior conversations, scheduled jobs, and runtime state.
 Messaging connections and multiplexer routes belong to the default backend and are
 not duplicated. Template model/tool credentials follow native cloning rules, including

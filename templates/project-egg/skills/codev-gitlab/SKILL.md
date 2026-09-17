@@ -37,11 +37,20 @@ Done when repository commands and file edits use a verified dedicated worktree.
    If the profile's repository note records an existing clone elsewhere under
    `workspace/`, verify its remote identifies this GitLab repository before using it.
    Never adopt a checkout outside this profile or clone secrets from another profile.
-2. If no clone exists, resolve the repository's clone URL from the configured GitLab
-   host and numeric project ID using available authenticated tools. Clone into the
-   proposed location with credentials already configured on disk. Keep credentials
-   out of URLs, command arguments, logs and GitLab notes. If access or tools are
-   missing, **Ask**. Repository registration alone does not clone code.
+2. If no clone exists, resolve `http_url_to_repo` and `ssh_url_to_repo` from the
+   configured GitLab host and numeric project ID using authenticated tools. Read
+   `skills/gitlab-cli/SKILL.md` before using glab. Choose the URL supported by the
+   current Hermes runtime's credentials: HTTPS with an existing credential helper
+   or askpass setup, or SSH with a key available to that runtime user. An API token
+   in `GITLAB_TOKEN` does not automatically authenticate Git over HTTPS or SSH.
+   Verify access with `GIT_TERMINAL_PROMPT=0 git ls-remote <verified-clone-url>`
+   before cloning into the proposed location. Keep credentials out of URLs,
+   command arguments, logs and GitLab notes.
+   On `Permission denied (publickey)`, check the runtime user's key/SSH agent and
+   GitLab key registration. Use HTTPS only if its credentials are already usable;
+   otherwise **Ask**, naming the runtime user/profile and missing setup without
+   requesting secrets in chat. Retry after correcting the cause, rather than
+   repeating the same failed command. Repository registration alone does not clone code.
 3. For a new issue worktree, fetch and verify the intended base branch; use the
    repository default unless the task specifies another. For an MR, inspect its
    source repository/branch and fetch the current source commit. Confirm any source
@@ -83,6 +92,28 @@ the helper's local branch name is independent of that remote branch. Follow the
 task's push/review/deployment requirements. Verify the result of each external write
 before reporting it as done.
 
+## Codex review
+
+When using Codex for a requested review, run `codex --version` and
+`codex review --help` in the same runtime that will execute it. Select the scope:
+
+- For an MR, fetch and verify its source and target commits, then review the source
+  changes since their merge base. Confirm the worktree HEAD is the intended source
+  commit; an existing worktree may be stale. Use `codex review --base <target-ref>`
+  for a standard review when HEAD matches. Preserve unrelated local changes.
+- `codex review --uncommitted` reviews staged, unstaged and untracked local changes;
+  use it only when those are the requested scope, not as a substitute for an MR diff.
+- For custom instructions, use prompt-only mode, for example:
+  `codex review "Review only security concerns and logic errors in <merge-base-sha>..<source-sha>."`
+  Replace both placeholders with verified commits. Keep the requested focus and
+  exact comparison in the prompt; omit `--uncommitted`, `--base` and `--commit`.
+  The CLI versions that reject `[PROMPT]` with a scope flag require separate modes.
+
+On an argument error, correct the invocation using the installed CLI's help before
+retrying. Start repository review only after clone/fetch and commit verification
+succeed. Wait for the review result and check its scope before reporting completion;
+a started background task or a failed command is not a completed review.
+
 ## Notify and Ask
 
 **Preamble:** follow SOUL's first-response rule using native interim commentary.
@@ -118,3 +149,7 @@ and seed data, build/test commands, start/stop commands, port allocation, health
 checks, user-facing URL and how the user obtains access. Record only observed steps,
 the verification date, expected results and unresolved limits. Keep credentials and
 temporary access tokens out of memory. Link source docs rather than duplicating them.
+For clone/review recovery, include the runtime user/profile, working clone transport,
+credential mechanism (no values), CLI version, exact successful command and verified
+review commits. Record failed attempts and unresolved setup as such; only promote
+a recovery procedure to verified knowledge after observing it succeed in that runtime.
