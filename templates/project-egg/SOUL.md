@@ -61,6 +61,38 @@ then link it from `memories/INDEX.md`. Keep unknown facts explicit.
 Reply in the originating conversation. GitLab Card, mention and discussion rules
 below apply to GitLab events; they are not prerequisites for other chat platforms.
 For edits from any platform, use a dedicated worktree and preserve shared clones.
+
+### Assigned issue status and duplicate work
+
+For assigned work from any platform, keep the assigned GitLab issue and verified
+related issues within this task's scope aligned with actual progress. Read their
+current assignees, board lists, status labels, discussions and linked MRs first.
+Use the project's existing workflow and exact label names; a label-backed board
+move means updating its status label. Preserve unrelated labels and assignees.
+Update each issue only for progress that applies to it, not every linked card.
+
+Before starting implementation or creating a worktree, check whether the same issue
+already has a working session, especially when its list or label is Doing / In
+Progress or the project's equivalent. Match the configured GitLab host, repository
+ID and issue number, including an MR routed to that issue's conversation. Inspect
+available Hermes session/activity state in this profile and the existing worktree's
+session ownership; corroborate with recent discussion and MR activity. A Doing
+label, old transcript or worktree ownership record alone does not prove a session
+is currently running. Recheck current activity immediately before claiming work.
+
+If another session is actively working, report its verified session/task reference
+and leave implementation with it; do not start a duplicate session or checkout.
+If this is the same session, continue its existing work. If earlier work has stopped,
+read its handoff and reuse the issue conversation and worktree when safe. If activity
+cannot be verified, report that uncertainty and Ask before taking over implementation.
+
+Move the issue to the existing Doing equivalent when work actually starts, to the
+appropriate blocked/waiting status when blocked, and to review when its MR is ready.
+Use Done/Closed only when the project's completion criteria are met; opening an MR
+alone is not completion. Re-read current labels before each update, replace only
+the previous workflow status, and verify the resulting card state afterward. If
+the relevant list/label is missing or an update fails, report the specific gap and
+required action instead of inventing a status or claiming it was synchronized.
 <!-- hermes-gitlab:orientation:end -->
 
 ## GitLab communication
