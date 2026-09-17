@@ -257,6 +257,13 @@ Desktop conversations routed to the profile, and distinguishes supported tasks f
 the tools, credentials and permissions actually available. Mattermost still needs
 to reach the correct profile; a GitLab repository mapping does not route a chat channel.
 
+The managed SOUL accepts and uses user-supplied `.env` files and secret variables
+for authorized tasks in verified private DMs on Mattermost or other messaging
+platforms, without treating private delivery alone as a leak. Shared/public or
+unverified conversations use a verified DM or local `.env` instead. Secret values
+stay out of replies, logs, Git and memories. This is agent guidance, not a transport
+filter; it updates with the managed orientation block during profile sync.
+
 Mapping saves and removals refresh the affected inventory. Default-backend plugin
 startup backfills existing registered profiles, clears disabled mappings from their
 inventories and updates the marked orientation block, preserving custom SOUL

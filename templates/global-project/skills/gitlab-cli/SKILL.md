@@ -26,7 +26,7 @@ Replace `<owned-project-id>` with an ID from this profile's inventory (for examp
 Use the existing injected `GITLAB_TOKEN`. Never print tokens, dump the environment,
 pass tokens as command arguments, or enable shell/HTTP tracing. Do not change
 global glab configuration. If glab or credentials are missing, report the missing
-capability without requesting secrets in chat.
+capability and follow SOUL's **Secrets in private messages** for credential delivery.
 
 On `401`, check the destination host before diagnosing authentication; it does
 not prove the token expired. Rate limiting normally returns `429`. Keep the

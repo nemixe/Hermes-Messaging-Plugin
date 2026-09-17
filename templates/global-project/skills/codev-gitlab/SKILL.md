@@ -49,9 +49,10 @@ Done when repository commands and file edits use a verified dedicated worktree.
    command arguments, logs and GitLab notes.
    On `Permission denied (publickey)`, check the runtime user's key/SSH agent and
    GitLab key registration. Use HTTPS only if its credentials are already usable;
-   otherwise **Ask**, naming the runtime user/profile and missing setup without
-   requesting secrets in chat. Retry after correcting the cause, rather than
-   repeating the same failed command. Repository registration alone does not clone code.
+   otherwise **Ask**, naming the runtime user/profile and missing setup; follow
+   SOUL's **Secrets in private messages** for credential delivery. Retry after
+   correcting the cause, rather than repeating the same failed command.
+   Repository registration alone does not clone code.
 3. For a new issue worktree, fetch and verify the intended base branch; use the
    repository default unless the task specifies another. For an MR, inspect its
    source repository/branch and fetch the current source commit. Confirm any source
