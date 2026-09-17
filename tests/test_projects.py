@@ -95,6 +95,70 @@ class ProjectSetup(unittest.TestCase):
         self.run_command("sync-knowledge")
         self.assertEqual(build_profile_terminal_scope(profile)["TERMINAL_CWD"], config["terminal"]["cwd"])
 
+    def test_sync_knowledge_updates_bundled_skills_with_backups_only_on_explicit_sync(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        self.run_command("add-project", "commerce", "--repos", "101")
+        bundle = Path(__file__).parents[1] / "templates/project-egg/skills"
+        profiles = [self.root / "profiles" / name for name in ("project-egg", "commerce")]
+        for profile in profiles:
+            (profile / "skills/codev-gitlab/SKILL.md").write_text("Local custom instructions")
+            (profile / "skills/codev-gitlab/SKILL.md").chmod(0o640)
+            (profile / "skills/codev-gitlab/scripts/worktree.py").write_text("# old helper")
+            (profile / "skills/gitlab-cli/SKILL.md").unlink()
+            (profile / "skills/custom").mkdir()
+            (profile / "skills/custom/SKILL.md").write_text("Keep custom skill")
+            (profile / "memories/INDEX.md").write_text("Keep learned knowledge")
+        cli.refresh_project_knowledge(self.root)
+        self.assertEqual((profiles[1] / "skills/codev-gitlab/SKILL.md").read_text(), "Local custom instructions")
+        output = self.run_command("sync-knowledge")
+        for profile in profiles:
+            for relative in ("codev-gitlab/SKILL.md", "codev-gitlab/scripts/worktree.py", "gitlab-cli/SKILL.md"):
+                self.assertEqual((profile / "skills" / relative).read_bytes(), (bundle / relative).read_bytes())
+            self.assertEqual((profile / "skills/codev-gitlab/SKILL.md").stat().st_mode & 0o777, 0o640)
+            self.assertEqual((profile / "skills/custom/SKILL.md").read_text(), "Keep custom skill")
+            self.assertEqual((profile / "memories/INDEX.md").read_text(), "Keep learned knowledge")
+            backups = list((profile / "backups/gitlab-skills").glob("*/codev-gitlab/SKILL.md"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(), "Local custom instructions")
+            self.assertEqual((backups[0].parent / "scripts/worktree.py").read_text(), "# old helper")
+            self.assertIn(str(backups[0].parent.parent), output)
+        before = {p: p.stat().st_mtime_ns for profile in profiles for p in profile.rglob("*") if p.is_file()}
+        self.run_command("sync-knowledge")
+        for path, mtime in before.items():
+            self.assertEqual(path.stat().st_mtime_ns, mtime)
+        self.assertEqual(len(list(profiles[1].glob("backups/gitlab-skills/*"))), 1)
+        self.assertFalse((self.root / "profiles/global-project/skills/codev-gitlab").exists())
+        self.assertFalse((self.root / "profiles/personal/skills").exists())
+
+    def test_skill_sync_rejects_symlinks_and_stops_when_backup_fails(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles/commerce"
+        target = profile / "skills/codev-gitlab/SKILL.md"
+        target.write_text("Keep local edits")
+        outside = self.root / "outside"
+        outside.mkdir()
+        for relative in ("skills", "skills/codev-gitlab", "skills/codev-gitlab/SKILL.md", "backups"):
+            with self.subTest(relative=relative):
+                path = profile / relative
+                saved = path.with_name(path.name + ".saved")
+                existed = path.exists()
+                if existed:
+                    path.rename(saved)
+                path.symlink_to(outside)
+                try:
+                    with self.assertRaisesRegex(ValueError, "symlink"):
+                        cli.sync_project_skills(profile)
+                    self.assertEqual(list(outside.iterdir()), [])
+                finally:
+                    path.unlink()
+                    if existed:
+                        saved.rename(path)
+        with patch.object(cli.shutil, "copy2", side_effect=OSError("Backup unavailable")):
+            with self.assertRaisesRegex(OSError, "Backup unavailable"):
+                cli.sync_project_skills(profile)
+        self.assertEqual(target.read_text(), "Keep local edits")
+
     def test_repository_knowledge_tracks_mapping_and_preserves_custom_content(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         config = yaml.safe_load(self.config_path.read_text())

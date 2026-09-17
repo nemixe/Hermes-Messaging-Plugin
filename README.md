@@ -243,7 +243,14 @@ Mapping saves and removals refresh the affected inventory. Default-backend plugi
 startup backfills existing registered profiles, clears disabled mappings from their
 inventories and updates only the marked orientation block, preserving custom SOUL
 text and memories. It also adds this block to existing `project-egg` starters.
-For a manual refresh after editing routes, run `hermes -p default gitlab sync-knowledge`.
+For a manual refresh after editing routes or updating the plugin, run
+`hermes -p default gitlab sync-knowledge`. This also syncs bundled skills into the
+installed `project-egg` starter and all registered or retained GitLab project profiles.
+It replaces changed bundled files after backing them up under each profile's
+`backups/gitlab-skills/sync-*/`, printing the backup path. Local edits to those files
+can be recovered or merged from the backup. Additional skill files and learned
+knowledge stay intact; identical files are left alone. If a backup fails, skill
+replacement for that profile stops. Automatic plugin startup does not sync skills.
 For local terminals, setup and sync set an unset/default working directory to the
 profile's absolute root, beside `SOUL.md`, `PROJECT.yaml` and `memories/`. New profiles
 rebase the starter's directory to their own root. Old `workspace/` defaults are
@@ -296,18 +303,22 @@ normal profile selector and edit the installed starter. New projects clone the i
 profile's current contents using Hermes's native full-clone operation. Additional prompt
 files, skill assets, configuration files, and starter memory are included. Later changes
 to the starter apply to future projects; existing projects keep their independent copies,
-except for the plugin-managed orientation block and repository inventory described above.
+except for the managed orientation/inventory refresh and explicit bundled-skill sync
+described above.
 
-To apply clone-authentication and Codex-review guidance to an existing installation,
-merge the bundled `templates/project-egg/skills/codev-gitlab/SKILL.md` changes into
-both the installed `project-egg/skills/codev-gitlab/SKILL.md` and the affected
-project profile's `skills/codev-gitlab/SKILL.md`, preserving local customizations.
-For example, the reported KPP runtime uses
-`/Users/macdev/.hermes/profiles/project_kpp/skills/codev-gitlab/SKILL.md`.
-`sync-knowledge` refreshes orientation and inventory; it does not update these skill
-copies or provision Git credentials. Verify repository access as the Hermes runtime
-user before retrying, then save successful setup/review commands in that profile's
-workflow knowledge. A fresh bot mention can resume the blocked GitLab conversation.
+To apply the latest bundled skills, including clone authentication and Codex review
+guidance, run on the Hermes backend:
+
+```sh
+hermes -p default plugins update hermes-gitlab
+hermes -p default gitlab sync-knowledge
+hermes -p default gateway restart
+```
+
+Sync explicitly replaces bundled skill files in existing profiles with backup,
+as described above. It does not provision Git credentials. Verify repository access
+as the Hermes runtime user before retrying; a fresh bot mention can resume the
+blocked GitLab conversation.
 
 Hermes's native clone excludes prior conversations, scheduled jobs, and runtime state.
 Messaging connections and multiplexer routes belong to the default backend and are

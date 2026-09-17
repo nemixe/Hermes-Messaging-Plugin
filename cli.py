@@ -16,7 +16,7 @@ from gateway.platforms._shared import extra_or_secret
 from hermes_constants import get_default_hermes_root, get_hermes_home
 from hermes_cli.config_backups import backup_config
 from hermes_cli.profiles import create_profile, get_profile_dir, normalize_profile_name, validate_profile_name
-from utils import atomic_write_text, atomic_yaml_write
+from utils import atomic_write_bytes, atomic_write_text, atomic_yaml_write
 
 from .adapter import ids
 
@@ -102,19 +102,57 @@ def sync_project_knowledge(profile, config=None):
             atomic_write_text(inventory, content, preserve_mode=True, create_mode=0o600)
 
 
-def refresh_project_knowledge(root):
+def sync_project_skills(profile):
+    """Update bundled skill files, backing up changed copies before any replacement."""
+    bundle = Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "skills"
+    backup_root = profile / "backups" / "gitlab-skills"
+    changes = []
+    for skill in sorted(bundle.iterdir()):
+        if not (skill / "SKILL.md").is_file():
+            continue
+        for source in sorted(skill.rglob("*")):
+            if not source.is_file() or "__pycache__" in source.parts or source.suffix in {".pyc", ".pyo"}:
+                continue
+            target = profile / "skills" / source.relative_to(bundle)
+            for path in (target, *target.parents, backup_root, *backup_root.parents):
+                if path.is_relative_to(profile.parent) and path.is_symlink():
+                    raise ValueError(f"Skill sync paths must not be symlinked: {path}")
+            content = source.read_bytes()
+            if not target.exists() or target.read_bytes() != content:
+                changes.append((target, content, target.stat().st_mode & 0o777 if target.exists()
+                                else source.stat().st_mode & 0o777))
+    existing = [target for target, _, _ in changes if target.exists()]
+    if existing:
+        backup_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        backup = Path(tempfile.mkdtemp(prefix="sync-", dir=backup_root))
+        print(f"Skill backup: {backup}")
+        for target in existing:
+            saved = backup / target.relative_to(profile / "skills")
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, saved)
+    for target, content, mode in changes:
+        atomic_write_bytes(target, content, mode=mode)
+    if changes:
+        print(f"Synced {len(changes)} bundled skill files: {profile.name}")
+
+
+def refresh_project_knowledge(root, *, sync_skills=False):
     """Backfill existing projects on plugin load or explicit operator refresh."""
     if not (root / "config.yaml").is_file():
         return
     with (root / ".gitlab-projects.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         config = read_config(root / "config.yaml")
+        if sync_skills:
+            sync_project_skills(root / "profiles" / TEMPLATE_PROFILE)
         mapped = {route.get("profile") for route in route_settings(config).get("profile_routes", [])
                   if managed_route(route)}
         for profile in sorted((root / "profiles").iterdir()):
             if profile.name not in RESERVED_PROFILES and (profile.name in mapped or is_project_profile(profile)):
                 if (profile / "config.yaml").is_file():
                     sync_project_knowledge(profile, config)
+                    if sync_skills:
+                        sync_project_skills(profile)
                     mark_project_profile(profile)
 
 
@@ -228,7 +266,7 @@ def setup_parser(parser):
     add.add_argument("--repos", required=True, help="Comma-separated numeric GitLab project IDs")
     add.add_argument("--description", help="Role description for a new profile")
     commands.add_parser("projects", help="List managed repository-to-profile routes")
-    commands.add_parser("sync-knowledge", help="Refresh project orientation and repository inventories")
+    commands.add_parser("sync-knowledge", help="Refresh project orientation, repository inventories and bundled skills")
 
 
 def read_config(path, *, raw=None):
@@ -406,8 +444,9 @@ def command(args):
             raise ValueError("Run this from the default profile: hermes -p default gitlab ...")
         if args.gitlab_command == "sync-knowledge":
             ensure_template()
-            refresh_project_knowledge(root)
-            print("Project orientation and repository inventories refreshed; custom instructions and memories preserved.")
+            refresh_project_knowledge(root, sync_skills=True)
+            print("Project orientation, repository inventories and bundled skills refreshed; "
+                  "changed skill files backed up, additional skills and memories preserved.")
             return
         if args.gitlab_command == "projects":
             routes = route_settings(read_config(root / "config.yaml")).get("profile_routes", [])
