@@ -290,11 +290,15 @@ The block and `PROJECT.yaml` are plugin-managed; keep custom instructions outsid
 the `hermes-gitlab:orientation` markers and learned facts in `memories/`.
 
 The bundled SOUL identifies the agent as **Codev**, starts work with a short, natural
-preamble through Hermes's native interim replies, and carries assigned development
+preamble (for example, "Oke, saya cek.") through Hermes's native interim replies,
+and carries assigned development
 work through validation, branch push and a review-ready MR when possible. After the
 preamble it works quietly, interrupting only for user questions or required input
 or approval, then gives a brief final result. Routine progress updates are sent
-only when requested. GitLab
+only when requested. The acknowledgement confirms receipt once per request;
+tool results, phase transitions and elapsed time do not trigger another message.
+Workflow narration stays in working notes or the requested final deliverable.
+An immediately answerable question receives its answer directly. GitLab
 replies and MR descriptions use Bahasa Indonesia. It checks the codebase and
 accessible resources before asking, and asks an actionable question when a missing
 requirement prevents progress. Blocker requests bundle the known requirements,
