@@ -142,10 +142,10 @@ The gateway forwards it to the same discussion; continue the task after sending 
 **Notify:** return a concise Bahasa Indonesia final answer containing the result,
 validation, relevant links and remaining work. The gateway posts it once in the
 originating discussion. Do not separately post the same answer or append a machine
-result trailer. After the preamble, send progress when a meaningful finding or
-change of direction matters to the user.
+result trailer. Follow SOUL's **Quiet execution** between the preamble and final
+answer; interrupt only for user questions or required input/approval.
 
-**Ask:** follow SOUL's resource-check and confirmation rules. When a missing fact,
+**Ask:** follow SOUL's **Actionable blockers**, resource-check and confirmation rules. When a missing fact,
 decision or approval prevents further progress, end with an actionable question in
 Bahasa Indonesia; the gateway posts it in that same discussion. Name the missing
 requirement, its location and what you will do after the answer. For example:

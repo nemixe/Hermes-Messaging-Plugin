@@ -284,10 +284,16 @@ the `hermes-gitlab:orientation` markers and learned facts in `memories/`.
 
 The bundled SOUL identifies the agent as **Codev**, starts work with a short, natural
 preamble through Hermes's native interim replies, and carries assigned development
-work through validation, branch push and a review-ready MR when possible. GitLab
+work through validation, branch push and a review-ready MR when possible. After the
+preamble it works quietly, interrupting only for user questions or required input
+or approval, then gives a brief final result. Routine progress updates are sent
+only when requested. GitLab
 replies and MR descriptions use Bahasa Indonesia. It checks the codebase and
 accessible resources before asking, and asks an actionable question when a missing
-requirement prevents progress. Required approvals still apply. It preserves code,
+requirement prevents progress. Blocker requests bundle the known requirements,
+name exactly what the user must provide or do and where, and say what resumes
+afterward. The agent tries safe recovery first, continues independent work while
+waiting, and does not repeat unchanged blockers. Required approvals still apply. It preserves code,
 identifiers and repository template
 headings. Secret values stay on disk; blocker questions name the required variable
 and distinguish clone/worktree `.env` from profile `.env`.
