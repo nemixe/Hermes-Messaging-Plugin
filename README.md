@@ -209,7 +209,7 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-gitlab` and `gitlab-cli` skills are seeded there from
+profile. Bundled `codev-gitlab`, `gitlab-cli`, `tunnel-preview` and `close-worktree` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
@@ -220,6 +220,21 @@ The relative path resolves from each
 profile's home, including on another backend. Reloading preserves shared profile
 files and avoids duplicate entries. Neither starter nor shared profile can be
 registered or deleted through GitLab Projects.
+
+`tunnel-preview` handles requested temporary public previews: one Pinggy SSH tunnel
+per web/API service, temporary application URL/origin environment settings, public
+verification and restoration on stop. It keeps preview state in the active project
+and does not start tunnels merely by installing or syncing the skill.
+
+`/close-worktree` removes a selected linked worktree after shutting down its
+dedicated app processes, preview tunnels and Docker dependencies. It verifies
+ownership, preserves shared infrastructure and volumes, and stops on unresolved
+work/data or shutdown failures. Creating or syncing the skill performs no cleanup.
+The worktree helper records the runtime's creator session ID and a unique creation
+ID in the linked worktree's Git administrative directory. Reuse never transfers
+ownership. `close-worktree` checks these records before runtime shutdown/removal;
+an issue/MR conversation match alone is insufficient. Legacy worktrees without
+creator records are not automatically claimed or cleaned up.
 
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.

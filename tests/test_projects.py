@@ -144,9 +144,11 @@ class ProjectSetup(unittest.TestCase):
             self.assertIn(str(backups[0].parent.parent), output)
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
-                viewed = json.loads(skill_view("codev-gitlab"))
-                self.assertEqual(Path(viewed["_source_path"]).resolve(),
-                                 (shared / "skills/codev-gitlab/SKILL.md").resolve())
+                for name in ("codev-gitlab", "tunnel-preview", "close-worktree"):
+                    viewed = json.loads(skill_view(name))
+                    self.assertEqual(Path(viewed["_source_path"]).resolve(),
+                                     (shared / "skills" / name / "SKILL.md").resolve())
+                    self.assertFalse((profile / "skills" / name).exists())
         before = {p: p.stat().st_mtime_ns for profile in [*profiles, shared] for p in profile.rglob("*") if p.is_file()}
         self.run_command("sync-knowledge")
         for path, mtime in before.items():

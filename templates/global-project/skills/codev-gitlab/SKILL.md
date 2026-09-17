@@ -69,6 +69,14 @@ Done when repository commands and file edits use a verified dedicated worktree.
    to that path for every command; use absolute paths for file tools. A `cd` in one
    isolated tool call may not persist into the next. Read the worktree's repository
    instructions before editing. Never switch or reset the shared clone's checkout.
+   Create from the owning Hermes session before delegating repository work. The
+   runtime must supply `HERMES_SESSION_ID`; never invent/export a different ID.
+   On creation the helper writes `codev-owner.json` inside this worktree's private
+   Git administrative directory (`git rev-parse --absolute-git-dir`). Read it and
+   retain its `creator_session_id`, `creator_session_key`, `creation_id`, profile,
+   clone, worktree and conversation in the session's project-local runtime record.
+   Existing-worktree reuse leaves ownership unchanged, including legacy worktrees
+   without a record. Sharing an issue/MR conversation does not transfer ownership.
 5. Reuse the same conversation key across events. For another owned repository,
    repeat these steps in that clone with the same key. The plugin serializes turns
    of a shared issue/MR conversation; different Cards get different worktrees.
@@ -80,6 +88,12 @@ Done when repository commands and file edits use a verified dedicated worktree.
    clone/worktree `.env`; provider/tool settings belong in profile `.env`. Git
    worktree creation does not copy ignored `.env` files. Use the documented on-disk
    provisioning procedure and protect secrets. Record new verified steps below.
+   When starting runtime dependencies, save worktree ownership and shutdown details
+   in private project-local runtime state keyed by the recorded worktree creation ID:
+   creator session, process/session handles, Docker context,
+   exact Compose project/files, container IDs and shared versus dedicated resources.
+   Use a worktree-specific Compose project name for a dedicated stack.
+   Keep these records outside the worktree so `close-worktree` can use them later.
 
 ## Task
 
@@ -92,6 +106,11 @@ repositories. When updating an existing MR, push to its verified source branch;
 the helper's local branch name is independent of that remote branch. Follow the
 task's push/review/deployment requirements. Verify the result of each external write
 before reporting it as done.
+
+When the user requests a temporary public preview, load `tunnel-preview` by name
+with `skill_view` for per-service tunnels, temporary environment updates and cleanup.
+When asked to close/remove a worktree, load `close-worktree` by name with
+`skill_view` to stop its dedicated runtime and preserve shared resources.
 
 ## Codex review
 

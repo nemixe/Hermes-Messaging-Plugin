@@ -1,5 +1,6 @@
 """Run the bundled worktree helper against disposable, real Git repositories."""
 import os
+import json
 from pathlib import Path
 import subprocess
 import sys
@@ -17,7 +18,8 @@ class CardWorktree(unittest.TestCase):
             root = Path(directory).resolve()
             clone = root / "workspace/42"
             clone.mkdir(parents=True)
-            env = {**os.environ, "HERMES_HOME": str(root), "GIT_CONFIG_GLOBAL": os.devnull,
+            env = {**os.environ, "HERMES_HOME": str(root), "HERMES_SESSION_ID": "creator-session",
+                   "HERMES_SESSION_KEY": "gitlab:42:issues:3", "GIT_CONFIG_GLOBAL": os.devnull,
                    "GIT_CONFIG_NOSYSTEM": "1"}
 
             def git(*args, cwd=clone):
@@ -37,6 +39,42 @@ class CardWorktree(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             worktree = Path(first.stdout.strip())
             self.assertEqual(worktree, clone / ".worktrees/42-issues-3")
+            owner_path = Path(git("rev-parse", "--absolute-git-dir", cwd=worktree)) / "codev-owner.json"
+            owner = json.loads(owner_path.read_text())
+            self.assertEqual(owner["creator_session_id"], "creator-session")
+            self.assertEqual(owner["conversation"], "42:issues:3")
+            self.assertEqual(owner["worktree"], str(worktree))
+            self.assertEqual(owner_path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
+            self.assertEqual(prepare("42:issues:3", clone, "--check-owner", "--creation-id",
+                                     owner["creation_id"]).returncode, 0)
+            self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner", "--creation-id",
+                                        "0" * 32).returncode, 0)
+            env["HERMES_SESSION_ID"] = "another-session"
+            self.assertEqual(prepare("42:issues:3").returncode, 0, "Reuse does not transfer ownership")
+            self.assertEqual(json.loads(owner_path.read_text()), owner)
+            self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
+            env["HERMES_SESSION_ID"] = "creator-session"
+            saved_owner = owner_path.read_text()
+            owner_path.write_text("{broken")
+            self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
+            owner_path.unlink()
+            foreign_owner = root / "foreign-owner.json"
+            foreign_owner.write_text(saved_owner)
+            owner_path.symlink_to(foreign_owner)
+            self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
+            self.assertEqual(foreign_owner.read_text(), saved_owner)
+            owner_path.unlink()
+            self.assertEqual(prepare("42:issues:3").returncode, 0)
+            self.assertFalse(owner_path.exists(), "Legacy reuse must not claim creator ownership")
+            self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
+            owner_path.write_text(saved_owner)
+            self.assertNotEqual(prepare("42:issues:99", clone, "--check-owner").returncode, 0)
+            self.assertFalse((clone / ".worktrees/42-issues-99").exists())
+            env["HERMES_SESSION_ID"] = ""
+            self.assertNotEqual(prepare("42:issues:98").returncode, 0)
+            self.assertFalse((clone / ".worktrees/42-issues-98").exists())
+            env["HERMES_SESSION_ID"] = "creator-session"
             (worktree / "draft.txt").write_text("Keep this draft")
             again = prepare("42:issues:3")
             self.assertEqual(again.returncode, 0, again.stderr)
@@ -52,11 +90,15 @@ class CardWorktree(unittest.TestCase):
             # Two prepares racing for one Card converge on one native worktree.
             commands = [subprocess.Popen([sys.executable, str(SCRIPT), "--clone", str(clone),
                                          "--card", "42:issues:4", "--start", initial],
-                                        env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        for _ in range(2)]
+                                        env={**env, "HERMES_SESSION_ID": f"racing-session-{index}"},
+                                        text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        for index in range(2)]
             outputs = [process.communicate(timeout=10) for process in commands]
             self.assertEqual([process.returncode for process in commands], [0, 0], outputs)
             self.assertEqual(outputs[0][0], outputs[1][0])
+            race_admin = Path(git("rev-parse", "--absolute-git-dir", cwd=outputs[0][0].strip()))
+            self.assertIn(json.loads((race_admin / "codev-owner.json").read_text())["creator_session_id"],
+                          {"racing-session-0", "racing-session-1"})
             # An occupied path or pre-existing branch must not be replaced.
             occupied = clone / ".worktrees/42-issues-7"
             occupied.mkdir()
