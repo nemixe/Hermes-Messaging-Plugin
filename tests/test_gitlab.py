@@ -687,6 +687,18 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("assigned", self.events[0].text)
         self.assertEqual(self.events[0].source.chat_id, "42:issues:3")
 
+    async def test_bot_self_assignment_starts_issue_session(self):
+        bot = {"id": 99, "username": "hermes-bot"}
+        self.todos = [self.todo(action_name="assigned", author=bot, body="Fix login"),
+                      self.todo(102, author=bot),
+                      self.todo(103, action_name="assigned", author=bot,
+                                target_type="MergeRequest")]
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 1)
+        self.assertIn("assigned", self.events[0].text)
+        self.assertEqual(self.events[0].user_id, "99")
+        self.assertEqual(self.events[0].source.chat_id, "42:issues:3")
+
     async def test_unauthorized_own_and_unmentioned_events_are_ignored(self):
         self.todos = [self.todo(i, **change) for i, change in enumerate((
             {"author": {"id": 99, "username": "hermes-bot"}}, {"author": {"id": 8}},
