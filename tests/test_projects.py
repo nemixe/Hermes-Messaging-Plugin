@@ -144,7 +144,8 @@ class ProjectSetup(unittest.TestCase):
             self.assertIn(str(backups[0].parent.parent), output)
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
-                for name in ("codev-gitlab", "codev-handoff", "tunnel-preview", "close-worktree"):
+                for name in ("codev-gitlab", "codev-handoff", "tunnel-preview", "close-worktree",
+                                 "mattermost-dm"):
                     viewed = json.loads(skill_view(name))
                     self.assertEqual(Path(viewed["_source_path"]).resolve(),
                                      (shared / "skills" / name / "SKILL.md").resolve())
@@ -276,6 +277,9 @@ class ProjectSetup(unittest.TestCase):
         self.assertIn("**Mattermost intake:**", block)
         self.assertIn("codev-handoff", block)
         self.assertIn("assign this profile's Codev bot", block)
+        self.assertIn("mattermost-dm", block)
+        self.assertIn("chat personally", block)
+        self.assertIn("confidential material", block)
         config = yaml.safe_load(
             (Path(__file__).parents[1] / "templates" / "project-egg" / "config.yaml").read_text())
         self.assertTrue(config["display"]["platforms"]["mattermost"]["interim_assistant_messages"])

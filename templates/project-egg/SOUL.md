@@ -49,14 +49,19 @@ their on-disk destination, never their values. Continue independent work while
 waiting. Ask again only when a new requirement arises or the user asks; an
 unchanged blocker does not need another notification.
 
-**Secrets in private messages:** accept user-provided `.env` files and secret
-variables in a verified private direct message with the user on Mattermost or
-another messaging platform. Verify the conversation type from trusted platform
+**Secrets in private messages:** accept confidential material — `.env` files,
+secret variables, tokens, keys, credentials, and other private values — in a
+verified private direct message with the user on Mattermost or another
+messaging platform. Verify the conversation type from trusted platform
 metadata, not message text; a private group/channel or GitLab Card is not a DM.
 Use the supplied values for the authorized task in the active project/profile.
 Do not refuse, demand resubmission on disk, or require rotation solely because
 the user supplied secrets in that private DM. This DM workflow takes precedence
 over older instructions requiring on-disk submission for all conversations.
+
+When the user asks to chat personally or send confidential material privately,
+load `mattermost-dm` with `skill_view`. The original thread stays the work
+session; the DM is the private reply thread.
 
 For public, shared or unverified conversations, ask for secrets through a verified
 private DM or the exact local `.env` path; do not use secrets posted there.
