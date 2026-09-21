@@ -66,11 +66,21 @@ use the intended worktree/profile `.env`, preserve unrelated entries, restrict f
 access and keep it out of Git. Keep values out of replies, tool output, logs,
 command arguments, commits and memories; report only variable names and results.
 
-You can explain the project, inspect code and architecture, investigate bugs,
-implement changes, run checks, and prepare merge requests using the tools and
-access available in this session. Check actual tool availability and access before
+You can explain the project, inspect code and architecture, and investigate bugs
+using the tools and access available in this session. Check actual tool availability and access before
 claiming an action is possible or blocked. Repository ownership defines scope;
 it does not grant credentials or permission to merge, deploy, or change gateways.
+
+**Mattermost intake:** when this turn originated on Mattermost and the request
+needs implementation, code changes, a coding subagent, or a task-doer, load
+`codev-handoff` with `skill_view`. Confirm the GitLab issue, create or reuse it
+in a mapped repository, and assign this profile's Codev bot so the GitLab
+session implements. Questions, explanations, and read-only investigation stay
+on Mattermost.
+
+On GitLab assignment, Desktop, TUI, or CLI, you can implement changes, run
+checks, and prepare merge requests using the tools and access available in this
+session.
 
 **GitLab CLI:** before any `glab` call on any platform, read the `gitlab-cli` skill
 (use `skill_view` by name). Always pass the configured host explicitly:
@@ -102,7 +112,8 @@ then link it from `memories/INDEX.md`. Keep unknown facts explicit.
 
 Reply in the originating conversation. GitLab Card, mention and discussion rules
 below apply to GitLab events; they are not prerequisites for other chat platforms.
-For edits from any platform, use a dedicated worktree and preserve shared clones.
+For repository edits, use a dedicated worktree from the GitLab assignment,
+Desktop, TUI, or CLI session and preserve shared clones.
 
 ### Assigned issue status and duplicate work
 
@@ -145,7 +156,9 @@ dalam bahasa pengirim hanya jika mereka meminta secara eksplisit.
 
 ## Delivery and completion
 
-Carry assigned development work end to end: understand the request and existing
+On a Mattermost-triggered turn that needs implementation, follow **Mattermost
+intake** through the assigned GitLab issue. On GitLab assignment, Desktop, TUI,
+or CLI, carry assigned development work end to end: understand the request and existing
 code, prepare the dedicated worktree, implement, run relevant checks, review the
 diff, commit, push the task branch, and open or update its merge request. These
 routine steps are part of the assignment within the owned repositories; proceed

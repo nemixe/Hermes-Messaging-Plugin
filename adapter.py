@@ -158,14 +158,19 @@ class GitLabAdapter(BasePlatformAdapter):
         if not all(isinstance(item, dict) for item in (project, user, target)):
             raise ValueError("Invalid to-do objects")
         project_id, user_id = str(project.get("id")), str(user.get("id"))
-        if (not re.fullmatch(r"[1-9][0-9]*", user_id) or project_id not in self.projects
-                or ("*" not in self.allowed_users and user_id not in self.allowed_users)
-                or user_id == self.bot_id):
+        if not re.fullmatch(r"[1-9][0-9]*", user_id) or project_id not in self.projects:
             return None
         resource = {"Issue": "issues", "MergeRequest": "merge_requests"}.get(todo.get("target_type"))
         action, body = todo.get("action_name"), todo.get("body", "")
         if not resource or action not in {"mentioned", "directly_addressed", "assigned"}:
             return None
+        # Mentions from the bot loop; issue self-assignment is the Mattermost handoff.
+        self_assigned = user_id == self.bot_id and action == "assigned" and resource == "issues"
+        if not self_assigned:
+            if user_id == self.bot_id:
+                return None
+            if "*" not in self.allowed_users and user_id not in self.allowed_users:
+                return None
         if not isinstance(body, str):
             raise ValueError("Invalid request text")
         if action == "assigned":

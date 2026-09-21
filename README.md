@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.19
+# Hermes GitLab messaging · 0.3.20
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -101,7 +101,7 @@ In **Messaging → GitLab** on the default backend, enter:
 Wildcard support requires plugin 0.3.1 or later. Save `*` in the default profile's
 Messaging → GitLab settings, then restart the default messaging gateway. This grants
 trigger access only within the registered repository list; it does not grant GitLab
-repository permissions. Empty values remain invalid, and the bot's own events are ignored.
+repository permissions. Empty values remain invalid. The bot's own mentions are ignored; assigning an issue to itself starts the Mattermost handoff into a GitLab coding session.
 
 The bot must be able to read repositories/issues/MRs, post comments, and be
 assigned issues. Hermes discovers its username using `/api/v4/user`. Credentials
@@ -212,7 +212,7 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-gitlab`, `gitlab-cli`, `tunnel-preview` and `close-worktree` skills are seeded there from
+profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview` and `close-worktree` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
@@ -259,6 +259,10 @@ before asking the user for project context. It applies to Mattermost, GitLab and
 Desktop conversations routed to the profile, and distinguishes supported tasks from
 the tools, credentials and permissions actually available. Mattermost still needs
 to reach the correct profile; a GitLab repository mapping does not route a chat channel.
+A Mattermost-triggered session answers questions and inspects code there. Implementation,
+code generation and task-doer work go through `codev-handoff`: confirm a GitLab issue,
+create or reuse it in a mapped repository, and assign this profile's Codev bot so the
+GitLab assignment session implements.
 
 The managed SOUL accepts and uses user-supplied `.env` files and secret variables
 for authorized tasks in verified private DMs on Mattermost or other messaging
@@ -298,8 +302,10 @@ visible there, including when the turn was triggered from Mattermost or GitLab.
 Messaging channels receive a one-line preamble on work that needs thinking
 (for example, "Oke, saya cek."), then the completion or an actionable blocker as
 the turn's final post. A question that can be answered in one short reply is
-posted as that answer. Assigned development work still runs
-through validation, branch push and a review-ready MR when possible. An
+posted as that answer. On Mattermost, implementation requests complete with the
+confirmed GitLab issue link after the bot is assigned. Assigned development work
+on GitLab, Desktop, TUI or CLI still runs through validation, branch push and a
+review-ready MR when possible. An
 immediately answerable question receives its answer directly. GitLab replies and
 MR descriptions use Bahasa Indonesia. It checks the codebase and accessible
 resources before asking, and asks an actionable question when a missing
@@ -319,6 +325,8 @@ The plugin supplies `card`, `conversation`, `clone`, `project`, `worktree`,
 The new `codev-gitlab` skill is bound to new GitLab sessions; every event also points
 resumed sessions to its instructions. It is written for this gateway's automatic
 discussion replies and does not depend on the older `gitlab-card` poller skill.
+`codev-handoff` is the Mattermost path: confirm a GitLab issue and assign the Codev
+bot so that GitLab session starts.
 
 The agent follows that skill to verify or provision the clone, then runs its bundled
 `scripts/worktree.py` helper with a verified base commit. The helper uses native Git
@@ -508,6 +516,8 @@ that account concurrently. Preserve this state during updates and migration.
 - After setup, mention the bot on an issue/MR or assign it a fresh issue from an
   allowed user. Expect a comment after the polling interval plus model time.
   Inspect gateway logs for fetch, routing, processing, or delivery failures.
+  A Mattermost implementation request should confirm an issue, assign the bot, and
+  start that GitLab assignment session; the bot's own mention comments stay ignored.
 - This follows GitLab **to-do creation**, not a complete event log. GitLab 17.8+
   with multiple to-dos enabled creates a new to-do per mention. Repeated issue
   assignment may not create another to-do; use a fresh mention for another response.
