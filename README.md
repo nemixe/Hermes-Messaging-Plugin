@@ -242,10 +242,10 @@ creator records are not automatically claimed or cleaned up.
 `mattermost-dm` opens a private Mattermost DM as the bot configured on the
 default messaging profile. A personal-chat request for confidential material
 stays on the original thread's session; the user's DM reply is collected into
-the recorded destination file so that session can continue. It reads
-`MATTERMOST_URL` and `MATTERMOST_TOKEN` from the default profile `.env` (the
-same file as `GITLAB_URL` / `GITLAB_TOKEN`). Installing or syncing the skill
-does not send messages.
+the recorded destination file so that session can continue. It reads the default profile's Mattermost messaging settings:
+`MATTERMOST_URL` and `MATTERMOST_TOKEN` from `.env`, or
+`platforms.mattermost` `url`/`token` in `config.yaml`. Installing or syncing
+the skill does not send messages.
 
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.
