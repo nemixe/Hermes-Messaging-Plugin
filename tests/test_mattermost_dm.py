@@ -19,7 +19,7 @@ ALICE_ID = "a" * 26
 CHANNEL_ID = "c" * 26
 POST_ID = "p" * 26
 TOKEN = "mm-bot-token-value"
-GITLAB_TOKEN = "glpat-should-never-be-sent"
+GITLAB_TOKEN = "not-a-gitlab-pat"
 
 
 def load_dm():
