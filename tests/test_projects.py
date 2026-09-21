@@ -262,6 +262,39 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual((profile / "SOUL.md").read_text(), soul)
         self.assertFalse((self.root / "profiles" / "personal" / "PROJECT.yaml").exists())
 
+    def test_orientation_keeps_session_workbench_and_messaging_posts_separate(self):
+        bundle = Path(__file__).parents[1] / "templates" / "project-egg" / "SOUL.md"
+        text = bundle.read_text()
+        start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
+        block = text.split(start, 1)[1].split(end, 1)[0]
+        self.assertIn("**Session workbench:**", block)
+        self.assertIn("**Messaging posts:**", block)
+        self.assertIn("hard-task preamble", block)
+        self.assertIn("extended thinking", block)
+        self.assertIn("Mattermost", block)
+        self.assertIn("Desktop", block)
+        config = yaml.safe_load(
+            (Path(__file__).parents[1] / "templates" / "project-egg" / "config.yaml").read_text())
+        self.assertTrue(config["display"]["platforms"]["mattermost"]["interim_assistant_messages"])
+        self.assertIn("Keep messaging posts concise.", text)
+        self.assertNotIn("Be brief. Keep responses concise and direct", text)
+        self.assertNotIn("Apply this communication rule across skills and platforms", block)
+
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles" / "commerce" / "SOUL.md"
+        old = (
+            "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
+            "essential details are needed.\n"
+        )
+        new = "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"
+        profile.write_text(profile.read_text().replace(new, old, 1))
+        self.assertIn(old, profile.read_text())
+        self.run_command("sync-knowledge")
+        after = profile.read_text()
+        self.assertIn(new, after)
+        self.assertNotIn("Be brief. Keep responses concise and direct", after)
+        self.assertIn("**Session workbench:**", after)
+
     def test_project_marker_preserves_metadata_and_survives_empty_registration(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         path = self.root / "profiles" / "existing"

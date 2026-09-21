@@ -13,3 +13,4 @@ display:
   platforms:
     mattermost:
       tool_progress: off
+      interim_assistant_messages: true

@@ -137,14 +137,17 @@ a started background task or a failed command is not a completed review.
 
 ## Notify and Ask
 
-**Preamble:** follow SOUL's first-response rule using native interim commentary.
-The gateway forwards it to the same discussion; continue the task after sending it.
+**Preamble:** follow SOUL's **Preamble first**. For assigned work, investigation,
+implementation or other extended thinking, send that one-line acknowledgement
+immediately so the originating discussion gets instant receipt. A short question
+that is the whole answer is the Notify post.
 
 **Notify:** return a concise Bahasa Indonesia final answer containing the result,
-validation, relevant links and remaining work. The gateway posts it once in the
-originating discussion. Do not separately post the same answer or append a machine
-result trailer. Follow SOUL's **Quiet execution** between the preamble and final
-answer; interrupt only for user questions or required input/approval.
+validation, relevant links and remaining work. The gateway posts that final
+answer once in the originating discussion. Follow SOUL's **Messaging posts** for
+the GitLab reply and **Session workbench** for working notes in the Hermes
+session. Interrupt the messaging channel for user questions or required
+input/approval.
 
 **Ask:** follow SOUL's **Actionable blockers**, resource-check and confirmation rules. When a missing fact,
 decision or approval prevents further progress, end with an actionable question in

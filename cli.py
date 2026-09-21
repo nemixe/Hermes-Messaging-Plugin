@@ -24,6 +24,13 @@ TEMPLATE_PROFILE = "project-egg"
 SHARED_PROFILE = "global-project"
 RESERVED_PROFILES = {"default", TEMPLATE_PROFILE, SHARED_PROFILE}
 PROJECT_MARKER = "hermes_gitlab_project"
+STARTER_BRIEF = (
+    "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
+    "essential details are needed.\n"
+)
+STARTER_SURFACES = (
+    "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"
+)
 
 
 def configure_project_directory(profile, *, destination=None):
@@ -82,6 +89,7 @@ def sync_project_knowledge(profile, config=None):
     after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
     after = after.replace("read `skills/codev-gitlab/SKILL.md` and follow",
                           "load `codev-gitlab` with `skill_view` and follow")
+    after = after.replace(STARTER_BRIEF, STARTER_SURFACES)
     data = None
     if config is not None:
         extra = PlatformConfig.from_dict(merge_platform_sections(config, config.get("gateway", {}), {})

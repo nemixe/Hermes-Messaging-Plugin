@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.16
+# Hermes GitLab messaging · 0.3.18
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -289,25 +289,24 @@ Use a new conversation to ensure the updated startup instructions are loaded.
 The block and `PROJECT.yaml` are plugin-managed; keep custom instructions outside
 the `hermes-gitlab:orientation` markers and learned facts in `memories/`.
 
-The bundled SOUL identifies the agent as **Codev**, starts work with a short, natural
-preamble (for example, "Oke, saya cek.") through Hermes's native interim replies,
-and carries assigned development
-work through validation, branch push and a review-ready MR when possible. After the
-preamble it works quietly, interrupting only for user questions or required input
-or approval, then gives a brief final result. Routine progress updates are sent
-only when requested. The acknowledgement confirms receipt once per request;
-tool results, phase transitions and elapsed time do not trigger another message.
-Workflow narration stays in working notes or the requested final deliverable.
-An immediately answerable question receives its answer directly. GitLab
-replies and MR descriptions use Bahasa Indonesia. It checks the codebase and
-accessible resources before asking, and asks an actionable question when a missing
-requirement prevents progress. Blocker requests bundle the known requirements,
-name exactly what the user must provide or do and where, and say what resumes
-afterward. The agent tries safe recovery first, continues independent work while
-waiting, and does not repeat unchanged blockers. Required approvals still apply. It preserves code,
-identifiers and repository template
-headings. Secret values stay on disk; blocker questions name the required variable
-and distinguish clone/worktree `.env` from profile `.env`.
+The bundled SOUL identifies the agent as **Codev**. The Hermes session (Desktop,
+TUI, CLI) is the workbench: working notes, findings, approach and progress stay
+visible there, including when the turn was triggered from Mattermost or GitLab.
+Messaging channels receive a one-line preamble on work that needs thinking
+(for example, "Oke, saya cek."), then the completion or an actionable blocker as
+the turn's final post. A question that can be answered in one short reply is
+posted as that answer. Assigned development work still runs
+through validation, branch push and a review-ready MR when possible. An
+immediately answerable question receives its answer directly. GitLab replies and
+MR descriptions use Bahasa Indonesia. It checks the codebase and accessible
+resources before asking, and asks an actionable question when a missing
+requirement prevents progress. Blocker requests go to the originating messaging
+channel, bundle the known requirements, name exactly what the user must provide
+or do and where, and say what resumes afterward. The agent tries safe recovery
+first, continues independent work while waiting, and does not repeat unchanged
+blockers. Required approvals still apply. It preserves code, identifiers and
+repository template headings. Secret values stay on disk; blocker questions name
+the required variable and distinguish clone/worktree `.env` from profile `.env`.
 
 ### Codev worktrees and setup knowledge
 
