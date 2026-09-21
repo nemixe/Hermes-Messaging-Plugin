@@ -39,12 +39,32 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                         manager._plugins["hermes-gitlab"].error)
         self.posts, self.requests, self.todos, self.events = [], [], [], []
         self.discussions = []
+        self.posted_discussions = {}
         self.closing_issues, self.related_issues = [], []
         self.fail_context = self.fail_send = self.fail_list = False
         self.fail_list_page = None
         self.sort_todos = True
         self.page_size = 100
         self.delivery_count = 0
+
+        def discussion_notes(discussion_id, create=False):
+            if discussion_id in self.posted_discussions:
+                return self.posted_discussions[discussion_id]
+            for item in self.discussions:
+                if item.get("id") == discussion_id:
+                    self.posted_discussions[discussion_id] = list(item.get("notes") or [])
+                    return self.posted_discussions[discussion_id]
+            if create:
+                self.posted_discussions[discussion_id] = []
+                return self.posted_discussions[discussion_id]
+            return None
+
+        def apply_note_edit(note_id, body):
+            for notes in list(self.posted_discussions.values()) + [item.get("notes") or [] for item in self.discussions]:
+                for note in notes:
+                    if str(note.get("id")) == str(note_id):
+                        note["body"] = body
+                        return
 
         async def api(request):
             self.assertEqual(request.headers.get("PRIVATE-TOKEN"), "test-pat")
@@ -64,10 +84,19 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                 chunk = todos[(page - 1) * self.page_size:page * self.page_size]
                 return web.json_response(chunk, headers={
                     "X-Next-Page": str(page + 1) if page * self.page_size < len(todos) else ""})
+            if request.method == "PUT":
+                payload = await request.json()
+                self.posts.append((request.path, payload))
+                note_id = request.path.rsplit("/", 1)[-1]
+                if not note_id.isdigit() or note_id.startswith("0"):
+                    return web.json_response({"error": "bad note"}, status=400)
+                apply_note_edit(note_id, payload.get("body"))
+                return web.json_response({"id": int(note_id)})
             if request.method == "POST":
                 if self.fail_send:
                     return web.json_response({"error": "test-pat secret response body"}, status=503)
-                self.posts.append((request.path, await request.json()))
+                payload = await request.json()
+                self.posts.append((request.path, payload))
                 self.delivery_count += 1
                 # GitLab replies complete other pending requests on this card too.
                 for todo in self.todos:
@@ -75,9 +104,13 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                     if request.path.startswith(f"/api/v4/projects/{todo['project']['id']}/"
                                                f"{resource}/{todo['target']['iid']}/"):
                         todo["state"] = "done"
+                note = {"id": 500 + self.delivery_count, "body": payload.get("body"), "system": False,
+                        "author": {"id": 99, "username": "hermes-bot"}}
                 if request.path.endswith("/discussions"):
-                    return web.json_response({"id": "c" * 40, "notes": [{"id": 500 + self.delivery_count}]}, status=201)
-                return web.json_response({"id": 500 + self.delivery_count}, status=201)
+                    self.posted_discussions["c" * 40] = [note]
+                    return web.json_response({"id": "c" * 40, "notes": [note]}, status=201)
+                discussion_notes(request.path[:-len("/notes")].rsplit("/", 1)[-1], create=True).append(note)
+                return web.json_response(note, status=201)
             if self.fail_context:
                 return web.json_response({"error": "test-pat secret response body"}, status=503)
             if request.path.endswith(("/closes_issues", "/related_issues")):
@@ -90,6 +123,12 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                 chunk = self.discussions[(page - 1) * self.page_size:page * self.page_size]
                 return web.json_response(chunk, headers={
                     "X-Next-Page": str(page + 1) if page * self.page_size < len(self.discussions) else ""})
+            if "/discussions/" in request.path and not request.path.endswith("/notes"):
+                discussion_id = request.path.rsplit("/", 1)[-1]
+                notes = discussion_notes(discussion_id)
+                if notes is None:
+                    return web.json_response({"error": "missing discussion"}, status=404)
+                return web.json_response({"id": discussion_id, "notes": notes})
             if request.path.endswith("/notes"):
                 return web.json_response([
                     {"id": 7, "body": "Earlier context", "system": False,
@@ -570,6 +609,54 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                              self.adapter.send("42:issues:3", "Second reply"))
         self.assertEqual(sum(path.endswith("/discussions") for path, _ in self.posts), 1)
         self.assertEqual(len(self.posts), 2)
+
+    async def test_working_status_edits_last_matching_note_instead_of_stacking(self):
+        working = "⏳ Working — {} min — iteration {}, waiting for provider response"
+        first = await self.adapter.send("42:issues:3", working.format(3, 1))
+        self.assertTrue(first.success)
+        self.assertTrue(self.posts[-1][0].endswith("/discussions"))
+        second = await self.adapter.send("42:issues:3", working.format(6, 32))
+        self.assertTrue(second.success)
+        self.assertEqual(second.message_id, first.message_id)
+        self.assertEqual(self.posts[-1][0], f"/api/v4/projects/42/issues/3/notes/{first.message_id}")
+        self.assertEqual(self.posts[-1][1]["body"], working.format(6, 32))
+        self.assertTrue((await self.adapter.send("42:issues:3", "Done.")).success)
+        self.assertTrue(self.posts[-1][0].endswith("/discussions/" + "c" * 40 + "/notes"))
+        later = await self.adapter.send("42:issues:3", working.format(9, 40))
+        self.assertTrue(later.success)
+        self.assertTrue(self.posts[-1][0].endswith("/discussions/" + "c" * 40 + "/notes"))
+        self.assertNotEqual(later.message_id, first.message_id)
+
+        self.discussions = [{"id": "status", "notes": [
+            {"id": 7, "body": "@hermes-bot please help", "system": False, "author": {"id": 7}},
+            {"id": 8, "body": working.format(3, 1), "system": False,
+             "author": {"id": 99, "username": "hermes-bot"}},
+        ]}]
+        threaded = await self.adapter.send("42:issues:3", working.format(12, 32),
+                                           metadata={"thread_id": "discussion:status"})
+        self.assertTrue(threaded.success)
+        self.assertEqual(threaded.message_id, "8")
+        self.assertEqual(self.posts[-1][0], "/api/v4/projects/42/issues/3/notes/8")
+        self.discussions = [{"id": "foreign", "notes": [
+            {"id": 9, "body": working.format(3, 1), "system": False, "author": {"id": 7}},
+        ]}]
+        foreign = await self.adapter.send("42:issues:3", working.format(15, 41),
+                                          metadata={"thread_id": "discussion:foreign"})
+        self.assertTrue(foreign.success)
+        self.assertTrue(self.posts[-1][0].endswith("/discussions/foreign/notes"))
+
+    async def test_edit_message_updates_existing_note(self):
+        result = await self.adapter.edit_message(
+            "42:issues:3", "8", "⏳ Working — 12 min — iteration 32, waiting for provider response")
+        self.assertTrue(result.success)
+        self.assertEqual(result.message_id, "8")
+        self.assertEqual(self.posts[-1][0], "/api/v4/projects/42/issues/3/notes/8")
+        self.assertEqual(self.posts[-1][1]["body"],
+                         "⏳ Working — 12 min — iteration 32, waiting for provider response")
+        self.assertFalse((await self.adapter.edit_message("42:issues:3", "bad", "updated")).success)
+        self.assertFalse((await self.adapter.edit_message("43:issues:3", "8", "updated")).success)
+        await self.adapter.disconnect()
+        self.assertFalse((await self.adapter.edit_message("42:issues:3", "8", "updated")).success)
 
     async def test_real_native_first_contact_notice_is_suppressed(self):
         runner = await self.native_runner()

@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.18
+# Hermes GitLab messaging · 0.3.19
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -48,6 +48,9 @@ The native home-channel prompt and Codex auto-compaction tuning notice are hidde
 on GitLab by default. Actual answers (including quoted notices), failures and
 approval messages still pass through. The platform prompt also asks the agent to
 answer the project request directly and skip generic onboarding invitations.
+
+Long-running heartbeats (`⏳ Working — N min`) edit the last matching bot note in
+that discussion, the same in-place update Mattermost uses.
 
 ## Install
 
