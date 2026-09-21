@@ -12,5 +12,8 @@ display:
   interim_assistant_messages: true
   platforms:
     mattermost:
-      tool_progress: off
+      tool_progress: false
+      interim_assistant_messages: true
+    gitlab:
+      tool_progress: false
       interim_assistant_messages: true

@@ -39,6 +39,13 @@ def ids(value):
     return result
 
 
+_WORKING_STATUS = re.compile(r"^\s*⏳\s+Working\s+[—-]\s+\d+\s+min(?:\s|$)", re.I)
+
+
+def _escape_gitlab_body(content):
+    return re.sub(r"(?m)^([ \t]*)/", r"\1\\/", content)
+
+
 class GitLabAdapter(BasePlatformAdapter):
     interactive_resume = False
 
@@ -578,8 +585,8 @@ class GitLabAdapter(BasePlatformAdapter):
             log.warning("GitLab processing or delivery failed; saved request will be retried")
 
     async def send(self, chat_id, content, reply_to=None, metadata=None):
-        match = re.fullmatch(r"([1-9][0-9]*):(issues|merge_requests):([1-9][0-9]*)", str(chat_id))
-        if not match or match[1] not in self.projects:
+        match = self._card_match(chat_id)
+        if not match:
             return SendResult(success=False, error="Invalid or unauthorized GitLab target")
         if not isinstance(content, str) or not content.strip() or len(content) > 1000000:
             return SendResult(success=False, error="GitLab reply must contain 1–1000000 characters")
@@ -599,7 +606,7 @@ class GitLabAdapter(BasePlatformAdapter):
             if approval_id not in {a.get("request_id") for a in list_gateway_approvals(self._source_session_key(source))}:
                 approval_id = None
         # Keep generated /close, /assign, etc. as text rather than GitLab quick actions.
-        content = re.sub(r"(?m)^([ \t]*)/", r"\1\\/", content)
+        content = _escape_gitlab_body(content)
         try:
             async with self._reply_lock:
                 thread = str((metadata or {}).get("thread_id") or "")
@@ -620,8 +627,8 @@ class GitLabAdapter(BasePlatformAdapter):
                             if self._card_source(card, {"id": self.bot_id}).profile != profile:
                                 raise ValueError("GitLab delivery profile route has changed")
                     chat_id, discussion = delivery["card"], delivery["discussion"]
-                    match = re.fullmatch(r"([1-9][0-9]*):(issues|merge_requests):([1-9][0-9]*)", chat_id)
-                    if not match or match[1] not in self.projects:
+                    match = self._card_match(chat_id)
+                    if not match:
                         raise ValueError("GitLab delivery repository is no longer registered")
                 elif str(reply_to or "").startswith("todo:"):
                     # Reconstruct destinations for native turns saved before 0.3.5.
@@ -638,12 +645,14 @@ class GitLabAdapter(BasePlatformAdapter):
                 if not discussion and self._db is not None:
                     row = self._db.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
                     discussion = row[0] if row else None
+                if discussion and not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
+                    raise ValueError("Invalid GitLab discussion ID")
                 route = f"projects/{match[1]}/{match[2]}/{match[3]}/discussions"
-                if discussion:
-                    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
-                        raise ValueError("Invalid GitLab discussion ID")
+                # Heartbeats reuse the last matching Working note in this discussion.
+                note = await self._update_matching_status_note(match, discussion, content)
+                if note is None and discussion:
                     note = await self._api("POST", route + f"/{discussion}/notes", json={"body": content})
-                else:
+                elif note is None:
                     created = await self._api("POST", route, json={"body": content})
                     discussion = str(created["id"])
                     if not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
@@ -661,6 +670,48 @@ class GitLabAdapter(BasePlatformAdapter):
                 return SendResult(success=True, message_id=str(note["id"]))
         except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, KeyError, TypeError, IndexError, sqlite3.Error):
             return SendResult(success=False, error="GitLab comment delivery failed; check gateway logs and GitLab")
+
+    def _card_match(self, chat_id):
+        match = re.fullmatch(r"([1-9][0-9]*):(issues|merge_requests):([1-9][0-9]*)", str(chat_id))
+        if not match or match[1] not in self.projects:
+            return None
+        return match
+
+    async def _edit_note(self, match, note_id, content):
+        if not re.fullmatch(r"[1-9][0-9]*", str(note_id)):
+            raise ValueError("Invalid GitLab note")
+        return await self._api("PUT", f"projects/{match[1]}/{match[2]}/{match[3]}/notes/{note_id}",
+                               json={"body": content})
+
+    async def _update_matching_status_note(self, match, discussion, content):
+        if not discussion or not _WORKING_STATUS.match(content):
+            return None
+        try:
+            existing = await self._api("GET", f"projects/{match[1]}/{match[2]}/{match[3]}/discussions/{discussion}")
+            notes = existing.get("notes") if isinstance(existing, dict) else None
+            last = next((note for note in reversed(notes or []) if not note.get("system")), None)
+            if not last or not _WORKING_STATUS.match(str(last.get("body") or "")):
+                return None
+            author = (last.get("author") or {}).get("id")
+            if author is not None and str(author) != str(self.bot_id):
+                return None
+            return await self._edit_note(match, last.get("id"), content)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, KeyError, TypeError, IndexError):
+            return None
+
+    async def edit_message(self, chat_id, message_id, content, *, finalize=False):
+        match = self._card_match(chat_id)
+        if not match:
+            return SendResult(success=False, error="Invalid or unauthorized GitLab target")
+        if not isinstance(content, str) or not content.strip() or len(content) > 1000000:
+            return SendResult(success=False, error="GitLab reply must contain 1–1000000 characters")
+        content = _escape_gitlab_body(content)
+        try:
+            async with self._reply_lock:
+                note = await self._edit_note(match, message_id, content)
+                return SendResult(success=True, message_id=str(note["id"]))
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, KeyError, TypeError, IndexError):
+            return SendResult(success=False, error="GitLab comment edit failed; check gateway logs and GitLab")
 
     async def get_chat_info(self, chat_id):
         return {"name": f"GitLab {chat_id}", "type": "group"}

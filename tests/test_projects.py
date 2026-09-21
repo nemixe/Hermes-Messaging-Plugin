@@ -276,6 +276,9 @@ class ProjectSetup(unittest.TestCase):
         config = yaml.safe_load(
             (Path(__file__).parents[1] / "templates" / "project-egg" / "config.yaml").read_text())
         self.assertTrue(config["display"]["platforms"]["mattermost"]["interim_assistant_messages"])
+        self.assertFalse(config["display"]["platforms"]["mattermost"]["tool_progress"])
+        self.assertTrue(config["display"]["platforms"]["gitlab"]["interim_assistant_messages"])
+        self.assertFalse(config["display"]["platforms"]["gitlab"]["tool_progress"])
         self.assertIn("Keep messaging posts concise.", text)
         self.assertNotIn("Be brief. Keep responses concise and direct", text)
         self.assertNotIn("Apply this communication rule across skills and platforms", block)
