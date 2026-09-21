@@ -240,12 +240,13 @@ an issue/MR conversation match alone is insufficient. Legacy worktrees without
 creator records are not automatically claimed or cleaned up.
 
 `mattermost-dm` opens a private Mattermost DM as the bot configured on the
-default messaging profile. A personal-chat request for confidential material
-stays on the original thread's session; the user's DM reply is collected into
-the recorded destination file so that session can continue. It reads the default profile's Mattermost messaging settings:
-`MATTERMOST_URL` and `MATTERMOST_TOKEN` from `.env`, or
-`platforms.mattermost` `url`/`token` in `config.yaml`. Installing or syncing
-the skill does not send messages.
+default messaging profile. The DM is a separate session: it asks for
+confidential material, names the dest file (for example
+`$HERMES_HOME/memories/env.md`), and writes the reply there. The original
+thread reads that file on a later turn. It reads the default profile's
+Mattermost messaging settings: `MATTERMOST_URL` and `MATTERMOST_TOKEN` from
+`.env`, or `platforms.mattermost` `url`/`token` in `config.yaml`. Installing
+or syncing the skill does not send messages.
 
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.

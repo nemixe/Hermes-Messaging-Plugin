@@ -230,11 +230,11 @@ class MattermostDM(unittest.TestCase):
         self.assertNotIn(GITLAB_TOKEN, result.stdout)
         self.assertNotIn(TOKEN, result.stderr + result.stdout)
 
-    def test_request_waits_for_dm_reply_then_origin_session_continues(self):
+    def test_request_records_dest_for_a_separate_dm_session_to_write(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             profile = root / "profiles" / "commerce"
-            dest = profile / "workspace" / "42" / ".env"
+            dest = profile / "memories" / "env.md"
             dest.parent.mkdir(parents=True)
             self.write_env(root, MATTERMOST_URL="https://mm.example.invalid", MATTERMOST_TOKEN=TOKEN)
             environ = {
@@ -243,8 +243,11 @@ class MattermostDM(unittest.TestCase):
                 "HERMES_SESSION_KEY": "agent:commerce:gitlab:group:42:issues:3",
             }
             requested = self.dm.request_dm(
-                "alice", "Mohon balas di thread DM ini.", dest,
-                "DATABASE_URL,API_KEY", environ=environ, home=str(root), request=self.api)
+                "alice",
+                "Mohon kirim DATABASE_URL di thread DM ini.\n"
+                f"Nilainya akan saya simpan di `{dest}`.\n"
+                "Setelah terkirim di sini, balas di thread asal supaya kerja lanjut.",
+                dest, "DATABASE_URL,API_KEY", environ=environ, home=str(root), request=self.api)
             self.assertTrue(requested["ok"])
             self.assertEqual(requested["status"], "pending")
             self.assertEqual(requested["user_id"], ALICE_ID)
@@ -255,24 +258,23 @@ class MattermostDM(unittest.TestCase):
             self.assertEqual(requested["origin_session_id"], "origin-session")
             self.assertNotIn("origin_session_key", requested)
             self.assertNotIn(TOKEN, json.dumps(requested))
+            self.assertEqual(self.dm.status_dm(requested["id"], environ=environ, home=str(root))["status"],
+                             "pending")
             pending = self.dm.pending_dm(ALICE_ID, CHANNEL_ID, environ=environ, home=str(root))
             self.assertEqual(pending["id"], requested["id"])
             self.assertTrue(pending["pending"])
             self.assertEqual(
                 self.dm.pending_dm(ALICE_ID, "z" * 26, environ=environ, home=str(root)),
                 {"ok": True, "pending": False})
-            waiting = self.dm.wait_dm(requested["id"], timeout=0.2, poll=0.05,
-                                      environ=environ, home=str(root))
-            self.assertEqual(waiting["status"], "pending")
-            self.assertTrue(waiting.get("waited"))
             dest.write_text("DATABASE_URL=secret\n")
             completed = self.dm.complete_dm(requested["id"], environ=environ, home=str(root))
             self.assertEqual(completed["status"], "complete")
-            finished = self.dm.wait_dm(requested["id"], timeout=0.2, poll=0.05,
-                                       environ=environ, home=str(root))
+            finished = self.dm.status_dm(requested["id"], environ=environ, home=str(root))
             self.assertEqual(finished["status"], "complete")
+            self.assertEqual(finished["dest"], str(dest.resolve()))
             self.assertEqual(finished["origin_session_id"], "origin-session")
             self.assertNotIn("secret", json.dumps(finished))
+            self.assertEqual(dest.read_text(), "DATABASE_URL=secret\n")
 
     def test_new_request_supersedes_previous_pending_for_the_same_user(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -289,7 +291,7 @@ class MattermostDM(unittest.TestCase):
             self.assertNotEqual(first["id"], second["id"])
             self.assertEqual(self.dm.pending_dm(ALICE_ID, environ=environ, home=str(root))["id"],
                              second["id"])
-            self.assertEqual(self.dm.wait_dm(first["id"], timeout=0, environ=environ, home=str(root))["status"],
+            self.assertEqual(self.dm.status_dm(first["id"], environ=environ, home=str(root))["status"],
                              "superseded")
 
     def test_request_accepts_a_confidential_file_other_than_dotenv(self):

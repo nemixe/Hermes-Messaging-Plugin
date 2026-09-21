@@ -18,7 +18,6 @@ ENV_KEY = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REQUEST_ID = re.compile(r"^[0-9a-f]{32}$")
 MAX_POST_LENGTH = 4000
 LOOPBACK = {"localhost", "127.0.0.1", "::1"}
-DEFAULT_WAIT = 150
 
 
 def parse_env(path):
@@ -350,24 +349,16 @@ def complete_dm(request_id, *, environ=None, home=None):
     return {"ok": True, **public_record(data)}
 
 
-def wait_dm(request_id, *, timeout=DEFAULT_WAIT, poll=1.0, environ=None, home=None):
+def status_dm(request_id, *, environ=None, home=None):
     if not REQUEST_ID.fullmatch(request_id or ""):
         raise ValueError("Supply the Mattermost DM request id")
     root = store_dir(environ, home)
     path = root / f"{request_id}.json"
-    deadline = time.monotonic() + max(0.0, float(timeout))
-    while True:
-        with _lock(root):
-            if not path.is_file():
-                raise ValueError("Mattermost DM request not found")
-            data = _read_record(path)
-        if data.get("status") == "complete":
-            return {"ok": True, **public_record(data)}
-        if data.get("status") != "pending":
-            return {"ok": True, **public_record(data)}
-        if time.monotonic() >= deadline:
-            return {"ok": True, "waited": True, **public_record(data)}
-        time.sleep(max(0.05, float(poll)))
+    with _lock(root):
+        if not path.is_file():
+            raise ValueError("Mattermost DM request not found")
+        data = _read_record(path)
+    return {"ok": True, **public_record(data)}
 
 
 def _run(args):
@@ -387,24 +378,23 @@ def _run(args):
         if not args.id:
             raise ValueError("complete requires --id")
         return complete_dm(args.id, home=args.home)
-    if args.command == "wait":
+    if args.command == "status":
         if not args.id:
-            raise ValueError("wait requires --id")
-        return wait_dm(args.id, timeout=args.timeout, home=args.home)
+            raise ValueError("status requires --id")
+        return status_dm(args.id, home=args.home)
     raise ValueError("Unknown Mattermost DM command")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", nargs="?", default="send",
-                        choices=("send", "request", "pending", "complete", "wait"))
+                        choices=("send", "request", "pending", "complete", "status"))
     parser.add_argument("--user", help="Mattermost username, email, or user ID")
     parser.add_argument("--message", help="DM text")
     parser.add_argument("--dest", help="Profile path that will receive the confidential material")
     parser.add_argument("--keys", help="Comma-separated names of the confidential items to collect")
     parser.add_argument("--id", help="Personal-chat request id")
     parser.add_argument("--channel", help="Mattermost DM channel ID")
-    parser.add_argument("--timeout", type=float, default=DEFAULT_WAIT)
     parser.add_argument("--home", help="Default Hermes home whose .env holds Mattermost credentials")
     args = parser.parse_args()
     try:
