@@ -212,7 +212,7 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview` and `close-worktree` skills are seeded there from
+profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`, `close-worktree` and `mattermost-dm` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
@@ -239,6 +239,14 @@ ownership. `close-worktree` checks these records before runtime shutdown/removal
 an issue/MR conversation match alone is insufficient. Legacy worktrees without
 creator records are not automatically claimed or cleaned up.
 
+`mattermost-dm` opens a private Mattermost DM as the bot configured on the
+default messaging profile. A personal-chat request for confidential material
+stays on the original thread's session; the user's DM reply is collected into
+the recorded destination file so that session can continue. It reads
+`MATTERMOST_URL` and `MATTERMOST_TOKEN` from the default profile `.env` (the
+same file as `GITLAB_URL` / `GITLAB_TOKEN`). Installing or syncing the skill
+does not send messages.
+
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.
 `SOUL.md` points architecture tasks to `prompts/architecture.md`, which uses that
@@ -264,12 +272,13 @@ code generation and task-doer work go through `codev-handoff`: confirm a GitLab 
 create or reuse it in a mapped repository, and assign this profile's Codev bot so the
 GitLab assignment session implements.
 
-The managed SOUL accepts and uses user-supplied `.env` files and secret variables
-for authorized tasks in verified private DMs on Mattermost or other messaging
-platforms, without treating private delivery alone as a leak. Shared/public or
-unverified conversations use a verified DM or local `.env` instead. Secret values
-stay out of replies, logs, Git and memories. This is agent guidance, not a transport
-filter; it updates with the managed orientation block during profile sync.
+The managed SOUL accepts confidential material — `.env` files, secret variables,
+tokens, keys, credentials, and other private values — for authorized tasks in
+verified private DMs on Mattermost or other messaging platforms, without treating
+private delivery alone as a leak. Shared/public or unverified conversations use
+a verified DM or local `.env` instead. Secret values stay out of replies, logs,
+Git and memories. This is agent guidance, not a transport filter; it updates with
+the managed orientation block during profile sync.
 
 Mapping saves and removals refresh the affected inventory. Default-backend plugin
 startup backfills existing registered profiles, clears disabled mappings from their
