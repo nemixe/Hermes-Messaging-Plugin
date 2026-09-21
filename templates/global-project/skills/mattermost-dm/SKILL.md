@@ -9,9 +9,10 @@ metadata:
 # Mattermost DM
 
 The original thread stays the work session. The Mattermost DM is the private
-reply thread for confidential material. Credentials are `MATTERMOST_URL` and
-`MATTERMOST_TOKEN` from the default profile `.env` (the same messaging config
-file as `GITLAB_URL` / `GITLAB_TOKEN`).
+reply thread for confidential material. Credentials are the default profile's
+Mattermost messaging settings: `MATTERMOST_URL` and `MATTERMOST_TOKEN` in `.env`,
+or `platforms.mattermost` `url`/`token` in `config.yaml` — the same keys the
+Mattermost gateway uses.
 
 Helper:
 
@@ -69,5 +70,7 @@ python3 "$HERMES_HOME/../global-project/skills/mattermost-dm/scripts/dm.py" \
 ```
 
 `pending` must match this DM. Report only item names. If the helper reports
-missing Mattermost credentials, add `MATTERMOST_URL` and `MATTERMOST_TOKEN`
-to the default profile `.env`.
+missing Mattermost credentials, set `MATTERMOST_URL` and `MATTERMOST_TOKEN`
+on the default profile (`.env` or `config.yaml` `platforms.mattermost`). A
+Cloudflare 1010/403 means the server blocked this API client; ask the
+Mattermost admin to allow it from this host.

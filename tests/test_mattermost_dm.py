@@ -140,6 +140,29 @@ class MattermostDM(unittest.TestCase):
             self.assertEqual(url, "https://mm.example.invalid")
             self.assertEqual(token, TOKEN)
 
+    def test_reads_mattermost_token_from_default_config_yaml(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.write_env(root, GITLAB_TOKEN=GITLAB_TOKEN, GITLAB_URL="https://gitlab.example.invalid")
+            (root / "config.yaml").write_text(
+                "platforms:\n  mattermost:\n    enabled: true\n"
+                f"    token: {TOKEN}\n    extra:\n      url: https://mm.example.invalid\n")
+            url, token, _allowed, home = self.dm.credentials({"HERMES_HOME": str(root / "profiles" / "commerce")},
+                                                             home=str(root))
+            self.assertEqual(home, root)
+            self.assertEqual(url, "https://mm.example.invalid")
+            self.assertEqual(token, TOKEN)
+            result = self.send(environ={"HERMES_HOME": str(root / "profiles" / "commerce")}, home=str(root))
+        self.assertEqual(result["user_id"], ALICE_ID)
+
+    def test_cloudflare_1010_names_bot_protection_not_a_missing_token(self):
+        message = self.dm.http_error_message(
+            403, "users/me", "<html>Cloudflare error 1010 Access denied</html>", TOKEN)
+        self.assertIn("1010", message)
+        self.assertIn("Cloudflare", message)
+        self.assertNotIn(TOKEN, message)
+        self.assertNotIn(GITLAB_TOKEN, message)
+
     def test_missing_mattermost_token_does_not_fall_back_to_gitlab_token(self):
         with tempfile.TemporaryDirectory() as directory:
             self.write_env(directory, GITLAB_TOKEN=GITLAB_TOKEN, GITLAB_URL="https://gitlab.example.invalid",
@@ -191,6 +214,7 @@ class MattermostDM(unittest.TestCase):
         for request in seen:
             self.assertIsInstance(request, Request)
             self.assertEqual(request.get_header("Authorization"), f"Bearer {TOKEN}")
+            self.assertEqual(request.get_header("User-agent"), "Hermes-Agent")
             self.assertNotIn(GITLAB_TOKEN, request.get_header("Authorization"))
         self.assertEqual(seen[2].full_url, "https://mm.example.invalid/api/v4/channels/direct")
 

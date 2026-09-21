@@ -55,19 +55,49 @@ def messaging_home(environ=None, home=None):
     return Path.home() / ".hermes"
 
 
+def config_mattermost(root):
+    """Read Mattermost url/token/allowlist from default-profile config.yaml."""
+    path = root / "config.yaml"
+    if not path.is_file():
+        return "", "", ""
+    try:
+        import yaml
+        data = yaml.safe_load(path.read_text()) or {}
+    except Exception:
+        return "", "", ""
+    if not isinstance(data, dict):
+        return "", "", ""
+    platforms = data.get("platforms")
+    if not isinstance(platforms, dict):
+        return "", "", ""
+    mattermost = platforms.get("mattermost")
+    if not isinstance(mattermost, dict):
+        return "", "", ""
+    extra = mattermost.get("extra") if isinstance(mattermost.get("extra"), dict) else {}
+    url = str(mattermost.get("url") or extra.get("url") or "").strip()
+    token = str(mattermost.get("token") or extra.get("token") or "").strip()
+    allowed = mattermost.get("allowed_users", extra.get("allowed_users", ""))
+    if isinstance(allowed, list):
+        allowed = ",".join(str(item) for item in allowed if str(item).strip())
+    return url, token, str(allowed or "")
+
+
 def credentials(environ=None, home=None):
     env = os.environ if environ is None else environ
     root = messaging_home(env, home)
     file_values = parse_env(root / ".env") if (root / ".env").is_file() else {}
-    url = (env.get("MATTERMOST_URL") or file_values.get("MATTERMOST_URL") or "").strip()
-    token = (env.get("MATTERMOST_TOKEN") or file_values.get("MATTERMOST_TOKEN") or "").strip()
+    yaml_url, yaml_token, yaml_allowed = config_mattermost(root)
+    url = (env.get("MATTERMOST_URL") or file_values.get("MATTERMOST_URL") or yaml_url or "").strip()
+    token = (env.get("MATTERMOST_TOKEN") or file_values.get("MATTERMOST_TOKEN") or yaml_token or "").strip()
     allowed = env.get("MATTERMOST_ALLOWED_USERS")
     if allowed is None:
-        allowed = file_values.get("MATTERMOST_ALLOWED_USERS", "")
+        allowed = file_values.get("MATTERMOST_ALLOWED_USERS")
+        if allowed is None:
+            allowed = yaml_allowed
     if not url or not token:
         raise ValueError(
-            "Set MATTERMOST_URL and MATTERMOST_TOKEN in the default profile .env "
-            "(the same messaging config file as GITLAB_URL)")
+            "Configure Mattermost on the default profile: MATTERMOST_URL and "
+            "MATTERMOST_TOKEN in .env, or platforms.mattermost url/token in config.yaml")
     return url, token, allowed, root
 
 
@@ -103,12 +133,27 @@ def allowlist(raw):
     return {part.strip() for part in text.split(",") if part.strip()}
 
 
+def http_error_message(code, path, body, token):
+    text = public_text(body, token)
+    lowered = text.lower()
+    if int(code) == 403 and ("1010" in text or "cloudflare" in lowered):
+        return (
+            f"Mattermost API 403 for {path}: Cloudflare error 1010 blocked this client. "
+            "The helper used the default profile Mattermost bot token. Ask the Mattermost "
+            "admin to allow API clients from this host.")
+    return f"Mattermost API {code} for {path}: {text}"
+
+
 def http_request(base_url, token, method, path, payload=None, timeout=30):
     if ".." in path:
         raise ValueError("Invalid Mattermost API path")
     url = f"{base_url}/api/v4/{path.lstrip('/')}"
     body = None if payload is None else json.dumps(payload).encode("utf-8")
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/json",
+        "User-Agent": "Hermes-Agent",
+    }
     if body is not None:
         headers["Content-Type"] = "application/json"
     request = Request(url, data=body, method=method, headers=headers)
@@ -117,8 +162,8 @@ def http_request(base_url, token, method, path, payload=None, timeout=30):
             raw = response.read().decode("utf-8")
             return json.loads(raw) if raw else {}
     except HTTPError as error:
-        detail = public_text(error.read().decode("utf-8", "replace")[:300], token)
-        raise ValueError(f"Mattermost API {error.code} for {path}: {detail}") from None
+        raise ValueError(http_error_message(
+            error.code, path, error.read().decode("utf-8", "replace")[:300], token)) from None
     except URLError:
         raise ValueError("Mattermost request failed; check MATTERMOST_URL") from None
 
