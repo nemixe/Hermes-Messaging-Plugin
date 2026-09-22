@@ -1,7 +1,7 @@
 name: hermes-gitlab
 label: GitLab
 kind: platform
-version: 0.3.22
+version: 0.3.23
 description: Manage GitLab project profiles in Hermes Desktop and poll bot mentions and issue assignments.
 platforms:
   - gitlab
@@ -18,4 +18,8 @@ requires_env:
 optional_env:
   - name: GITLAB_PROJECTS
     description: Comma-separated numeric project IDs for single-profile mode; managed routing uses config.yaml
+    password: false
+  - name: GITLAB_MAX_WORKERS
+    prompt: Concurrent workers
+    description: How many different GitLab cards may run at once. Leave empty to use 5. Enter an integer from 1 to 64, then restart the gateway.
     password: false

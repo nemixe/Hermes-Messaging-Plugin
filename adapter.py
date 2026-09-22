@@ -26,6 +26,7 @@ ENV = (
     ("GITLAB_TOKEN", "token", None),
     ("GITLAB_PROJECTS", "projects", None),
     ("GITLAB_ALLOWED_USERS", "allowed_users", None),
+    ("GITLAB_MAX_WORKERS", "max_workers", None),
 )
 
 
@@ -90,7 +91,8 @@ class GitLabAdapter(BasePlatformAdapter):
         self.poll_interval = float(config.extra.get("poll_interval", 30))
         if not math.isfinite(self.poll_interval) or self.poll_interval < 5:
             raise ValueError("poll_interval must be at least 5 seconds")
-        self.max_workers = worker_count(config.extra.get("max_workers", DEFAULT_MAX_WORKERS))
+        self.max_workers = worker_count(extra_or_secret(
+            config.extra, "max_workers", "GITLAB_MAX_WORKERS", DEFAULT_MAX_WORKERS))
         self.bot_id = self.bot_username = None
         self._client = self._poll_task = self._db = self._state_lock = None
         self._state_root = get_default_hermes_root() / "gitlab"
@@ -780,7 +782,7 @@ class GitLabAdapter(BasePlatformAdapter):
 def register(ctx):
     ctx.register_platform(
         name="gitlab", label="GitLab", adapter_factory=GitLabAdapter,
-        check_fn=lambda: True, required_env=[env for env, key, _ in ENV if key != "projects"],
+        check_fn=lambda: True, required_env=[env for env, key, _ in ENV if key not in {"projects", "max_workers"}],
         is_connected=lambda cfg: bool(extra_or_secret(cfg.extra, "token", "GITLAB_TOKEN")),
         allowed_users_env="GITLAB_ALLOWED_USERS", allow_update_command=False,
         env_enablement_fn=lambda: seed_extra_from_env(row for row in ENV if row[1] != "projects")

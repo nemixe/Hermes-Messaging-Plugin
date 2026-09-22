@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.22
+# Hermes GitLab messaging · 0.3.23
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -132,11 +132,13 @@ platforms:
 start idle before onboarding. The page/CLI manages this list after that.
 
 `max_workers` is how many different GitLab cards may run at once. The default is 5,
-and the allowed range is 1–64. Mention and assignment requests beyond that stay in
-the inbox until a worker finishes; the next free slot starts the oldest waiting card
-without waiting for another poll. One issue or MR remains one conversation. Commands
-such as `/status` and `/stop` are not held by this cap. Restart the messaging gateway
-after changing it.
+and the allowed range is 1–64. The same setting is **Concurrent workers** in
+**Messaging → GitLab**, saved as `GITLAB_MAX_WORKERS`. That value wins over
+`max_workers` in this file. Leave the field empty to use 5. Mention and assignment
+requests beyond the cap stay in the inbox until a worker finishes; the next free slot
+starts the oldest waiting card without waiting for another poll. One issue or MR
+remains one conversation. Commands such as `/status` and `/stop` are not held by
+this cap. Restart the messaging gateway after changing it.
 
 Remove legacy `GITLAB_PROJECTS`, `GITLAB_WEBHOOK_SECRET`, `GITLAB_LISTEN_HOST`, and
 `GITLAB_LISTEN_PORT` settings when upgrading. Old GitLab webhooks can be removed;

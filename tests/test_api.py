@@ -98,6 +98,15 @@ class DesktopAPI(unittest.TestCase):
             self.assertTrue(state["connection_configured"])
             self.assertEqual(state["transport"], "polling")
             self.assertEqual(state["max_workers"], 5)
+            (root / ".env").write_text("GITLAB_TOKEN=test-bot-pat\nGITLAB_MAX_WORKERS=4\n")
+            self.assertEqual(client.get(base + "/projects").json()["max_workers"], 4)
+            from hermes_cli.config import OPTIONAL_ENV_VARS, _inject_platform_plugin_env_vars
+            from hermes_cli.web_server_messaging import _discover_platform_env_vars
+            _inject_platform_plugin_env_vars()
+            self.assertEqual(OPTIONAL_ENV_VARS["GITLAB_MAX_WORKERS"]["prompt"], "Concurrent workers")
+            self.assertFalse(OPTIONAL_ENV_VARS["GITLAB_MAX_WORKERS"]["password"])
+            self.assertIn("GITLAB_MAX_WORKERS", _discover_platform_env_vars("gitlab"))
+            (root / ".env").write_text("GITLAB_TOKEN=test-bot-pat\n")
             self.assertEqual(state["open_count"], 0)
             self.assertEqual(client.get(base + "/events").json(), {"events": [], "next_page": None, "open_count": 0})
             self.assertEqual(client.get(base + "/sessions").json(),

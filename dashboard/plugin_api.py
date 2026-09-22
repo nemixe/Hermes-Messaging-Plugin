@@ -106,10 +106,9 @@ def errors():
 
 
 def configured_workers(extra):
-    if "max_workers" not in extra or extra.get("max_workers") is None:
-        return adapter.DEFAULT_MAX_WORKERS
+    raw = extra_or_secret(extra, "max_workers", "GITLAB_MAX_WORKERS", adapter.DEFAULT_MAX_WORKERS)
     try:
-        return adapter.worker_count(extra["max_workers"])
+        return adapter.worker_count(raw)
     except (TypeError, ValueError):
         return adapter.DEFAULT_MAX_WORKERS
 

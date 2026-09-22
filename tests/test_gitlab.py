@@ -1117,6 +1117,9 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.module.worker_count("5"), 5)
         self.assertEqual(self.module.GitLabAdapter(PlatformConfig(
             extra={**self.config.extra, "max_workers": 1})).max_workers, 1)
+        with patch.dict(os.environ, {"GITLAB_MAX_WORKERS": "4"}):
+            self.assertEqual(self.module.GitLabAdapter(PlatformConfig(
+                extra={**self.config.extra, "max_workers": 1})).max_workers, 4)
         await self.adapter.disconnect()
         self.assertFalse((await self.adapter.send("42:issues:3", "reply")).success)
 
