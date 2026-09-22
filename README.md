@@ -1,10 +1,10 @@
-# Hermes GitLab messaging · 0.3.20
+# Hermes GitLab messaging · 0.3.21
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
 Desktop. **Mappings** registers repositories to Hermes project profiles.
-**Activity** is the poller's durable inbox — globally or for one project — with
-event detail when a row is selected.
+**Sessions** lists GitLab-triggered Hermes sessions — globally or for one project —
+with cost and the related project when a row is selected.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
@@ -162,9 +162,9 @@ for this shared connection management page.
 ## Manage projects
 
 Open **GitLab Projects** below **Kanban**. **Mappings** is the registry; click a
-row for repositories, recent activity, and edit/delete. **Activity** is the
-poller's inbox (mentions, assignments, commands) for all projects or one project;
-click a row for request text, dispatch status, card, and session.
+row for repositories, recent sessions, and edit/delete. **Sessions** lists GitLab
+sessions for all projects or one project; click a row for cost, related project,
+card, and the option to open the session.
 
 1. Select an existing profile, or create a new project/profile with a name and description.
 2. Search repositories accessible to the bot and select **Save and activate**.

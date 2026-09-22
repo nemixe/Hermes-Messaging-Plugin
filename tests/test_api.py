@@ -80,6 +80,7 @@ class DesktopAPI(unittest.TestCase):
             base = "/api/plugins/hermes-gitlab"
             self.assertEqual(client.get(base + "/projects").status_code, 401)
             self.assertEqual(client.get(base + "/events").status_code, 401)
+            self.assertEqual(client.get(base + "/sessions").status_code, 401)
             self.assertEqual(client.put(base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.request("DELETE", base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.post(base + "/gateway/restart").status_code, 401)
@@ -98,6 +99,8 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(state["transport"], "polling")
             self.assertEqual(state["open_count"], 0)
             self.assertEqual(client.get(base + "/events").json(), {"events": [], "next_page": None, "open_count": 0})
+            self.assertEqual(client.get(base + "/sessions").json(),
+                             {"sessions": [], "next_page": None, "session_count": 0, "cost_usd": 0.0, "cost_status": None})
             self.assertNotIn("test-bot-pat", response.text)
             # A Desktop backend may have been launched in another profile. A
             # missing default PAT must not fall back to that process's credentials.
@@ -214,7 +217,50 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(len(client.get(base + "/events?status=open").json()["events"]), 2)
             self.assertEqual(client.get(base + "/events?q=invoices").json()["events"][0]["id"], "102")
             self.assertEqual(client.get(base + "/events?profile=missing").json()["events"], [])
+            state_db = sqlite3.connect(profile / "state.db")
+            with state_db:
+                state_db.execute("DROP TABLE IF EXISTS sessions")
+                state_db.execute("""CREATE TABLE sessions (
+                    id TEXT PRIMARY KEY, source TEXT, title TEXT, chat_id TEXT, origin_json TEXT,
+                    profile_name TEXT, model TEXT, actual_cost_usd REAL, estimated_cost_usd REAL,
+                    cost_status TEXT, input_tokens INTEGER, output_tokens INTEGER, message_count INTEGER,
+                    started_at REAL, last_activity_at REAL, ended_at REAL, archived INTEGER, hidden INTEGER)""")
+                origin = json.dumps({"platform": "gitlab", "chat_id": "42:issues:3", "user_name": "alice",
+                                     "parent_chat_id": "repo:42", "profile": "commerce"})
+                state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    ("sess-paid", "gitlab", "Fix login rounding", "42:issues:3", origin, "commerce",
+                     "gpt-5.6-terra", 0.12, 0.15, None, 1000, 200, 4, 1789482598.0, 1789482698.0, None, 0, 0))
+                state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    ("sess-included", "gitlab", "Export invoices", "42:issues:8",
+                     origin.replace("issues:3", "issues:8"), "commerce", "gpt-5.6-terra", 0.0, 0.0, "included",
+                     500, 40, 2, 1789481000.0, 1789481100.0, None, 0, 0))
+                state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    ("sess-desktop", "desktop", "Local notes", None, None, "commerce", "gpt-5.6-terra",
+                     1.5, 1.5, None, 10, 10, 1, 1789483000.0, 1789483000.0, None, 0, 0))
+                state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    ("sess-hidden", "gitlab", "Hidden", "42:issues:9", origin, "commerce", "gpt-5.6-terra",
+                     9.0, 9.0, None, 10, 10, 1, 1789484000.0, 1789484000.0, None, 0, 1))
+            state_db.close()
+            listed_sessions = client.get(base + "/sessions").json()
+            self.assertEqual([session["id"] for session in listed_sessions["sessions"]], ["sess-paid", "sess-included"])
+            self.assertEqual(listed_sessions["session_count"], 2)
+            self.assertAlmostEqual(listed_sessions["cost_usd"], 0.12185, places=5)
+            self.assertEqual(listed_sessions["cost_status"], "estimated")
+            self.assertEqual(listed_sessions["sessions"][0]["cost_usd"], 0.12)
+            self.assertEqual(listed_sessions["sessions"][0]["profile"], "commerce")
+            self.assertEqual(listed_sessions["sessions"][0]["repository"]["id"], "42")
+            self.assertEqual(listed_sessions["sessions"][0]["repository"]["name"], "team/payments")
+            self.assertEqual(listed_sessions["sessions"][0]["card"], "42:issues:3")
+            self.assertEqual(listed_sessions["sessions"][1]["cost_status"], "included")
+            self.assertAlmostEqual(listed_sessions["sessions"][1]["cost_usd"], 0.00185, places=5)
+            self.assertEqual(client.get(base + "/sessions?q=invoices").json()["sessions"][0]["id"], "sess-included")
+            self.assertEqual(client.get(base + "/sessions?profile=missing").json()["sessions"], [])
             state = client.get(base + "/projects").json()
+            self.assertEqual(state["session_count"], 2)
+            self.assertEqual(state["projects"][0]["last_session"]["id"], "sess-paid")
+            self.assertEqual(state["projects"][0]["last_session"]["cost_usd"], 0.12)
+            self.assertAlmostEqual(state["projects"][0]["cost_usd"], 0.12185, places=5)
+            self.assertEqual(state["projects"][0]["cost_status"], "estimated")
             self.assertEqual(state["open_count"], 2)
             self.assertEqual(state["projects"][0]["last_event"]["id"], "103")
             self.assertEqual(state["projects"][0]["last_event"]["status"], "retrying")

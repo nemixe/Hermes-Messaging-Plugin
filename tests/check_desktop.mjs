@@ -64,7 +64,7 @@ try {
     export const useValue = useStore;
     export const ROUTES_AREA = 'routes', SIDEBAR_NAV_AREA = 'sidebar.nav';
     export const locale = atom('en');
-    export const host = {state:{connectionId:atom('mac-mini'),profile:atom('default')},navigate:()=>{},notify:()=>{}};
+    export const host = {state:{connectionId:atom('mac-mini'),profile:atom('default')},navigate:()=>{},notify:()=>{},openSession:async()=>{}};
     export let bundles;
     export const setBundles = value => bundles = value;
     export const translate = (key, ...args) => {const value = bundles[locale.get()][key] ?? bundles.en[key];return typeof value === 'function' ? value(...args) : value};
@@ -83,14 +83,14 @@ try {
       import {setBundles,translate,locale,host} from './sdk.jsx';
       import plugin from ${JSON.stringify(sourcePath)};
       const repos=[{id:'1842',name:'northstar/customer-portal',url:'https://gitlab.example/northstar/customer-portal',enabled:true},{id:'1843',name:'northstar/billing-api',url:'https://gitlab.example/northstar/billing-api',enabled:true},{id:'2056',name:'studio/design-system',url:'https://gitlab.example/studio/design-system',enabled:true},{id:'3108',name:'northstar/mobile-app',url:'https://gitlab.example/northstar/mobile-app',enabled:true}];
-      const events=[{id:'101',created_at:new Date(Date.now()-120000).toISOString(),profile:'northstar',repository:repos[0],action:'mentioned',target_type:'Issue',iid:'12',title:'Fix invoice rounding',author:'alice',body:'@hermes-bot check rounding',status:'delivered',attempts:1,last_error:null,card:'1842:issues:12',conversation:'1842:issues:12',discussion:'abc',command:null,kind:'mention'},{id:'102',created_at:new Date(Date.now()-360000).toISOString(),profile:'northstar',repository:repos[1],action:'assigned',target_type:'Issue',iid:'8',title:'Export invoices',author:'mei',body:'assigned',status:'pending',attempts:0,last_error:null,card:'1843:issues:8',conversation:'1843:issues:8',discussion:null,command:null,kind:'assignment'}];
-      const data={projects:[{profile:'northstar',available:true,description:'Customer platform and billing. Shared product decisions, architecture, and delivery context.',repositories:repos.slice(0,2),last_event:{id:'101',status:'delivered',created_at:events[0].created_at,kind:'mention',iid:'12',target_type:'Issue',repository:repos[0]}},{profile:'studio',available:true,description:'Design tools and shared interface standards.',repositories:[repos[2]],last_event:null},{profile:'operations',available:true,description:'Internal operations and knowledge.',repositories:[],last_event:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,transport:'polling',open_count:1};
+      const sessions=[{id:'sess-101',last_activity_at:new Date(Date.now()-120000).toISOString(),profile:'northstar',repository:repos[0],title:'Fix invoice rounding',author:'alice',cost_usd:0.12,cost_status:null,input_tokens:18420,output_tokens:910,card:'1842:issues:12',conversation:'1842:issues:12',target_type:'Issue',iid:'12',model:'gpt-5.6-terra'},{id:'sess-102',last_activity_at:new Date(Date.now()-360000).toISOString(),profile:'northstar',repository:repos[1],title:'Export invoices',author:'mei',cost_usd:0,cost_status:'included',input_tokens:2200,output_tokens:180,card:'1843:issues:8',conversation:'1843:issues:8',target_type:'Issue',iid:'8',model:'gpt-5.6-terra'}];
+      const data={projects:[{profile:'northstar',available:true,description:'Customer platform and billing. Shared product decisions, architecture, and delivery context.',repositories:repos.slice(0,2),cost_usd:0.12,cost_status:null,last_session:{id:'sess-101',title:'Fix invoice rounding',last_activity_at:sessions[0].last_activity_at,cost_usd:0.12,cost_status:null,card:'1842:issues:12',iid:'12',target_type:'Issue',repository:repos[0]}},{profile:'studio',available:true,description:'Design tools and shared interface standards.',repositories:[repos[2]],cost_usd:0,cost_status:null,last_session:null},{profile:'operations',available:true,description:'Internal operations and knowledge.',repositories:[],cost_usd:0,cost_status:null,last_session:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,transport:'polling',session_count:2};
       if(new URLSearchParams(location.search).has('long')){repos.push(...Array.from({length:48},(_,i)=>({id:String(4000+i),name:'northstar/service-'+(i+1),url:'https://gitlab.example/northstar/service-'+(i+1),enabled:true})));data.projects[0].repositories=repos.slice(4,24)};
       host.deleteProfile=async profile=>{data.projects=data.projects.filter(p=>p.profile!==profile)};
       let page;
       plugin.register({register:c=>{if(c.area==='routes')page=c.render},onDispose:()=>{},i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options)=>{
         if(path==='/projects')return structuredClone(data);
-        if(path.startsWith('/events'))return {events:structuredClone(events),next_page:null,open_count:1};
+        if(path.startsWith('/sessions'))return {sessions:structuredClone(sessions),next_page:null,session_count:2,cost_usd:0.12,cost_status:null};
         if(path==='/gateway/restart')return {restart_started:true,restart_pid:321};
         if(path.startsWith('/gateway/restart/status'))return {status:'finished'};
         if(path.startsWith('/repositories')){const q=new URL('http://fixture'+path).searchParams.get('q')||'';return {repositories:repos.filter(r=>r.name.includes(q)),next_page:null}};
@@ -131,10 +131,11 @@ try {
       const b = {id:'2',name:'acme/frontend',url:'https://gitlab.example/acme/frontend',enabled:true};
       const other = {id:'3',name:'other/private',url:'https://gitlab.example/other/private',enabled:true};
       const c = {id:'4',name:'acme/worker',url:'https://gitlab.example/acme/worker',enabled:true};
-      const inbox = [{id:'101',created_at:new Date(Date.now()-120000).toISOString(),profile:'acme',repository:a,action:'mentioned',target_type:'Issue',iid:'3',title:'Fix login',author:'alice',body:'@hermes-bot please help',status:'delivered',attempts:1,last_error:null,card:'1:issues:3',conversation:'1:issues:3',discussion:'abc',command:null,kind:'mention'}];
-      const original = {projects:[{profile:'acme',available:true,description:'Acme project',repositories:[a],last_event:{id:'101',status:'delivered',created_at:inbox[0].created_at,kind:'mention',iid:'3',target_type:'Issue',repository:a}},{profile:'other',available:true,description:'',repositories:[other],last_event:null},{profile:'empty',available:true,description:'',repositories:[],last_event:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,transport:'polling',open_count:0};
+      const sessionList = [{id:'sess-101',last_activity_at:new Date(Date.now()-120000).toISOString(),profile:'acme',repository:a,title:'Fix login',author:'alice',cost_usd:0.12,cost_status:null,input_tokens:1000,output_tokens:200,card:'1:issues:3',conversation:'1:issues:3',target_type:'Issue',iid:'3',model:'gpt-5.6-terra'}];
+      const original = {projects:[{profile:'acme',available:true,description:'Acme project',repositories:[a],cost_usd:0.12,cost_status:null,last_session:{id:'sess-101',title:'Fix login',last_activity_at:sessionList[0].last_activity_at,cost_usd:0.12,cost_status:null,card:'1:issues:3',iid:'3',target_type:'Issue',repository:a}},{profile:'other',available:true,description:'',repositories:[other],cost_usd:0,cost_status:null,last_session:null},{profile:'empty',available:true,description:'',repositories:[],cost_usd:0,cost_status:null,last_session:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,transport:'polling',session_count:1};
       let data = structuredClone(original), failSave = false, pendingSave, deleteError, pendingDelete, nativeDeleteError, restartFails = false, restartStatus = 'finished', missingModel = false;
-      const calls = [], nativeDeletes = [], contributions = [], disposers = [];
+      const calls = [], nativeDeletes = [], contributions = [], disposers = [], opened = [];
+      host.openSession = async (id, options) => { opened.push({id, options}); };
       host.deleteProfile = async profile => {
         nativeDeletes.push({profile,scope:[host.state.connectionId.get(),host.state.profile.get()]});
         if(nativeDeleteError) throw new Error(nativeDeleteError);
@@ -143,14 +144,12 @@ try {
       const ctx = {register: c => contributions.push(c), onDispose: fn => disposers.push(fn), i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options) => {
         calls.push({scope:[host.state.connectionId.get(),host.state.profile.get()],path,options});
         if (path === '/projects') return structuredClone(data);
-        if (path.startsWith('/events')) {
+        if (path.startsWith('/sessions')) {
           const q = new URL('http://fixture'+path).searchParams;
-          let rows = inbox.filter(event => data.projects.some(p=>p.profile===event.profile));
-          if (q.get('profile')) rows = rows.filter(event => event.profile === q.get('profile'));
-          if (q.get('status') === 'open') rows = rows.filter(event => event.status !== 'delivered');
-          else if (q.get('status')) rows = rows.filter(event => event.status === q.get('status'));
-          if (q.get('q')) rows = rows.filter(event => JSON.stringify(event).includes(q.get('q')));
-          return {events: structuredClone(rows), next_page:null, open_count: inbox.filter(e=>e.status!=='delivered').length};
+          let rows = sessionList.filter(session => data.projects.some(p=>p.profile===session.profile));
+          if (q.get('profile')) rows = rows.filter(session => session.profile === q.get('profile'));
+          if (q.get('q')) rows = rows.filter(session => JSON.stringify(session).includes(q.get('q')));
+          return {sessions: structuredClone(rows), next_page:null, session_count: sessionList.length, cost_usd: rows.reduce((n,s)=>n+(s.cost_usd||0),0), cost_status:null};
         }
         if (path === '/gateway/restart') return {restart_started:true,restart_pid:321};
         if (path.startsWith('/gateway/restart/status')) return {status:restartStatus};
@@ -181,12 +180,19 @@ try {
       const client = new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0},mutations:{retry:false}}});
       const mounted = render(<QueryClientProvider client={client}>{contributions.find(c=>c.area==='routes').render()}</QueryClientProvider>);
       const openProject = async name => fireEvent.click(await screen.findByRole('button',{name:new RegExp('^'+name+' ')}));
-      fireEvent.click(await screen.findByRole('tab',{name:/Activity/}));
+      fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
-      fireEvent.click(screen.getByRole('button',{name:/Mention #3/}));
+      assert(screen.getByText('$0.12'));
+      fireEvent.click(screen.getByRole('button',{name:/Fix login/}));
       await screen.findByText('@alice');
+      assert(screen.getAllByText('Related project').length >= 2);
+      assert(screen.getByRole('button',{name:'Open in GitLab'}));
+      fireEvent.click(screen.getByRole('button',{name:'Open session'}));
+      assert.deepEqual(opened, [{id:'sess-101', options:{profile:'acme'}}]);
       fireEvent.click(screen.getByRole('tab',{name:'Mappings'}));
+      await screen.findByRole('columnheader',{name:'Cost'});
       await openProject('acme');
+      await screen.findByText('Total cost');
       await screen.findByText('Acme project');
       fireEvent.click(screen.getByRole('button',{name:'Edit registration'}));
       assert.equal(Boolean(screen.queryByLabelText('Description')),false,'existing description is create-only');
@@ -298,7 +304,7 @@ try {
       await screen.findByText('Project acme deleted. Restart required.');
       assert.equal(calls.filter(c=>c.options?.method==='DELETE').at(-1).options.body.revision,'d'.repeat(64),'partial failure refreshes revision for retry');
       assert.equal(Boolean(screen.queryByRole('button',{name:/acme/})),false);
-      data.projects.push({profile:'missing',available:false,description:'',repositories:[a],last_event:null});
+      data.projects.push({profile:'missing',available:false,description:'',repositories:[a],last_session:null});
       fireEvent.click(screen.getByRole('button',{name:'Refresh'}));
       fireEvent.click(await screen.findByRole('button',{name:'missing Profile missing'}));
       fireEvent.click(screen.getByRole('button',{name:'Delete project'}));
@@ -312,7 +318,7 @@ try {
       fireEvent.click(screen.getByRole('button',{name:'Save and activate'}));
       await waitFor(()=>assert(pendingSave.resolve));
       const oldKey = client.getQueryCache().getAll().find(q=>q.queryKey[2]==='projects').queryKey;
-      data = {...structuredClone(original),projects:[{profile:'remote-project',available:true,description:'Remote backend',repositories:[],last_event:null}],open_count:0};
+      data = {...structuredClone(original),projects:[{profile:'remote-project',available:true,description:'Remote backend',repositories:[],last_session:null}],session_count:0};
       await act(async()=>host.state.connectionId.set('another-backend'));
       await openProject('remote-project');
       await screen.findByText('Remote backend');

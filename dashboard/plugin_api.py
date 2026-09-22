@@ -1,6 +1,7 @@
 """Desktop management API. Mounted behind Hermes's existing session/OAuth auth."""
 import asyncio
 from contextlib import contextmanager
+import datetime
 import hashlib
 import importlib
 import json
@@ -138,12 +139,26 @@ def projects():
             profile = event.get("profile")
             if profile and profile not in latest:
                 latest[profile] = compact_event(event)
+        latest_session = {}
+        sessions = load_sessions(root)
+        by_profile = {}
+        for session in sessions:
+            profile = session.get("profile")
+            if not profile:
+                continue
+            if profile not in latest_session:
+                latest_session[profile] = compact_session(session)
+            by_profile.setdefault(profile, []).append(session)
         for row in rows:
+            cost, status = session_cost_summary(by_profile.get(row["profile"]) or [])
             row["last_event"] = latest.get(row["profile"])
+            row["last_session"] = latest_session.get(row["profile"])
+            row["cost_usd"] = cost
+            row["cost_status"] = status
         return {"projects": rows, "revision": revision, "url": url, "connection_configured": configured,
                 "multiplex_enabled": GatewayConfig.from_dict(config).multiplex_profiles,
                 "poll_interval": extra.get("poll_interval", 30), "transport": "polling",
-                "open_count": open_count}
+                "open_count": open_count, "session_count": len(sessions)}
 
 
 def inbox_path(root):
@@ -283,6 +298,273 @@ def events(profile: str = Query("", max_length=64), status: str = Query("", max_
         chunk = filtered[start:start + per_page]
         return {"events": chunk, "next_page": page + 1 if start + per_page < len(filtered) else None,
                 "open_count": sum(1 for event in rows if event["status"] != "delivered")}
+
+SESSION_COLUMNS = (
+    "id", "source", "title", "chat_id", "origin_json", "model", "billing_provider",
+    "actual_cost_usd", "estimated_cost_usd", "cost_status",
+    "input_tokens", "output_tokens", "message_count",
+    "started_at", "ended_at", "last_activity_at", "archived", "hidden",
+)
+
+_LIST_PRICE_PROVIDERS = ("openai", "anthropic", "google", "fireworks", "minimax")
+_LIST_PRICE_ALIASES = {
+    "openai-codex": "openai", "openai-api": "openai", "codex": "openai",
+    "google-gemini": "google", "gemini": "google", "vertex": "google",
+}
+
+
+def iso_from_unix(value):
+    try:
+        ts = float(value)
+    except (TypeError, ValueError):
+        return ""
+    if ts <= 0:
+        return ""
+    return datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def money(value):
+    try:
+        return None if value is None else round(float(value), 6)
+    except (TypeError, ValueError):
+        return None
+
+def list_price_usd(model, provider, input_tokens, output_tokens):
+    if not model or (not input_tokens and not output_tokens):
+        return None
+    try:
+        from decimal import Decimal
+        from agent.usage_pricing import BillingRoute, _lookup_official_docs_pricing, _OFFICIAL_DOCS_PRICING
+    except Exception:
+        return None
+    bare = str(model).strip().split("/")[-1]
+    if not bare:
+        return None
+    mapped = _LIST_PRICE_ALIASES.get((provider or "").strip().lower(), (provider or "").strip().lower())
+    entry = _lookup_official_docs_pricing(BillingRoute(provider=mapped or "openai", model=bare)) if mapped else None
+    if not entry or not (entry.input_cost_per_million or entry.output_cost_per_million):
+        entry = None
+        for name in ((mapped,) if mapped else ()) + _LIST_PRICE_PROVIDERS:
+            if not name:
+                continue
+            candidate = _OFFICIAL_DOCS_PRICING.get((name, bare.lower()))
+            if candidate and (candidate.input_cost_per_million or candidate.output_cost_per_million):
+                entry = candidate
+                break
+        if entry is None:
+            return None
+    amount = Decimal(0)
+    million = Decimal("1000000")
+    if entry.input_cost_per_million is not None and input_tokens:
+        amount += Decimal(input_tokens) * entry.input_cost_per_million / million
+    if entry.output_cost_per_million is not None and output_tokens:
+        amount += Decimal(output_tokens) * entry.output_cost_per_million / million
+    if amount <= 0:
+        return None
+    return round(float(amount), 6)
+
+
+def as_int(value):
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
+def row_get(row, key, default=None):
+    try:
+        value = row[key]
+    except (KeyError, IndexError):
+        return default
+    return default if value is None else value
+
+
+def parse_card(chat_id):
+    if not isinstance(chat_id, str):
+        return "", None, "", None
+    parts = chat_id.split(":")
+    if len(parts) != 3:
+        return "", None, "", None
+    project_id, resource, iid = parts
+    target_type = {"issues": "Issue", "merge_requests": "MergeRequest"}.get(resource)
+    if not target_type or not re.fullmatch(r"[1-9][0-9]*", project_id) or not re.fullmatch(r"[1-9][0-9]*", iid):
+        return "", None, "", None
+    return project_id, target_type, iid, f"{project_id}:{resource}:{iid}"
+
+
+def compact_session(session):
+    return {key: session[key] for key in (
+        "id", "title", "last_activity_at", "cost_usd", "cost_status", "card", "iid",
+        "target_type", "repository") if key in session}
+
+def session_cost_summary(rows):
+    total = 0.0
+    estimated = False
+    for session in rows:
+        try:
+            total += float(session.get("cost_usd") or 0)
+        except (TypeError, ValueError):
+            continue
+        if session.get("cost_status") in {"included", "estimated"}:
+            estimated = True
+    return round(total, 6), ("estimated" if estimated else None)
+
+
+def public_session(profile, row, info):
+    origin = {}
+    raw_origin = row_get(row, "origin_json")
+    if isinstance(raw_origin, str) and raw_origin.strip():
+        try:
+            parsed = json.loads(raw_origin)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            parsed = None
+        if isinstance(parsed, dict):
+            origin = parsed
+    chat_id = origin.get("chat_id") or row_get(row, "chat_id") or ""
+    if not isinstance(chat_id, str):
+        chat_id = ""
+    project_id, target_type, iid, card = parse_card(chat_id)
+    if not project_id:
+        parent = origin.get("parent_chat_id")
+        if isinstance(parent, str) and parent.startswith("repo:"):
+            candidate = parent.split(":", 1)[1]
+            if re.fullmatch(r"[1-9][0-9]*", candidate):
+                project_id = candidate
+    repo = info.get(project_id) or {}
+    name = repo.get("name")
+    if not isinstance(name, str) or not name.strip():
+        name = f"Repository {project_id}" if project_id else ""
+    actual = money(row_get(row, "actual_cost_usd"))
+    estimated = money(row_get(row, "estimated_cost_usd"))
+    input_tokens = as_int(row_get(row, "input_tokens"))
+    output_tokens = as_int(row_get(row, "output_tokens"))
+    cost = actual if actual else (estimated if estimated else 0.0)
+    if not cost:
+        cost = list_price_usd(row_get(row, "model"), row_get(row, "billing_provider"),
+                              input_tokens, output_tokens) or 0.0
+    title = row_get(row, "title")
+    if not isinstance(title, str) or not title.strip():
+        title = None
+    else:
+        title = title.strip()[:1000]
+    cost_status = row_get(row, "cost_status")
+    if not isinstance(cost_status, str) or not cost_status.strip():
+        cost_status = None
+    else:
+        cost_status = cost_status.strip()[:40]
+    author = origin.get("user_name") or origin.get("user_id") or ""
+    model = row_get(row, "model")
+    repository = None
+    if project_id:
+        repository = {"id": project_id, "name": name[:1000], "url": repo.get("url")}
+    return {
+        "id": str(row_get(row, "id") or ""),
+        "profile": profile,
+        "title": title,
+        "source": "gitlab",
+        "model": str(model)[:200] if model else None,
+        "cost_usd": cost,
+        "cost_status": cost_status,
+        "actual_cost_usd": actual,
+        "estimated_cost_usd": estimated,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "message_count": as_int(row_get(row, "message_count")),
+        "started_at": iso_from_unix(row_get(row, "started_at")),
+        "last_activity_at": iso_from_unix(row_get(row, "last_activity_at") or row_get(row, "started_at")),
+        "ended_at": iso_from_unix(row_get(row, "ended_at")) or None,
+        "repository": repository,
+        "card": card,
+        "target_type": target_type,
+        "iid": iid,
+        "author": str(author)[:200] if author else "",
+        "conversation": chat_id or None,
+    }
+
+
+def load_sessions(root):
+    config, extra, _ = settings(root)
+    routes = [r for r in cli.route_settings(config).get("profile_routes", []) if cli.managed_route(r)]
+    info = extra.get("repository_info") or {}
+    profiles = {name: path for name, path in profiles_to_serve(True) if name not in cli.RESERVED_PROFILES}
+    names = sorted(({name for name, path in profiles.items() if cli.is_project_profile(path)}
+                    | {r["profile"] for r in routes if r.get("profile")}) - cli.RESERVED_PROFILES)
+    sessions = []
+    for name in names:
+        try:
+            path = Path(cli.get_profile_dir(name)) / "state.db"
+        except (TypeError, ValueError, OSError):
+            continue
+        if not path.is_file():
+            continue
+        try:
+            database = sqlite3.connect(str(path), timeout=2)
+        except sqlite3.Error:
+            continue
+        try:
+            database.row_factory = sqlite3.Row
+            database.execute("PRAGMA query_only=ON")
+            cols = {row[1] for row in database.execute("PRAGMA table_info(sessions)")}
+            if "id" not in cols or "source" not in cols:
+                continue
+            select = [col for col in SESSION_COLUMNS if col in cols]
+            where = ["source = 'gitlab'"]
+            if "hidden" in cols:
+                where.append("IFNULL(hidden, 0) = 0")
+            if "archived" in cols:
+                where.append("IFNULL(archived, 0) = 0")
+            if "last_activity_at" in cols and "started_at" in cols:
+                order_sql = "COALESCE(last_activity_at, started_at) DESC"
+            elif "last_activity_at" in cols:
+                order_sql = "last_activity_at DESC"
+            elif "started_at" in cols:
+                order_sql = "started_at DESC"
+            else:
+                order_sql = "rowid DESC"
+            sql = (f"SELECT {', '.join(select)} FROM sessions WHERE {' AND '.join(where)} "
+                   f"ORDER BY {order_sql} LIMIT 500")
+            for row in database.execute(sql):
+                try:
+                    session = public_session(name, row, info)
+                except (TypeError, ValueError, KeyError):
+                    continue
+                if session.get("id"):
+                    sessions.append(session)
+        except sqlite3.Error:
+            continue
+        finally:
+            database.close()
+    sessions.sort(key=lambda session: session.get("last_activity_at") or "", reverse=True)
+    return sessions
+
+
+@router.get("/sessions")
+def sessions(profile: str = Query("", max_length=64), q: str = Query("", max_length=200),
+             page: int = Query(1, ge=1, le=10000)):
+    with errors(), root_scope() as root:
+        rows = load_sessions(root)
+        needle = q.strip().casefold()
+        filtered = []
+        for session in rows:
+            if profile and session.get("profile") != profile:
+                continue
+            if needle:
+                repo = (session.get("repository") or {}).get("name") or ""
+                hay = " ".join([
+                    session.get("profile") or "", session.get("title") or "",
+                    session.get("author") or "", session.get("iid") or "",
+                    session.get("card") or "", session.get("conversation") or "",
+                    session.get("model") or "", repo,
+                ]).casefold()
+                if needle not in hay:
+                    continue
+            filtered.append(session)
+        per_page = 50
+        start = (page - 1) * per_page
+        chunk = filtered[start:start + per_page]
+        cost, status = session_cost_summary(filtered)
+        return {"sessions": chunk, "next_page": page + 1 if start + per_page < len(filtered) else None,
+                "session_count": len(rows), "cost_usd": cost, "cost_status": status}
 
 
 @router.get("/repositories")

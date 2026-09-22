@@ -48,21 +48,20 @@ const locales = {
     deleteHint: name => `This permanently deletes the Hermes profile ${name}, including its memories, sessions, credentials, skills, and repository mappings. GitLab repositories are kept. Type ${name} to confirm.`,
     deleted: name => `Project ${name} deleted. Restart required.`,
     deleteError: (name, removed) => removed ? `Registration removed, but Hermes profile ${name} was not deleted. Restart the gateway to apply the registration removal. Retry to delete the profile.` : `Project ${name} was not deleted.`,
-    mappings: 'Mappings', activity: 'Activity', openEvents: n => `${n} open`,
-    filterProjects: 'Filter projects or repositories', filterEvents: 'Filter events',
+    mappings: 'Mappings', sessions: 'Sessions',
+    filterProjects: 'Filter projects or repositories', filterSessions: 'Filter sessions',
     allProjects: 'All projects', findProject: 'Find a project', noProjectMatch: 'No project matches.',
-    all: 'All', unmapped: 'Unmapped', needsAttention: 'Needs attention', openStatus: 'Open',
-    delivered: 'Delivered', pending: 'Pending', retrying: 'Retrying', failed: 'Failed',
-    when: 'When', event: 'Event', lastEvent: 'Last event', noLastEvent: 'No events',
-    noEvents: 'No events', noEventsHint: 'Mentions and assignments appear after the next poll.',
-    recentActivity: 'Recent activity', allActivity: 'All activity', request: 'Request', dispatch: 'Dispatch',
-    gitlabTodo: 'GitLab to-do', card: 'Card', session: 'Session', discussion: 'Discussion',
-    attempts: 'Attempts', polled: 'Polled', relatedIssue: 'related issue',
-    noDiscussion: 'None yet — assignment or description has no comment anchor.',
-    mention: 'Mention', assignment: 'Assigned', justNow: 'now',
+    all: 'All', unmapped: 'Unmapped', needsAttention: 'Needs attention',
+    when: 'When', lastSession: 'Last session', noLastSession: 'No sessions',
+    noSessions: 'No sessions', noSessionsHint: 'Mentions and assignments open sessions here after the next poll.',
+    recentSessions: 'Recent sessions', allSessions: 'All sessions',
+    card: 'Card', session: 'Session', relatedProject: 'Related project',
+    cost: 'Cost', totalCost: 'Total cost', includedCost: 'Included', tokens: (input, output) => `${input} in · ${output} out`,
+    openSession: 'Open session', openInGitlab: 'Open in GitLab', openSessionFailed: 'Could not open this session.',
+    justNow: 'now',
     ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
-    clearProject: 'Show all projects', selectEvent: 'Select an event to see its detail.',
-    loadEventsError: 'Could not load GitLab events', closeDetail: 'Close', routing: 'Routing', status: 'Status'
+    clearProject: 'Show all projects', selectSession: 'Select a session to see its detail.',
+    loadSessionsError: 'Could not load GitLab sessions', closeDetail: 'Close', model: 'Model'
   },
   ja: {
     profileIdentifier: 'プロジェクトプロファイル ID',
@@ -102,21 +101,20 @@ const locales = {
     deleteHint: name => `Hermes プロファイル ${name} と、そのメモリ、セッション、認証情報、スキル、リポジトリの登録を完全に削除します。GitLab リポジトリは保持されます。確認のため ${name} と入力してください。`,
     deleted: name => `プロジェクト ${name} を削除しました。再起動が必要です。`,
     deleteError: (name, removed) => removed ? `登録を削除しましたが、Hermes プロファイル ${name} は削除されませんでした。ゲートウェイを再起動して登録の削除を適用してください。再試行するとプロファイルを削除します。` : `プロジェクト ${name} は削除されませんでした。`,
-    mappings: '登録', activity: 'アクティビティ', openEvents: n => `${n} 件未完了`,
-    filterProjects: 'プロジェクトまたはリポジトリを絞り込み', filterEvents: 'イベントを絞り込み',
+    mappings: '登録', sessions: 'セッション',
+    filterProjects: 'プロジェクトまたはリポジトリを絞り込み', filterSessions: 'セッションを絞り込み',
     allProjects: 'すべてのプロジェクト', findProject: 'プロジェクトを検索', noProjectMatch: '一致するプロジェクトはありません。',
-    all: 'すべて', unmapped: '未登録', needsAttention: '要対応', openStatus: '未完了',
-    delivered: '配信済み', pending: '保留', retrying: '再試行中', failed: '失敗',
-    when: '時刻', event: 'イベント', lastEvent: '最新イベント', noLastEvent: 'イベントなし',
-    noEvents: 'イベントはありません', noEventsHint: 'メンションとアサインは次回のポーリング後に表示されます。',
-    recentActivity: '最近のアクティビティ', allActivity: 'すべてのアクティビティ', request: 'リクエスト', dispatch: '配信',
-    gitlabTodo: 'GitLab To-do', card: 'カード', session: 'セッション', discussion: 'ディスカッション',
-    attempts: '試行', polled: '取得', relatedIssue: '関連イシュー',
-    noDiscussion: 'まだありません。アサインや説明にはコメントの起点がありません。',
-    mention: 'メンション', assignment: 'アサイン', justNow: 'たった今',
+    all: 'すべて', unmapped: '未登録', needsAttention: '要対応',
+    when: '時刻', lastSession: '最新セッション', noLastSession: 'セッションなし',
+    noSessions: 'セッションはありません', noSessionsHint: 'メンションとアサインは次回のポーリング後にセッションとして表示されます。',
+    recentSessions: '最近のセッション', allSessions: 'すべてのセッション',
+    card: 'カード', session: 'セッション', relatedProject: '関連プロジェクト',
+    cost: 'コスト', totalCost: '合計コスト', includedCost: '含まれています', tokens: (input, output) => `${input} 入力 · ${output} 出力`,
+    openSession: 'セッションを開く', openInGitlab: 'GitLab で開く', openSessionFailed: 'このセッションを開けませんでした。',
+    justNow: 'たった今',
     ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
-    clearProject: 'すべてのプロジェクトを表示', selectEvent: 'イベントを選ぶと詳細が表示されます。',
-    loadEventsError: 'GitLab イベントを読み込めません', closeDetail: '閉じる', routing: 'ルーティング中', status: '状態'
+    clearProject: 'すべてのプロジェクトを表示', selectSession: 'セッションを選ぶと詳細が表示されます。',
+    loadSessionsError: 'GitLab セッションを読み込めません', closeDetail: '閉じる', model: 'モデル'
   },
   zh: {
     profileIdentifier: '项目配置文件 ID',
@@ -150,21 +148,20 @@ const locales = {
     deleteHint: name => `这将永久删除 Hermes 配置文件 ${name}，包括其记忆、会话、凭据、技能和仓库注册。GitLab 仓库将保留。请输入 ${name} 以确认。`,
     deleted: name => `项目 ${name} 已删除。需要重启。`,
     deleteError: (name, removed) => removed ? `注册已移除，但 Hermes 配置文件 ${name} 未删除。请重启网关以应用注册移除。重试以删除配置文件。` : `项目 ${name} 未删除。`,
-    mappings: '注册', activity: '动态', openEvents: n => `${n} 条未完成`,
-    filterProjects: '筛选项目或仓库', filterEvents: '筛选事件',
+    mappings: '注册', sessions: '会话',
+    filterProjects: '筛选项目或仓库', filterSessions: '筛选会话',
     allProjects: '全部项目', findProject: '查找项目', noProjectMatch: '没有匹配的项目。',
-    all: '全部', unmapped: '未注册', needsAttention: '需处理', openStatus: '未完成',
-    delivered: '已送达', pending: '待处理', retrying: '重试中', failed: '失败',
-    when: '时间', event: '事件', lastEvent: '最近事件', noLastEvent: '无事件',
-    noEvents: '暂无事件', noEventsHint: '提及和指派会在下次轮询后出现。',
-    recentActivity: '最近动态', allActivity: '全部动态', request: '请求', dispatch: '投递',
-    gitlabTodo: 'GitLab 待办', card: '卡片', session: '会话', discussion: '讨论',
-    attempts: '尝试', polled: '采集', relatedIssue: '相关议题',
-    noDiscussion: '尚无讨论。指派或描述没有评论锚点。',
-    mention: '提及', assignment: '指派', justNow: '刚刚',
+    all: '全部', unmapped: '未注册', needsAttention: '需处理',
+    when: '时间', lastSession: '最近会话', noLastSession: '无会话',
+    noSessions: '暂无会话', noSessionsHint: '提及和指派会在下次轮询后作为会话显示。',
+    recentSessions: '最近会话', allSessions: '全部会话',
+    card: '卡片', session: '会话', relatedProject: '相关项目',
+    cost: '费用', totalCost: '总费用', includedCost: '已包含', tokens: (input, output) => `${input} 输入 · ${output} 输出`,
+    openSession: '打开会话', openInGitlab: '在 GitLab 中打开', openSessionFailed: '无法打开此会话。',
+    justNow: '刚刚',
     ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
-    clearProject: '显示全部项目', selectEvent: '选择事件以查看详情。',
-    loadEventsError: '无法加载 GitLab 事件', closeDetail: '关闭', routing: '路由中', status: '状态'
+    clearProject: '显示全部项目', selectSession: '选择会话以查看详情。',
+    loadSessionsError: '无法加载 GitLab 会话', closeDetail: '关闭', model: '模型'
   },
   'zh-hant': {
     profileIdentifier: '專案設定檔 ID',
@@ -198,21 +195,20 @@ const locales = {
     deleteHint: name => `這將永久刪除 Hermes 設定檔 ${name}，包括其記憶、工作階段、憑證、技能與儲存庫註冊。GitLab 儲存庫將保留。請輸入 ${name} 以確認。`,
     deleted: name => `專案 ${name} 已刪除。需要重新啟動。`,
     deleteError: (name, removed) => removed ? `註冊已移除，但 Hermes 設定檔 ${name} 未刪除。請重新啟動閘道以套用註冊移除。重試以刪除設定檔。` : `專案 ${name} 未刪除。`,
-    mappings: '註冊', activity: '活動', openEvents: n => `${n} 筆未完成`,
-    filterProjects: '篩選專案或儲存庫', filterEvents: '篩選事件',
+    mappings: '註冊', sessions: '工作階段',
+    filterProjects: '篩選專案或儲存庫', filterSessions: '篩選工作階段',
     allProjects: '全部專案', findProject: '尋找專案', noProjectMatch: '沒有符合的專案。',
-    all: '全部', unmapped: '未註冊', needsAttention: '需處理', openStatus: '未完成',
-    delivered: '已送達', pending: '待處理', retrying: '重試中', failed: '失敗',
-    when: '時間', event: '事件', lastEvent: '最近事件', noLastEvent: '無事件',
-    noEvents: '尚無事件', noEventsHint: '提及與指派會在下次輪詢後出現。',
-    recentActivity: '最近活動', allActivity: '全部活動', request: '請求', dispatch: '投遞',
-    gitlabTodo: 'GitLab 待辦', card: '卡片', session: '工作階段', discussion: '討論',
-    attempts: '嘗試', polled: '擷取', relatedIssue: '相關議題',
-    noDiscussion: '尚無討論。指派或說明沒有留言錨點。',
-    mention: '提及', assignment: '指派', justNow: '剛剛',
+    all: '全部', unmapped: '未註冊', needsAttention: '需處理',
+    when: '時間', lastSession: '最近工作階段', noLastSession: '無工作階段',
+    noSessions: '尚無工作階段', noSessionsHint: '提及與指派會在下次輪詢後以工作階段顯示。',
+    recentSessions: '最近工作階段', allSessions: '全部工作階段',
+    card: '卡片', session: '工作階段', relatedProject: '相關專案',
+    cost: '費用', totalCost: '總費用', includedCost: '已包含', tokens: (input, output) => `${input} 輸入 · ${output} 輸出`,
+    openSession: '開啟工作階段', openInGitlab: '在 GitLab 開啟', openSessionFailed: '無法開啟此工作階段。',
+    justNow: '剛剛',
     ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
-    clearProject: '顯示全部專案', selectEvent: '選取事件以查看詳細資料。',
-    loadEventsError: '無法載入 GitLab 事件', closeDetail: '關閉', routing: '路由中', status: '狀態'
+    clearProject: '顯示全部專案', selectSession: '選取工作階段以查看詳細資料。',
+    loadSessionsError: '無法載入 GitLab 工作階段', closeDetail: '關閉', model: '模型'
   }
 }
 
@@ -244,6 +240,8 @@ const css = `
 .hgl-table { width:100%; border-collapse:collapse; font-size:.8125rem; }
 .hgl-table th { text-align:left; font-size:.6875rem; font-weight:600; color:var(--ui-text-secondary); padding:12px 20px; border-bottom:1px solid var(--ui-stroke-secondary); position:sticky; top:0; background:var(--ui-bg-editor); }
 .hgl-table td { padding:14px 20px; border-bottom:1px solid var(--ui-stroke-secondary); vertical-align:middle; }
+.hgl-num { font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
+.hgl-table th.hgl-num { text-align:right; }
 .hgl-row { cursor:pointer; }
 .hgl-row:hover td { background:var(--ui-row-hover-background); }
 .hgl-row[aria-current=true] td { background:var(--ui-row-active-background); }
@@ -255,9 +253,9 @@ const css = `
 .hgl-stack { display:flex; flex-direction:column; gap:12px; min-width:0; }
 .hgl-subtle { color:var(--ui-text-secondary); font-size:.75rem; }
 .hgl-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
-.hgl-drawer-actions { display:flex; gap:8px; width:100%; }
-.hgl-drawer-actions > * { flex:1 1 0; min-width:0; }
-.hgl-drawer-actions button { width:100%; justify-content:center; }
+.hgl-drawer-actions { display:flex; flex-wrap:wrap; gap:8px; width:100%; }
+.hgl-drawer-actions > * { flex:1 1 9rem; min-width:0; }
+.hgl-drawer-actions button { width:100%; justify-content:center; white-space:nowrap; }
 .hgl-notice { flex-shrink:0; margin:16px 28px 0; padding:12px 14px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; display:flex; flex-direction:column; gap:8px; background:var(--ui-bg-quaternary); }
 .hgl-form { display:flex; flex-direction:column; gap:20px; padding:20px 28px 28px; overflow:auto; }
 .hgl-field { display:flex; flex-direction:column; gap:6px; max-width:560px; }
@@ -281,7 +279,7 @@ const css = `
 .hgl-pill-warn { background:color-mix(in srgb, #f59e0b 16%, transparent); color:#b45309; }
 .hgl-pill-bad { background:color-mix(in srgb, var(--destructive) 16%, transparent); color:var(--destructive); }
 .hgl-muted { color:var(--ui-text-secondary); }
-.hgl-dl { display:grid; grid-template-columns:118px minmax(0,1fr); gap:6px 12px; font-size:.75rem; }
+.hgl-dl { display:grid; grid-template-columns:132px minmax(0,1fr); gap:6px 12px; font-size:.75rem; }
 .hgl-dl dt { color:var(--ui-text-secondary); }
 .hgl-dl dd { margin:0; overflow-wrap:anywhere; }
 .hgl-pre { padding:10px 12px; border:1px solid var(--ui-stroke-secondary); border-radius:6px; white-space:pre-wrap; }
@@ -308,8 +306,20 @@ const makeDraft = (project, revision) => ({
 })
 const RESERVED = ['default', 'project-egg', 'global-project']
 const projectStatus = (row, t) => !row.available ? t('missing') : row.repositories.length ? t('count', row.repositories.length) : t('unregistered')
-const eventKind = (event, t) => event.command || (event.action === 'assigned' || event.kind === 'assignment' ? t('assignment') : t('mention'))
-const cardRef = event => event.iid ? `${event.target_type === 'MergeRequest' ? '!' : '#'}${event.iid}` : ''
+const cardRef = row => row?.iid ? `${row.target_type === 'MergeRequest' ? '!' : '#'}${row.iid}` : ''
+const compactNum = n => {
+  const value = Number(n) || 0
+  if (value < 1000) return String(value)
+  if (value < 1000000) return `${Math.round(value / 100) / 10}k`.replace(/\.0k$/, 'k')
+  return `${Math.round(value / 100000) / 10}M`.replace(/\.0M$/, 'M')
+}
+const formatCost = row => {
+  const amount = Number(row?.cost_usd) || 0
+  const approx = amount > 0 && (row?.cost_status === 'included' || row?.cost_status === 'estimated')
+  const prefix = approx ? '~' : ''
+  if (amount > 0 && amount < 0.01) return `${prefix}$${amount.toFixed(4)}`
+  return `${prefix}$${amount.toFixed(2)}`
+}
 const age = (iso, t) => {
   const ms = Date.now() - Date.parse(iso)
   if (!Number.isFinite(ms)) return ''
@@ -320,7 +330,6 @@ const age = (iso, t) => {
   if (hours < 48) return t('ageHr', hours)
   return t('ageDay', Math.round(hours / 24))
 }
-const pill = (status, label) => jsx('span', { className: `hgl-pill${{ delivered: ' hgl-pill-ok', pending: ' hgl-pill-warn', retrying: ' hgl-pill-warn', failed: ' hgl-pill-bad' }[status] || ''}`, children: label })
 const glyph = name => jsx('span', { className: 'hgl-glyph', 'aria-hidden': true, children: (name || '?')[0] })
 
 function Repository({ ctx, repo, children }) {
@@ -418,9 +427,8 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const [mapQuery, setMapQuery] = useState('')
   const [mapFilter, setMapFilter] = useState('all')
   const [projectScope, setProjectScope] = useState('all')
-  const [eventStatus, setEventStatus] = useState('all')
-  const [eventQuery, setEventQuery] = useState('')
-  const [eventPage, setEventPage] = useState(1)
+  const [sessionQuery, setSessionQuery] = useState('')
+  const [sessionPage, setSessionPage] = useState(1)
   const [draft, setDraft] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -463,20 +471,19 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const nameError = draft?.isNew && name ?
     (!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(name) || RESERVED.includes(name) ? t('nameInvalid') :
       projects.some(row => row.profile === name) ? t('nameExists') : null) : null
-  const eventsKey = [ID, scope, 'events', pane === 'activity' ? projectScope : selected, pane === 'activity' ? eventStatus : 'all',
-    pane === 'activity' ? eventQuery : '', pane === 'activity' ? eventPage : 1]
-  const events = useQuery({
-    queryKey: eventsKey, retry: false,
-    enabled: Boolean(data) && (pane === 'activity' || inspect?.type === 'project'),
+  const sessionsKey = [ID, scope, 'sessions', pane === 'sessions' ? projectScope : selected,
+    pane === 'sessions' ? sessionQuery : '', pane === 'sessions' ? sessionPage : 1]
+  const sessions = useQuery({
+    queryKey: sessionsKey, retry: false,
+    enabled: Boolean(data) && (pane === 'sessions' || inspect?.type === 'project'),
     queryFn: () => {
       if (scopeNow() !== scope) throw new Error('Backend changed')
       const params = new URLSearchParams()
-      const profile = pane === 'activity' ? projectScope : selected
+      const profile = pane === 'sessions' ? projectScope : selected
       if (profile && profile !== 'all') params.set('profile', profile)
-      if (pane === 'activity' && eventStatus !== 'all') params.set('status', eventStatus)
-      if (pane === 'activity' && eventQuery.trim()) params.set('q', eventQuery.trim())
-      if (pane === 'activity') params.set('page', String(eventPage))
-      return ctx.rest(`/events?${params}`)
+      if (pane === 'sessions' && sessionQuery.trim()) params.set('q', sessionQuery.trim())
+      if (pane === 'sessions') params.set('page', String(sessionPage))
+      return ctx.rest(`/sessions?${params}`)
     }
   })
   const start = row => {
@@ -507,7 +514,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       setSelected(null)
       setInspect(null)
       await client.invalidateQueries({ queryKey })
-      await client.invalidateQueries({ queryKey: [ID, scope, 'events'] })
+      await client.invalidateQueries({ queryKey: [ID, scope, 'sessions'] })
     } catch (failure) {
       if (!current()) return
       setError(`${t('deleteError', target.profile, removed)} ${errorText(failure)}`)
@@ -536,7 +543,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       setPane('mappings')
       setDraft(null)
       await client.invalidateQueries({ queryKey })
-      await client.invalidateQueries({ queryKey: [ID, scope, 'events'] })
+      await client.invalidateQueries({ queryKey: [ID, scope, 'sessions'] })
     } catch (failure) {
       if (current()) setError(errorText(failure))
     } finally {
@@ -559,21 +566,16 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     if (mapFilter === 'issue' && row.available && !row.repositories.some(repo => repo.enabled === false)) return false
     return !needle || row.profile.includes(needle) || row.repositories.some(repo => repo.name.toLowerCase().includes(needle))
   })
-  const eventRows = events.data?.events || []
+  const sessionRows = sessions.data?.sessions || []
   const inspectProject = inspect?.type === 'project' ? projects.find(row => row.profile === inspect.profile) : null
-  const inspectEvent = inspect?.type === 'event' ? inspect.event : null
-  const openCount = data?.open_count || events.data?.open_count || 0
+  const inspectSession = inspect?.type === 'session' ? inspect.session : null
   const switchPane = next => {
     if (locked) return
     setPane(next)
     setInspect(null)
-    setEventPage(1)
+    setSessionPage(1)
   }
-  const lastCell = row => {
-    const last = row.last_event
-    if (!last) return jsx('span', { className: 'hgl-muted', children: t('noLastEvent') })
-    return jsxs('span', { children: [pill(last.status, t(last.status)), ' ', jsx('span', { className: 'hgl-subtle', children: `${age(last.created_at, t)} · ${eventKind(last, t)} ${cardRef(last)}` })] })
-  }
+  const costCell = row => jsx('span', { className: Number(row.cost_usd) > 0 ? 'hgl-num' : 'hgl-num hgl-muted', children: formatCost(row) })
   const editor = draft && jsxs('form', { className: 'hgl-form', onSubmit: save, children: [
     jsx('h2', { children: draft.isNew ? t('newProject') : draft.profile }),
     draft.isNew && jsxs('div', { className: 'hgl-field', children: [
@@ -629,22 +631,25 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     ] }),
     inspectProject.description ? jsx('p', { className: 'hgl-subtle', children: inspectProject.description }) : null,
     !inspectProject.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
+    jsxs('dl', { className: 'hgl-dl', children: [
+      jsx('dt', { children: t('totalCost') }), jsx('dd', { className: 'hgl-num', children: formatCost(inspectProject) })
+    ] }),
     jsx('h3', { children: t('repositories') }),
     inspectProject.repositories.length ? jsx('ul', { className: 'hgl-list', children: inspectProject.repositories.map(repo => jsx(Repository, { ctx, repo }, repo.id)) }) :
       jsx(EmptyState, { title: t('noRepositories'), description: t('noRepositoriesHint') }),
-    jsx('h3', { children: t('recentActivity') }),
-    eventRows.length ? jsxs('div', { className: 'hgl-stack', children: [
-      jsx('div', { className: 'hgl-recent', children: eventRows.slice(0, 3).map(event => jsxs('button', { type: 'button', onClick: () => {
-        setPane('activity'); setProjectScope(event.profile || 'all'); setInspect({ type: 'event', event })
+    jsx('h3', { children: t('recentSessions') }),
+    sessionRows.length ? jsxs('div', { className: 'hgl-stack', children: [
+      jsx('div', { className: 'hgl-recent', children: sessionRows.slice(0, 3).map(session => jsxs('button', { type: 'button', onClick: () => {
+        setPane('sessions'); setProjectScope(session.profile || 'all'); setInspect({ type: 'session', session })
       }, children: [
-        jsx('span', { children: `${eventKind(event, t)} ${cardRef(event)}` }),
-        pill(event.status, t(event.status)),
-        jsx('span', { className: 'hgl-subtle', children: age(event.created_at, t) })
-      ] }, event.id)) }),
+        jsx('span', { children: session.title || t('session') }),
+        jsx('span', { className: 'hgl-num', children: formatCost(session) }),
+        jsx('span', { className: 'hgl-subtle', children: [session.profile, cardRef(session), age(session.last_activity_at, t)].filter(Boolean).join(' · ') })
+      ] }, session.id)) }),
       jsx(Button, { type: 'button', variant: 'ghost', onClick: () => {
-        setPane('activity'); setProjectScope(inspectProject.profile); setInspect(null)
-      }, children: t('allActivity') })
-    ] }) : jsx('p', { className: 'hgl-subtle', children: t('noEventsHint') }),
+        setPane('sessions'); setProjectScope(inspectProject.profile); setInspect(null)
+      }, children: t('allSessions') })
+    ] }) : jsx('p', { className: 'hgl-subtle', children: t('noSessionsHint') }),
     jsxs('div', { className: 'hgl-drawer-actions', children: [
       jsx(Button, { type: 'button', variant: 'outline', disabled: locked || !data.connection_configured || !data.multiplex_enabled,
         onClick: () => start(inspectProject), children: t('edit') }),
@@ -653,43 +658,42 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       }, children: t('deleteProject') })
     ] })
   ] })
-  const eventDrawer = inspectEvent && jsxs('aside', { className: 'hgl-drawer', children: [
+  const sessionDrawer = inspectSession && jsxs('aside', { className: 'hgl-drawer', children: [
     jsxs('div', { className: 'hgl-drawer-head', children: [
       jsxs('div', { className: 'hgl-stack', children: [
-        jsx('p', { className: 'hgl-subtle', children: `${eventKind(inspectEvent, t)} · ${inspectEvent.repository?.name || ''} ${cardRef(inspectEvent)}` }),
-        jsx('h2', { children: inspectEvent.title || eventKind(inspectEvent, t) })
+        jsx('p', { className: 'hgl-subtle', children: [inspectSession.repository?.name, cardRef(inspectSession)].filter(Boolean).join(' ') || t('session') }),
+        jsx('h2', { children: inspectSession.title || t('session') })
       ] }),
       jsx(Button, { type: 'button', variant: 'ghost', size: 'icon-xs', className: 'hgl-drawer-close', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: jsx(Codicon, { name: 'close', size: '.875rem' }) })
     ] }),
     jsxs('div', { className: 'hgl-actions', children: [
-      pill(inspectEvent.status, t(inspectEvent.status)),
-      inspectEvent.created_at && jsx('span', { className: 'hgl-pill', children: age(inspectEvent.created_at, t) }),
-      inspectEvent.command && jsx('span', { className: 'hgl-pill', children: inspectEvent.command })
+      jsx('span', { className: 'hgl-pill', children: formatCost(inspectSession) }),
+      inspectSession.last_activity_at && jsx('span', { className: 'hgl-pill', children: age(inspectSession.last_activity_at, t) }),
+      inspectSession.model && jsx('span', { className: 'hgl-pill', children: inspectSession.model })
     ] }),
-    inspectEvent.author && jsx('p', { children: `@${inspectEvent.author}` }),
-    jsx('h3', { children: t('request') }),
-    jsx('div', { className: 'hgl-pre', children: inspectEvent.body || '—' }),
-    inspectEvent.last_error && jsx('p', { className: 'hgl-error', children: inspectEvent.last_error }),
-    jsx('h3', { children: t('dispatch') }),
+    inspectSession.author && jsx('p', { children: `@${inspectSession.author}` }),
     jsxs('dl', { className: 'hgl-dl', children: [
-      jsx('dt', { children: t('profile') }), jsxs('dd', { children: [glyph(inspectEvent.profile || '?'), ' ', inspectEvent.profile || '—'] }),
-      jsx('dt', { children: t('gitlabTodo') }), jsx('dd', { children: `#${inspectEvent.id}` }),
-      jsx('dt', { children: t('card') }), jsx('dd', { children: inspectEvent.card || '—' }),
-      jsx('dt', { children: t('session') }), jsxs('dd', { children: [inspectEvent.conversation || '—', inspectEvent.conversation && inspectEvent.card && inspectEvent.conversation !== inspectEvent.card ? ` · ${t('relatedIssue')}` : ''] }),
-      jsx('dt', { children: t('discussion') }), jsx('dd', { children: inspectEvent.discussion || t('noDiscussion') }),
-      jsx('dt', { children: t('attempts') }), jsx('dd', { children: String(inspectEvent.attempts || 0) }),
-      jsx('dt', { children: t('polled') }), jsx('dd', { children: inspectEvent.created_at || '—' })
+      jsx('dt', { children: t('relatedProject') }), jsxs('dd', { children: [glyph(inspectSession.profile || '?'), ' ', inspectSession.profile || '—'] }),
+      jsx('dt', { children: t('cost') }), jsxs('dd', { children: [formatCost(inspectSession),
+        inspectSession.input_tokens || inspectSession.output_tokens ? ` · ${t('tokens', compactNum(inspectSession.input_tokens), compactNum(inspectSession.output_tokens))}` : ''] }),
+      jsx('dt', { children: t('card') }), jsx('dd', { children: inspectSession.card || '—' }),
+      jsx('dt', { children: t('session') }), jsx('dd', { children: inspectSession.id || '—' }),
+      jsx('dt', { children: t('model') }), jsx('dd', { children: inspectSession.model || '—' })
     ] }),
     jsxs('div', { className: 'hgl-drawer-actions', children: [
-      inspectEvent.repository?.url && jsx(Button, { type: 'button', variant: 'outline', onClick: async () => {
-        try { if (!await ctx.os.openExternal(inspectEvent.repository.url)) host.notify({ kind: 'error', message: t('openFailed') }) }
+      typeof host.openSession === 'function' && jsx(Button, { type: 'button', onClick: async () => {
+        try { await host.openSession(inspectSession.id, { profile: inspectSession.profile }) }
+        catch { host.notify({ kind: 'error', message: t('openSessionFailed') }) }
+      }, children: t('openSession') }),
+      inspectSession.repository?.url && jsx(Button, { type: 'button', variant: 'outline', onClick: async () => {
+        try { if (!await ctx.os.openExternal(inspectSession.repository.url)) host.notify({ kind: 'error', message: t('openFailed') }) }
         catch { host.notify({ kind: 'error', message: t('openFailed') }) }
-      }, children: t('openRepo', inspectEvent.repository.name) })
+      }, children: t('openInGitlab') })
     ] })
   ] })
   const mappingTable = jsxs('div', { className: `hgl-split${inspectProject || deleting ? ' draw' : ''}`, children: [
     jsx('div', { className: 'hgl-table-wrap', children: visible.length ? jsxs('table', { className: 'hgl-table', children: [
-      jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('projects') }), jsx('th', { children: t('repositories') }), jsx('th', { children: t('lastEvent') })] })] }),
+      jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('projects') }), jsx('th', { children: t('repositories') }), jsx('th', { className: 'hgl-num', children: t('cost') })] })] }),
       jsx('tbody', { children: visible.map(row => {
         const status = projectStatus(row, t)
         return jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button', 'aria-label': `${row.profile} ${status}`,
@@ -699,31 +703,31 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(row.profile), jsx('strong', { children: row.profile }),
               status !== t('count', row.repositories.length) && jsx('span', { className: `hgl-pill${row.available ? '' : ' hgl-pill-bad'}`, children: status }) ] })] }),
             jsx('td', { className: 'hgl-muted', children: row.repositories.length ? t('count', row.repositories.length) : t('unregistered') }),
-            jsx('td', { children: lastCell(row) })
+            jsx('td', { className: 'hgl-num', children: costCell(row) })
           ] }, row.profile)
       }) })
     ] }) : jsx(EmptyState, { title: t('noProjects'), description: t('noProjectsHint') }) }),
     deleting ? jsx('aside', { className: 'hgl-drawer', children: deleter }) : inspectProject ? projectDrawer : null
   ] })
-  const activityTable = jsxs('div', { className: `hgl-split${inspectEvent ? ' draw' : ''}`, children: [
-    jsx('div', { className: 'hgl-table-wrap', children: events.isError ? jsx(ErrorState, { className: 'hgl-center', title: t('loadEventsError'), description: errorText(events.error),
-      children: jsx(Button, { type: 'button', onClick: () => events.refetch(), children: t('retry') }) }) :
-      events.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
-      eventRows.length ? jsxs('table', { className: 'hgl-table', children: [
-        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('event') }), jsx('th', { children: t('projects') }), jsx('th', { children: t('status') })] })] }),
-        jsx('tbody', { children: eventRows.map(event => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
-          'aria-label': `${eventKind(event, t)} ${cardRef(event)} ${event.profile || ''} ${t(event.status)}`,
-          'aria-current': inspectEvent?.id === event.id,
-          onClick: () => setInspect({ type: 'event', event }),
-          onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'event', event }) } },
+  const sessionTable = jsxs('div', { className: `hgl-split${inspectSession ? ' draw' : ''}`, children: [
+    jsx('div', { className: 'hgl-table-wrap', children: sessions.isError ? jsx(ErrorState, { className: 'hgl-center', title: t('loadSessionsError'), description: errorText(sessions.error),
+      children: jsx(Button, { type: 'button', onClick: () => sessions.refetch(), children: t('retry') }) }) :
+      sessions.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
+      sessionRows.length ? jsxs('table', { className: 'hgl-table', children: [
+        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', children: t('cost') })] })] }),
+        jsx('tbody', { children: sessionRows.map(session => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
+          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${formatCost(session)}`,
+          'aria-current': inspectSession?.id === session.id,
+          onClick: () => setInspect({ type: 'session', session }),
+          onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'session', session }) } },
           children: [
-            jsx('td', { className: 'hgl-muted', children: age(event.created_at, t) }),
-            jsxs('td', { children: [jsx('div', { children: `${eventKind(event, t)} ${cardRef(event)}` }), jsx('div', { className: 'hgl-subtle', children: event.title })] }),
-            jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(event.profile || '?'), event.profile || '—'] })] }),
-            jsx('td', { children: pill(event.status, t(event.status)) })
-          ] }, event.id)) })
-      ] }) : jsx(EmptyState, { title: t('noEvents'), description: t('noEventsHint') }) }),
-    inspectEvent ? eventDrawer : null
+            jsx('td', { className: 'hgl-muted', children: age(session.last_activity_at, t) }),
+            jsxs('td', { children: [jsx('div', { children: session.title || t('session') }), jsx('div', { className: 'hgl-subtle', children: [session.repository?.name, cardRef(session)].filter(Boolean).join(' ') })] }),
+            jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(session.profile || '?'), session.profile || '—'] })] }),
+            jsx('td', { className: 'hgl-num', children: formatCost(session) })
+          ] }, session.id)) })
+      ] }) : jsx(EmptyState, { title: t('noSessions'), description: t('noSessionsHint') }) }),
+    inspectSession ? sessionDrawer : null
   ] })
   const mappingToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
     jsx(Input, { className: 'hgl-search', value: mapQuery, placeholder: t('filterProjects'), 'aria-label': t('filterProjects'),
@@ -742,35 +746,27 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
         onClick: () => start(null), children: t('newProject') })
     ] })
   ] })
-  const activityToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
-    jsxs(Select, { value: projectScope, onValueChange: value => { setProjectScope(value); setEventPage(1) }, children: [
+  const sessionToolbar = jsxs('div', { className: 'hgl-toolbar', children: [
+    jsxs(Select, { value: projectScope, onValueChange: value => { setProjectScope(value); setSessionPage(1) }, children: [
       jsx(SelectTrigger, { className: 'hgl-select', 'aria-label': t('allProjects'), children: jsx(SelectValue, {}) }),
       jsxs(SelectContent, { children: [
         jsx(SelectItem, { value: 'all', children: t('allProjects') }),
         ...projects.map(row => jsx(SelectItem, { value: row.profile, children: row.profile }, row.profile))
       ] })
     ] }),
-    jsx(Input, { className: 'hgl-search', value: eventQuery, placeholder: t('filterEvents'), 'aria-label': t('filterEvents'),
-      onChange: event => { setEventQuery(event.target.value.slice(0, 200)); setEventPage(1) } }),
-    jsxs(Select, { value: eventStatus, onValueChange: value => { setEventStatus(value); setEventPage(1) }, children: [
-      jsx(SelectTrigger, { className: 'hgl-select', 'aria-label': t('status'), children: jsx(SelectValue, {}) }),
-      jsxs(SelectContent, { children: [
-        jsx(SelectItem, { value: 'all', children: t('all') }),
-        jsx(SelectItem, { value: 'open', children: t('openStatus') }),
-        jsx(SelectItem, { value: 'retrying', children: t('retrying') }),
-        jsx(SelectItem, { value: 'delivered', children: t('delivered') })
-      ] })
-    ] }),
-    jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || events.isFetching, onClick: () => events.refetch(), children: t('refresh') })
+    jsx(Input, { className: 'hgl-search', value: sessionQuery, placeholder: t('filterSessions'), 'aria-label': t('filterSessions'),
+      onChange: event => { setSessionQuery(event.target.value.slice(0, 200)); setSessionPage(1) } }),
+    jsxs('span', { className: 'hgl-primary hgl-actions', children: [
+      sessions.data ? jsx('span', { className: 'hgl-subtle hgl-num', children: `${t('totalCost')} ${formatCost(sessions.data)}` }) : null,
+      jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || sessions.isFetching, onClick: () => sessions.refetch(), children: t('refresh') })
+    ] })
   ] })
   return jsxs('div', { className: 'hgl', children: [
     jsxs('header', { className: 'hgl-head', children: [
       jsx('h1', { children: t('title') }),
       jsxs('div', { className: 'hgl-tabs', role: 'tablist', children: [
         jsx('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'mappings', disabled: locked, onClick: () => switchPane('mappings'), children: t('mappings') }),
-        jsxs('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'activity', disabled: locked, onClick: () => switchPane('activity'), children: [
-          t('activity'), openCount ? jsx('span', { className: 'hgl-tab-count', children: t('openEvents', openCount) }) : null
-        ] })
+        jsx('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'sessions', disabled: locked, onClick: () => switchPane('sessions'), children: t('sessions') })
       ] })
     ] }),
     result.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children:
@@ -796,8 +792,8 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
         ] })
       ] }),
       jsx('div', { className: 'hgl-panel', children: draft ? editor : jsxs('div', { className: 'hgl-panel', children: [
-        pane === 'activity' ? activityToolbar : mappingToolbar,
-        pane === 'activity' ? activityTable : mappingTable
+        pane === 'sessions' ? sessionToolbar : mappingToolbar,
+        pane === 'sessions' ? sessionTable : mappingTable
       ] }) })
     ] })
   ] })
