@@ -97,6 +97,7 @@ class DesktopAPI(unittest.TestCase):
             self.assertTrue(personal.is_dir())
             self.assertTrue(state["connection_configured"])
             self.assertEqual(state["transport"], "polling")
+            self.assertEqual(state["max_workers"], 5)
             self.assertEqual(state["open_count"], 0)
             self.assertEqual(client.get(base + "/events").json(), {"events": [], "next_page": None, "open_count": 0})
             self.assertEqual(client.get(base + "/sessions").json(),

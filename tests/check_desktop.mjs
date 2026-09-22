@@ -132,7 +132,7 @@ try {
       const other = {id:'3',name:'other/private',url:'https://gitlab.example/other/private',enabled:true};
       const c = {id:'4',name:'acme/worker',url:'https://gitlab.example/acme/worker',enabled:true};
       const sessionList = [{id:'sess-101',last_activity_at:new Date(Date.now()-120000).toISOString(),profile:'acme',repository:a,title:'Fix login',author:'alice',cost_usd:0.12,cost_status:null,input_tokens:1000,output_tokens:200,card:'1:issues:3',conversation:'1:issues:3',target_type:'Issue',iid:'3',model:'gpt-5.6-terra'}];
-      const original = {projects:[{profile:'acme',available:true,description:'Acme project',repositories:[a],cost_usd:0.12,cost_status:null,last_session:{id:'sess-101',title:'Fix login',last_activity_at:sessionList[0].last_activity_at,cost_usd:0.12,cost_status:null,card:'1:issues:3',iid:'3',target_type:'Issue',repository:a}},{profile:'other',available:true,description:'',repositories:[other],cost_usd:0,cost_status:null,last_session:null},{profile:'empty',available:true,description:'',repositories:[],cost_usd:0,cost_status:null,last_session:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,transport:'polling',session_count:1};
+      const original = {projects:[{profile:'acme',available:true,description:'Acme project',repositories:[a],cost_usd:0.12,cost_status:null,last_session:{id:'sess-101',title:'Fix login',last_activity_at:sessionList[0].last_activity_at,cost_usd:0.12,cost_status:null,card:'1:issues:3',iid:'3',target_type:'Issue',repository:a}},{profile:'other',available:true,description:'',repositories:[other],cost_usd:0,cost_status:null,last_session:null},{profile:'empty',available:true,description:'',repositories:[],cost_usd:0,cost_status:null,last_session:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,max_workers:5,transport:'polling',open_count:2,session_count:1};
       let data = structuredClone(original), failSave = false, pendingSave, deleteError, pendingDelete, nativeDeleteError, restartFails = false, restartStatus = 'finished', missingModel = false;
       const calls = [], nativeDeletes = [], contributions = [], disposers = [], opened = [];
       host.openSession = async (id, options) => { opened.push({id, options}); };
@@ -180,6 +180,7 @@ try {
       const client = new QueryClient({defaultOptions:{queries:{retry:false,gcTime:0},mutations:{retry:false}}});
       const mounted = render(<QueryClientProvider client={client}>{contributions.find(c=>c.area==='routes').render()}</QueryClientProvider>);
       const openProject = async name => fireEvent.click(await screen.findByRole('button',{name:new RegExp('^'+name+' ')}));
+      await screen.findByText('Polling every 30s · 5 workers · 2 waiting');
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
       assert(screen.getByText('$0.12'));

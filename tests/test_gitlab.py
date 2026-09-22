@@ -1052,13 +1052,71 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertFalse((await self.adapter.send("43:issues:3", "reply")).success)
         self.assertFalse((await self.adapter.send("42:issues:3", " ")).success)
 
+    async def test_worker_cap_queues_later_cards_and_still_runs_commands(self):
+        release = asyncio.Event()
+        started = []
+
+        async def handler(event):
+            if event.get_command():
+                return "Native status"
+            started.append(event.message_id)
+            await release.wait()
+            return "Answer"
+
+        self.native_handler(handler)
+        self.assertEqual(self.adapter.max_workers, 5)
+        self.todos = [self.todo(300 + n, target={"iid": n}) for n in range(1, 7)]
+        await self.adapter._poll_once()
+        for _ in range(50):
+            if len(started) >= 5:
+                break
+            await asyncio.sleep(0.02)
+        self.assertEqual(started, [f"todo:{300 + n}" for n in range(1, 6)])
+        self.assertEqual(self.row(306), (0, 0, None))
+        release.set()
+        for _ in range(50):
+            if "todo:306" in started:
+                break
+            await asyncio.sleep(0.02)
+        self.assertIn("todo:306", started)
+        await self.finish_native()
+
+        release = asyncio.Event()
+        started.clear()
+        self.adapter.max_workers = 1
+        self.todos = [self.todo(401, target={"iid": 11})]
+        await self.adapter._poll_once()
+        for _ in range(50):
+            if started:
+                break
+            await asyncio.sleep(0.02)
+        self.todos += [self.todo(402, target={"iid": 12}),
+                       self.command_todo(403, "@hermes-bot /status", target={"iid": 13})]
+        await self.adapter._poll_once()
+        self.assertEqual(started, ["todo:401"])
+        self.assertEqual(self.row(402), (0, 0, None))
+        self.assertEqual(self.row(403)[0], 1)
+        release.set()
+        for _ in range(50):
+            if "todo:402" in started:
+                break
+            await asyncio.sleep(0.02)
+        self.assertEqual(started, ["todo:401", "todo:402"])
+        await self.finish_native()
+
     async def test_configuration_and_disconnected_send_fail_cleanly(self):
         for override in ({"url": "http://gitlab.example"}, {"url": "https://bot:pat@gitlab.example"},
                          {"projects": "42,not-an-id"}, {"allowed_users": ""}, {"token": ""},
-                         {"poll_interval": 0}, {"poll_interval": float("nan")}):
+                         {"poll_interval": 0}, {"poll_interval": float("nan")},
+                         {"max_workers": 0}, {"max_workers": 65}, {"max_workers": True},
+                         {"max_workers": "many"}):
             with self.assertRaises(ValueError):
                 self.module.GitLabAdapter(PlatformConfig(extra={**self.config.extra, **override}))
         self.assertEqual(self.adapter.poll_interval, 30)
+        self.assertEqual(self.adapter.max_workers, 5)
+        self.assertEqual(self.module.worker_count("5"), 5)
+        self.assertEqual(self.module.GitLabAdapter(PlatformConfig(
+            extra={**self.config.extra, "max_workers": 1})).max_workers, 1)
         await self.adapter.disconnect()
         self.assertFalse((await self.adapter.send("42:issues:3", "reply")).success)
 

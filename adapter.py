@@ -40,6 +40,25 @@ def ids(value):
 
 
 _WORKING_STATUS = re.compile(r"^\s*⏳\s+Working\s+[—-]\s+\d+\s+min(?:\s|$)", re.I)
+DEFAULT_MAX_WORKERS = 5
+
+
+def worker_count(value):
+    """Concurrent GitLab cards. Missing config uses the default before this is called."""
+    if isinstance(value, bool):
+        raise ValueError("max_workers must be an integer from 1 to 64")
+    if isinstance(value, float):
+        if not math.isfinite(value) or not value.is_integer():
+            raise ValueError("max_workers must be an integer from 1 to 64")
+        value = int(value)
+    if isinstance(value, str):
+        value = value.strip()
+        if not re.fullmatch(r"[1-9][0-9]*", value):
+            raise ValueError("max_workers must be an integer from 1 to 64")
+        value = int(value)
+    if isinstance(value, int) and 1 <= value <= 64:
+        return value
+    raise ValueError("max_workers must be an integer from 1 to 64")
 
 
 def _escape_gitlab_body(content):
@@ -71,6 +90,7 @@ class GitLabAdapter(BasePlatformAdapter):
         self.poll_interval = float(config.extra.get("poll_interval", 30))
         if not math.isfinite(self.poll_interval) or self.poll_interval < 5:
             raise ValueError("poll_interval must be at least 5 seconds")
+        self.max_workers = worker_count(config.extra.get("max_workers", DEFAULT_MAX_WORKERS))
         self.bot_id = self.bot_username = None
         self._client = self._poll_task = self._db = self._state_lock = None
         self._state_root = get_default_hermes_root() / "gitlab"
@@ -265,16 +285,42 @@ class GitLabAdapter(BasePlatformAdapter):
                     await self._collect(state)
                 except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError, KeyError):
                     log.warning("GitLab to-do fetch failed; retrying on the next poll")
-            rows = self._db.execute("SELECT id, payload FROM inbox WHERE completed = 0 ORDER BY id").fetchall()
-            for todo_id, payload in rows:
-                try:
-                    await self._dispatch(todo_id, json.loads(payload))
-                except Exception:
-                    self._inflight.pop(f"todo:{todo_id}", None)
-                    with self._db:
-                        self._db.execute("UPDATE inbox SET last_error = 'context or dispatch failed' WHERE id = ?",
-                                         (todo_id,))
-                    log.warning("GitLab request context or dispatch failed; inspect its saved inbox status")
+            await self._dispatch_saved()
+
+    async def _dispatch_saved(self):
+        rows = self._db.execute(
+            "SELECT id, payload FROM inbox WHERE completed = 0 ORDER BY id").fetchall()
+        for todo_id, payload in rows:
+            try:
+                await self._dispatch(todo_id, json.loads(payload))
+            except Exception:
+                self._inflight.pop(f"todo:{todo_id}", None)
+                with self._db:
+                    self._db.execute(
+                        "UPDATE inbox SET last_error = 'context or dispatch failed' WHERE id = ?",
+                        (todo_id,))
+                log.warning("GitLab request context or dispatch failed; inspect its saved inbox status")
+
+    def _workers_full(self):
+        return len(set(self._inflight.values())) >= self.max_workers
+
+    def _schedule_queue_drain(self):
+        # The poll that is already walking the inbox holds this lock and continues
+        # to the next saved request. A completion outside that poll fills the free slot.
+        if self._db is None or self._client is None or self._admission.locked():
+            return
+        task = asyncio.create_task(self._drain_queue())
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+    async def _drain_queue(self):
+        try:
+            async with self._admission:
+                if self._db is None:
+                    return
+                await self._dispatch_saved()
+        except Exception:
+            log.warning("GitLab queue drain failed; saved requests will be retried")
 
     async def _dispatch(self, todo_id, todo):
         # Keep ownership in our durable inbox while native startup restores old turns.
@@ -292,6 +338,9 @@ class GitLabAdapter(BasePlatformAdapter):
         source = self._card_source(chat_id, user)
         command = self._comment_command(todo)
         if not command and self._source_session_key(source) in self._inflight.values():
+            return
+        # Commands stay immediate. A full worker set leaves this card in the inbox.
+        if not command and self._workers_full():
             return
         if resource == "merge_requests":
             related = await self._related_issue(route)
@@ -312,6 +361,8 @@ class GitLabAdapter(BasePlatformAdapter):
             await self._dispatch_command(event, todo, command, chat_id, discussion, note)
             return
         if session_key in self._active_sessions or session_key in self._inflight.values():
+            return
+        if self._workers_full():
             return
         discussion = await self._discussion_for_todo(todo, route)
         with self._db:
@@ -588,6 +639,7 @@ class GitLabAdapter(BasePlatformAdapter):
         self._inflight.pop(event.message_id, None)
         if not success:
             log.warning("GitLab processing or delivery failed; saved request will be retried")
+        self._schedule_queue_drain()
 
     async def send(self, chat_id, content, reply_to=None, metadata=None):
         match = self._card_match(chat_id)

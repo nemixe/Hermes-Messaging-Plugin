@@ -27,6 +27,7 @@ from hermes_cli.profiles import profiles_to_serve, read_profile_meta
 # installed package root; never depend on another profile's plugin namespace.
 __path__ = [str(Path(__file__).resolve().parent.parent)]
 cli = importlib.import_module(__name__ + ".cli")
+adapter = importlib.import_module(__name__ + ".adapter")
 router = APIRouter()
 
 
@@ -104,6 +105,14 @@ def errors():
         raise HTTPException(409, "Could not read or save Hermes configuration on this backend") from None
 
 
+def configured_workers(extra):
+    if "max_workers" not in extra or extra.get("max_workers") is None:
+        return adapter.DEFAULT_MAX_WORKERS
+    try:
+        return adapter.worker_count(extra["max_workers"])
+    except (TypeError, ValueError):
+        return adapter.DEFAULT_MAX_WORKERS
+
 @router.get("/projects")
 def projects():
     with errors(), root_scope() as root:
@@ -157,7 +166,8 @@ def projects():
             row["cost_status"] = status
         return {"projects": rows, "revision": revision, "url": url, "connection_configured": configured,
                 "multiplex_enabled": GatewayConfig.from_dict(config).multiplex_profiles,
-                "poll_interval": extra.get("poll_interval", 30), "transport": "polling",
+                "poll_interval": extra.get("poll_interval", 30),
+                "max_workers": configured_workers(extra), "transport": "polling",
                 "open_count": open_count, "session_count": len(sessions)}
 
 

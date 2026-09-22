@@ -1,4 +1,4 @@
-# Hermes GitLab messaging · 0.3.21
+# Hermes GitLab messaging · 0.3.22
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
@@ -124,12 +124,21 @@ platforms:
       projects: []
       require_profile_route: true
       poll_interval: 30
+      max_workers: 5
       toolsets: [web, terminal, file, skills, memory]
 ```
 
 `poll_interval` is seconds, minimum 5. The empty repository list lets the poller
-start idle before onboarding. The page/CLI manages this list after that. Remove
-legacy `GITLAB_PROJECTS`, `GITLAB_WEBHOOK_SECRET`, `GITLAB_LISTEN_HOST`, and
+start idle before onboarding. The page/CLI manages this list after that.
+
+`max_workers` is how many different GitLab cards may run at once. The default is 5,
+and the allowed range is 1–64. Mention and assignment requests beyond that stay in
+the inbox until a worker finishes; the next free slot starts the oldest waiting card
+without waiting for another poll. One issue or MR remains one conversation. Commands
+such as `/status` and `/stop` are not held by this cap. Restart the messaging gateway
+after changing it.
+
+Remove legacy `GITLAB_PROJECTS`, `GITLAB_WEBHOOK_SECRET`, `GITLAB_LISTEN_HOST`, and
 `GITLAB_LISTEN_PORT` settings when upgrading. Old GitLab webhooks can be removed;
 this release exposes no webhook endpoint.
 
