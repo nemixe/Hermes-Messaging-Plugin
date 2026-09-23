@@ -24,6 +24,7 @@ memories/
   INDEX.md                         Topic map and repository identities
   semantic/
     project.md                     Purpose, domain vocabulary, scope, constraints
+    team.md                        Verified work identities, PM/BE/FE/QA ownership, gaps
     architecture.md                Cross-repository design and contracts
     repositories/<project-id>.md   Repository role, entry points, verified commands
     decisions/<id>-<slug>.md        Decision summary or link to a repository ADR
@@ -41,6 +42,9 @@ URL, and checkout location inside the page so repository renames preserve identi
 
 - **Project:** product boundaries, domain terms, requirements, and stable constraints.
   Split a domain topic out only when the overview becomes difficult to use.
+- **Team:** project-scoped work identities and domain/repository responsibilities,
+  with role evidence, account verification dates and unresolved gaps. Keep
+  Mattermost and GitLab accounts distinct; use `mattermost-onboarding` for routing.
 - **Architecture:** component responsibilities, dependencies, data flow, API/event
   contracts, compatibility requirements, and design limitations.
 - **Repository:** role, important paths, build/test commands, local conventions,
@@ -81,7 +85,8 @@ If those tools are unavailable, report that the notes were not saved.
 
 ## Write workflow
 
-1. Keep information only if it will help a future development task.
+1. Write only new useful knowledge or a verified correction/change. If the task
+   adds none, leave memory unchanged; update only the changed information otherwise.
 2. Search existing titles, repository IDs, and source links before creating a page.
    Give each fact one primary home; link to it from other topics.
 3. Append uncertain or event-like information to an episode. Promote it to a semantic

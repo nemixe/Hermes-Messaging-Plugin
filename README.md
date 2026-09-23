@@ -49,8 +49,10 @@ on GitLab by default. Actual answers (including quoted notices), failures and
 approval messages still pass through. The platform prompt also asks the agent to
 answer the project request directly and skip generic onboarding invitations.
 
-Long-running heartbeats (`⏳ Working — N min`) edit the last matching bot note in
-that discussion, the same in-place update Mattermost uses.
+Codev project profiles disable reasoning, tool-progress messages and long-running
+heartbeats (`⏳ Working — N min`). Interim replies remain enabled for the single
+short preamble required by SOUL; subsequent narration is suppressed by that
+instruction. This is not a transport-level limit on interim messages.
 
 ## Install
 
@@ -223,7 +225,8 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`, `close-worktree` and `mattermost-dm` skills are seeded there from
+profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,
+`close-worktree`, `mattermost-dm` and `mattermost-onboarding` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
@@ -258,6 +261,16 @@ thread reads that file on a later turn. It reads the default profile's
 Mattermost messaging settings: `MATTERMOST_URL` and `MATTERMOST_TOKEN` from
 `.env`, or `platforms.mattermost` `url`/`token` in `config.yaml`. Installing
 or syncing the skill does not send messages.
+
+`mattermost-onboarding` starts on the first Mattermost conversation routed to a
+project after connection, or when explicitly requested. It records PM/BE/FE/QA
+members, verified platform identities and domain/repository responsibilities in
+that profile's `memories/semantic/team.md`, linked from its memory index. Unknown
+roles remain explicit and only missing information is requested. Codev consults
+this map for relevant blocker, decision, review and testing mentions, using a
+separately verified GitLab identity for GitLab replies. This is skill guidance;
+connecting or syncing alone does not launch onboarding or send messages. Apply
+it to existing profiles with `hermes -p default gitlab sync-knowledge`.
 
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.
@@ -317,37 +330,65 @@ Use a new conversation to ensure the updated startup instructions are loaded.
 The block and `PROJECT.yaml` are plugin-managed; keep custom instructions outside
 the `hermes-gitlab:orientation` markers and learned facts in `memories/`.
 
-The bundled SOUL identifies the agent as **Codev**. The Hermes session (Desktop,
-TUI, CLI) is the workbench: working notes, findings, approach and progress stay
-visible there, including when the turn was triggered from Mattermost or GitLab.
-Messaging channels receive a one-line preamble on work that needs thinking
-(for example, "Oke, saya cek."), then the completion or an actionable blocker as
-the turn's final post. A question that can be answered in one short reply is
-posted as that answer. On Mattermost, implementation requests complete with the
-confirmed GitLab issue link after the bot is assigned. Assigned development work
-on GitLab, Desktop, TUI or CLI still runs through validation, branch push and a
-review-ready MR when possible. An
-immediately answerable question receives its answer directly. GitLab replies and
-MR descriptions use Bahasa Indonesia. It checks the codebase and accessible
-resources before asking, and asks an actionable question when a missing
-requirement prevents progress. Blocker requests go to the originating messaging
-channel, bundle the known requirements, name exactly what the user must provide
-or do and where, and say what resumes afterward. The agent tries safe recovery
-first, continues independent work while waiting, and does not repeat unchanged
-blockers. Required approvals still apply. It preserves code, identifiers and
-repository template headings. Secret values stay on disk; blocker questions name
-the required variable and distinguish clone/worktree `.env` from profile `.env`.
+The bundled SOUL identifies the agent as **Codev**. On every surface (including
+Desktop, TUI, CLI, Mattermost and GitLab), visible replies are one instant preamble
+when work needs thinking, then a concise final result or an actionable blocker.
+Working notes stay internal; retries, compaction, reviews and resumed work do not
+trigger another preamble. Immediately answerable questions receive the answer
+directly. Blockers name the missing input and where to provide it; recoverable
+failures are handled silently. Required approvals remain visible.
+
+Project setup and `gitlab sync-knowledge` apply the bundled quiet display settings
+to new and existing project profiles, with config backups. They preserve unrelated
+display preferences. Mattermost and GitLab disable response streaming so partial
+narration is not streamed to chat; interim replies stay enabled for the preamble.
+Use a new conversation after syncing to load the updated SOUL instructions.
+
+Project implementation on every surface requires a verified GitLab issue currently
+assigned to this profile's Codev bot; an MR must resolve to that issue. Questions,
+investigation and read-only reviews need no assignment. `codev-handoff` supports
+issue-only requests without assigning the bot. For an authorized assignment, it
+returns the issue link and leaves implementation with the GitLab worker, avoiding
+duplicate work from Desktop/TUI/CLI.
+
+Codev owns assigned work through implementation, review feedback and QA verification.
+It traces relevant UI/API/business-rule/authorization/data effects, makes routine
+technical choices and asks the responsible team member for business scope or major
+architecture decisions with findings and a recommendation. It validates, reviews,
+pushes and reuses the issue/MR; opening an MR is not task completion. Done follows
+team acceptance criteria; merge and deployment still require authorization.
+
+UI changes require passing, rerunnable automated E2E tests and screenshots from the
+running app at the tested revision. Reuse existing scenarios when coverage is
+adequate; add or update tests only for gaps, and run them in either case.
+The MR records scenarios, commands/results,
+revision and relevant states/viewports, with screenshots uploaded to GitLab or
+linked through reviewer-accessible artifacts. Build/unit tests and local screenshot
+paths alone are insufficient. Failed checks or missing/stale/inaccessible evidence
+mean incomplete verification: keep new MRs draft and do not advance to review.
+Backend-only work uses relevant API/data/security checks without a screenshot gate.
+
+On a fresh supported mention/assignment, Codev handles reviewer/QA findings on the
+same MR, checks current CI and refreshes affected evidence. This guidance adds no
+automatic wake-up for CI/review changes. Sync with `gitlab sync-knowledge` and use
+a new conversation to load the updated persona; existing profile customizations
+outside the managed block remain intact. GitLab replies and MR descriptions use
+Bahasa Indonesia and preserve repository template headings. Secrets stay out of
+replies and evidence.
 
 ### Codev worktrees and setup knowledge
 
 The plugin supplies `card`, `conversation`, `clone`, `project`, `worktree`,
 `owned_repository_ids` and `gitlab_url` in each event. Clone paths are profile-relative
 `workspace/<numeric-repository-id>` locations; they do not imply a clone exists.
-The new `codev-gitlab` skill is bound to new GitLab sessions; every event also points
-resumed sessions to its instructions. It is written for this gateway's automatic
+The `codev-gitlab` skill is bound to new GitLab sessions; later events reuse its full
+body in context. Call `skill_view` only if that body is missing or stale (for example,
+after a skill sync); a catalog description alone is insufficient. Other skill
+references follow the same rule, without skipping current task/account checks.
+It is written for this gateway's automatic
 discussion replies and does not depend on the older `gitlab-card` poller skill.
-`codev-handoff` is the Mattermost path: confirm a GitLab issue and assign the Codev
-bot so that GitLab session starts.
+`codev-handoff` prepares issues and authorized assignments on every surface;
+the Mattermost path ends with the verified link while the GitLab session implements.
 
 The agent follows that skill to verify or provision the clone, then runs its bundled
 `scripts/worktree.py` helper with a verified base commit. The helper uses native Git

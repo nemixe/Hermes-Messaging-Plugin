@@ -8,12 +8,25 @@ terminal:
 skills:
   external_dirs:
     - ../global-project/skills
+# Keep interim replies enabled for the single preamble defined in SOUL.md.
 display:
+  show_reasoning: false
+  thinking_progress: false
+  tool_progress: false
+  long_running_notifications: false
   interim_assistant_messages: true
   platforms:
     mattermost:
+      show_reasoning: false
+      thinking_progress: false
       tool_progress: false
+      long_running_notifications: false
+      streaming: false
       interim_assistant_messages: true
     gitlab:
+      show_reasoning: false
+      thinking_progress: false
       tool_progress: false
+      long_running_notifications: false
+      streaming: false
       interim_assistant_messages: true

@@ -145,7 +145,7 @@ class ProjectSetup(unittest.TestCase):
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
                 for name in ("codev-gitlab", "codev-handoff", "tunnel-preview", "close-worktree",
-                                 "mattermost-dm"):
+                                 "mattermost-dm", "mattermost-onboarding"):
                     viewed = json.loads(skill_view(name))
                     self.assertEqual(Path(viewed["_source_path"]).resolve(),
                                      (shared / "skills" / name / "SKILL.md").resolve())
@@ -263,14 +263,72 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual((profile / "SOUL.md").read_text(), soul)
         self.assertFalse((self.root / "profiles" / "personal" / "PROJECT.yaml").exists())
 
-    def test_orientation_keeps_session_workbench_and_messaging_posts_separate(self):
+    def test_sync_replaces_managed_persona_and_preserves_profile_knowledge(self):
+        from agent.skill_utils import _external_dirs_cache_clear
+        from tools.skills_tool import skill_view
+
+        self.run_command("add-project", "commerce", "--repos", "101")
+        bundle = Path(__file__).parents[1] / "templates"
+        start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
+        current = (bundle / "project-egg/SOUL.md").read_text()
+        managed = start + current.split(start, 1)[1].split(end, 1)[0] + end
+        prefix, suffix = "Custom team conventions\n", "\n## Local delivery notes\nKeep our release policy.\n"
+        profiles = [self.root / "profiles" / name for name in ("project-egg", "commerce")]
+        for profile in profiles:
+            (profile / "SOUL.md").write_text(prefix + start + "\nOlder persona\n" + end + suffix)
+            (profile / "memories/INDEX.md").write_text("Our verified project notes\n")
+        self.run_command("sync-knowledge")
+        for profile in profiles:
+            self.assertEqual((profile / "SOUL.md").read_text(), prefix + managed + suffix)
+            self.assertEqual((profile / "memories/INDEX.md").read_text(), "Our verified project notes\n")
+            with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
+                _external_dirs_cache_clear()
+                for name in ("codev-gitlab", "codev-handoff"):
+                    viewed = json.loads(skill_view(name))
+                    source = Path(viewed["_source_path"])
+                    self.assertEqual(source.read_bytes(),
+                                     (bundle / "global-project/skills" / name / "SKILL.md").read_bytes())
+        self.run_command("sync-knowledge")
+        for profile in profiles:
+            self.assertEqual((profile / "SOUL.md").read_text(), prefix + managed + suffix)
+
+    def test_quiet_display_migrates_existing_profiles_without_losing_custom_settings(self):
+        from gateway.display_config import resolve_display_setting
+
+        self.run_command("add-project", "commerce", "--repos", "101")
+        profile = self.root / "profiles" / "commerce"
+        path = profile / "config.yaml"
+        config = yaml.safe_load(path.read_text())
+        config["display"] = {"show_reasoning": True, "show_cost": True, "platforms": {
+            "mattermost": {"show_reasoning": True, "long_running_notifications": True,
+                           "streaming": True, "tool_preview_length": 23},
+            "gitlab": {"thinking_progress": True, "tool_progress": "all"},
+        }}
+        path.write_text(yaml.safe_dump(config))
+        self.run_command("sync-knowledge")
+        migrated = yaml.safe_load(path.read_text())
+        self.assertTrue(migrated["display"]["show_cost"])
+        self.assertEqual(migrated["display"]["platforms"]["mattermost"]["tool_preview_length"], 23)
+        self.assertEqual(migrated["model"], config["model"])
+        for target in (profile, self.root / "profiles" / "project-egg"):
+            settings = yaml.safe_load((target / "config.yaml").read_text())
+            for platform in ("mattermost", "gitlab"):
+                for key in ("show_reasoning", "thinking_progress", "long_running_notifications", "streaming"):
+                    self.assertFalse(resolve_display_setting(settings, platform, key), (target.name, platform, key))
+                self.assertEqual(resolve_display_setting(settings, platform, "tool_progress"), "off")
+                self.assertTrue(resolve_display_setting(settings, platform, "interim_assistant_messages"))
+        before = path.read_bytes()
+        self.run_command("sync-knowledge")
+        self.assertEqual(path.read_bytes(), before)
+
+    def test_orientation_limits_visible_messages_across_surfaces(self):
         bundle = Path(__file__).parents[1] / "templates" / "project-egg" / "SOUL.md"
         text = bundle.read_text()
         start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
         block = text.split(start, 1)[1].split(end, 1)[0]
         self.assertIn("**Session workbench:**", block)
         self.assertIn("**Messaging posts:**", block)
-        self.assertIn("hard-task preamble", block)
+        self.assertIn("**Preamble first:**", block)
         self.assertIn("extended thinking", block)
         self.assertIn("Mattermost", block)
         self.assertIn("Desktop", block)
@@ -286,7 +344,10 @@ class ProjectSetup(unittest.TestCase):
         self.assertFalse(config["display"]["platforms"]["mattermost"]["tool_progress"])
         self.assertTrue(config["display"]["platforms"]["gitlab"]["interim_assistant_messages"])
         self.assertFalse(config["display"]["platforms"]["gitlab"]["tool_progress"])
-        self.assertIn("Keep messaging posts concise.", text)
+        self.assertIn("Keep visible replies concise:", text)
+        self.assertIn("keep reasoning and working notes internal", block)
+        self.assertIn("at most one preamble per user request", block)
+        self.assertNotIn("use interim commentary", block)
         self.assertNotIn("Be brief. Keep responses concise and direct", text)
         self.assertNotIn("Apply this communication rule across skills and platforms", block)
 
@@ -296,14 +357,16 @@ class ProjectSetup(unittest.TestCase):
             "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
             "essential details are needed.\n"
         )
-        new = "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"
-        profile.write_text(profile.read_text().replace(new, old, 1))
-        self.assertIn(old, profile.read_text())
-        self.run_command("sync-knowledge")
-        after = profile.read_text()
-        self.assertIn(new, after)
-        self.assertNotIn("Be brief. Keep responses concise and direct", after)
-        self.assertIn("**Session workbench:**", after)
+        new = "Keep visible replies concise: one preamble, the final result, or an actionable blocker.\n"
+        for legacy in (old, "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"):
+            with self.subTest(legacy=legacy):
+                profile.write_text(profile.read_text().replace(new, legacy, 1))
+                self.assertIn(legacy, profile.read_text())
+                self.run_command("sync-knowledge")
+                after = profile.read_text()
+                self.assertIn(new, after)
+                self.assertNotIn(legacy, after)
+                self.assertIn("**Session workbench:**", after)
 
     def test_project_marker_preserves_metadata_and_survives_empty_registration(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)

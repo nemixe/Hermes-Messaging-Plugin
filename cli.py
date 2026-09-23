@@ -32,6 +32,35 @@ STARTER_SURFACES = (
     "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"
 )
 
+STARTER_QUIET = "Keep visible replies concise: one preamble, the final result, or an actionable blocker.\n"
+
+
+def configure_project_display(profile):
+    """Apply bundled quiet settings while retaining unrelated display preferences."""
+    path = profile / "config.yaml"
+    if path.is_symlink():
+        raise ValueError("Project config.yaml must not be symlinked")
+    config = yaml.safe_load(path.read_text())
+    if not isinstance(config, dict):
+        raise ValueError("Project config.yaml must be a mapping")
+    defaults = yaml.safe_load((Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "config.yaml").read_text())["display"]
+    display = config.setdefault("display", {})
+    if not isinstance(display, dict):
+        raise ValueError("Project display settings must be a mapping")
+    platforms = display.setdefault("platforms", {})
+    if not isinstance(platforms, dict):
+        raise ValueError("Project display.platforms must be a mapping")
+    before = yaml.safe_dump(config)
+    for platform, settings in defaults["platforms"].items():
+        target = platforms.setdefault(platform, {})
+        if not isinstance(target, dict):
+            raise ValueError(f"Project display.platforms.{platform} must be a mapping")
+        target.update(settings)
+    display.update({key: value for key, value in defaults.items() if key != "platforms"})
+    if yaml.safe_dump(config) != before:
+        backup_config(path, "gitlab-quiet-display")
+        atomic_yaml_write(path, config, create_mode=0o600)
+
 
 def configure_project_directory(profile, *, destination=None):
     """Materialize the local terminal default per profile, including cloned starters."""
@@ -89,7 +118,7 @@ def sync_project_knowledge(profile, config=None):
     after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
     after = after.replace("read `skills/codev-gitlab/SKILL.md` and follow",
                           "load `codev-gitlab` with `skill_view` and follow")
-    after = after.replace(STARTER_BRIEF, STARTER_SURFACES)
+    after = after.replace(STARTER_BRIEF, STARTER_QUIET).replace(STARTER_SURFACES, STARTER_QUIET)
     data = None
     if config is not None:
         extra = PlatformConfig.from_dict(merge_platform_sections(config, config.get("gateway", {}), {})
@@ -105,6 +134,7 @@ def sync_project_knowledge(profile, config=None):
         data = {"profile": profile.name, "gitlab_url": public_url(extra_or_secret(extra, "url", "GITLAB_URL")),
                 "repositories": repositories}
     configure_project_directory(profile)
+    configure_project_display(profile)
     if after != before:
         atomic_write_text(soul, after, preserve_mode=True, create_mode=0o600)
     if data is not None:

@@ -1,6 +1,6 @@
 ---
 name: codev-gitlab
-description: Handle Hermes GitLab mentions and issue assignments, prepare isolated Card worktrees, ask for blockers in the originating discussion, and retain verified setup knowledge across repositories.
+description: Use for Hermes GitLab events or assigned Codev implementation on any surface, including delivery, UI evidence, and reviewer or QA follow-ups on an existing issue/MR.
 metadata:
   hermes:
     tags: [gitlab, development, worktrees]
@@ -8,11 +8,29 @@ metadata:
 
 # Codev GitLab
 
-Use this skill for GitLab events delivered by the `hermes-gitlab` messaging plugin.
+Use this skill for GitLab events and assigned implementation on any surface.
 This shared skill lives in `global-project`; `HERMES_HOME` stays set to the active
 project profile for repository work and knowledge. Resolve profile files from `HERMES_HOME`. Follow this profile's SOUL for language
 and scope. The plugin delivers the final answer to the triggering discussion,
-including when an MR shares an issue's conversation.
+including when an MR shares an issue's conversation. On other surfaces, reply
+there rather than creating an extra GitLab discussion post.
+
+## Assignment before implementation
+
+Follow SOUL's **Implementation gate** and **Task ownership and delivery**. Read
+`PROJECT.yaml`; use `gitlab-cli` under SOUL's **Skill loading** rule to read the
+configured host's bot identity, issue and current assignees. Confirm that this profile's bot
+is assigned to the issue in a mapped repository. Resolve an MR to that issue via
+verified links; ask when absent or ambiguous. Check current assignment on resumed
+work too. If missing, use `codev-handoff` for an authorized assignment; preserve
+requests to create only. Do not edit or delegate coding before verification.
+Read-only questions/reviews can proceed without assignment or a new worktree.
+
+On Desktop/TUI/CLI without an event header, derive the issue conversation key
+`<numeric-project-id>:issues:<iid>` from the verified issue and locate the clone
+through `PROJECT.yaml` and repository notes. For an MR, retain its source branch
+and owning issue conversation. Check existing session activity as SOUL requires;
+an assignment may already have started a GitLab worker, which must not be duplicated.
 
 ## Event context
 
@@ -39,8 +57,8 @@ Done when repository commands and file edits use a verified dedicated worktree.
    `workspace/`, verify its remote identifies this GitLab repository before using it.
    Never adopt a checkout outside this profile or clone secrets from another profile.
 2. If no clone exists, resolve `http_url_to_repo` and `ssh_url_to_repo` from the
-   configured GitLab host and numeric project ID using authenticated tools. Read
-   the `gitlab-cli` skill with `skill_view` before using glab. Choose the URL supported by the
+   configured GitLab host and numeric project ID using authenticated tools. Follow
+   `gitlab-cli` for glab requests. Choose the URL supported by the
    current Hermes runtime's credentials: HTTPS with an existing credential helper
    or askpass setup, or SSH with a key available to that runtime user. An API token
    in `GITLAB_TOKEN` does not automatically authenticate Git over HTTPS or SSH.
@@ -98,15 +116,64 @@ Done when repository commands and file edits use a verified dedicated worktree.
 
 ## Task
 
-Follow SOUL's **Delivery and completion** through a review-ready MR for assigned
-development work. Read the current request and relevant discussion; implement and
-validate in the dedicated worktree. Preserve repository templates and their heading
+Read the current issue, acceptance criteria, relevant discussion and linked MR.
+Trace the affected user/data flow before implementing the smallest complete change
+in the dedicated worktree. For bugs, reproduce the failure and retain a runnable
+regression check. For backend-only work, verify relevant API behavior, validation,
+authorization and data effects; UI evidence applies when the change affects UI.
+Review the diff and relevant CI results, and resolve failures caused by this change.
+Preserve repository templates and their heading
 text. Use available authenticated GitLab tools to create or update the MR and write
 its description in Bahasa Indonesia, including the correct issue reference across
 repositories. When updating an existing MR, push to its verified source branch;
 the helper's local branch name is independent of that remote branch. Follow the
 task's push/review/deployment requirements. Verify the result of each external write
 before reporting it as done.
+
+### UI evidence
+
+A UI change is ready for review only when its acceptance criteria are demonstrated
+by passing automated E2E tests and accessible screenshots of the tested revision.
+
+1. Reuse the repository's E2E runner, setup, test-data conventions and existing
+   rerunnable scenarios that cover the acceptance criteria. Add or update scenarios
+   only for gaps in the changed user journey or relevant failure cases. Run the
+   applicable scenarios even when no test edits are needed. Exercise the running
+   application and its relevant integration; a static mockup, unit test or build
+   is not E2E proof. Identify mocked dependencies and
+   coverage limits. If no runner exists, use available browser automation with a
+   saved runnable scenario and documented command; do not substitute manual clicks
+   for automated evidence. Report a setup blocker if no usable automation exists.
+2. Run against the intended change and capture screenshots of the relevant UI
+   states and viewports. For responsive changes, cover affected screen sizes.
+   Use safe test data; exclude credentials and private user data from captures.
+   Save scenario/command, result, tested commit, environment and viewport with the
+   evidence. Verify the running app contains that revision; older screenshots or
+   generated visuals are not evidence. After further relevant edits, rerun the
+   affected scenarios and refresh captures; unrelated edits must not be implied
+   to have been tested by an earlier run.
+3. Publish screenshots via the project's GitLab uploads or CI artifacts and link
+   or embed them in the MR alongside the E2E results. Verify the links and access
+   for the intended reviewers using available project permissions; local paths,
+   inaccessible or expired artifacts do not count. Keep screenshots out of source
+   commits unless the repository convention requires them. Preserve MR headings.
+4. If E2E fails, execution is blocked, screenshots are missing/stale, or evidence
+   cannot be shared, fix what is in scope and mark verification incomplete. Keep
+   a new MR draft; for an existing MR, clearly update its verification status and
+   use the project's draft/blocked workflow. Do not report ready for review or
+   move the issue to review. Name the specific blocker and required input.
+
+### Reviewer and QA follow-up
+
+On the next supported mention/assignment, reread current feedback, issue scope,
+MR diff and CI results. Check findings against the code, explain disagreements
+with evidence, fix valid in-scope findings on the same MR branch and repeat affected
+checks, including UI evidence when relevant. Summarize addressed and unresolved
+findings with evidence links. Use the saved team map for an authorized reviewer/QA
+handoff with test steps and expected results; identify who needs to act next.
+Opening an MR or replying to a review does not itself complete the task. Await
+the team's acceptance; merging/deploying requires authorization. Do not claim to
+monitor future CI, QA or review activity automatically; ask for a fresh bot mention.
 
 When the user requests a temporary public preview, load `tunnel-preview` by name
 with `skill_view` for per-service tunnels, temporary environment updates and cleanup.
@@ -137,43 +204,20 @@ a started background task or a failed command is not a completed review.
 
 ## Notify and Ask
 
-**Preamble:** follow SOUL's **Preamble first**. For assigned work, investigation,
-implementation or other extended thinking, send that one-line acknowledgement
-immediately so the originating discussion gets instant receipt. A short question
-that is the whole answer is the Notify post.
-
-**Notify:** return a concise Bahasa Indonesia final answer containing the result,
-validation, relevant links and remaining work. The gateway posts that final
-answer once in the originating discussion. Follow SOUL's **Messaging posts** for
-the GitLab reply and **Session workbench** for working notes in the Hermes
-session. Interrupt the messaging channel for user questions or required
-input/approval.
-
-**Ask:** follow SOUL's **Actionable blockers**, resource-check and confirmation rules. When a missing fact,
-decision or approval prevents further progress, end with an actionable question in
-Bahasa Indonesia; the gateway posts it in that same discussion. Name the missing
-requirement, its location and what you will do after the answer. For example:
-"Mohon isi `DATABASE_URL` di `.env`
-clone ini melalui disk, lalu balas dengan mention bot ini setelah siap. Jangan kirim
-nilainya di GitLab. Setelah siap, saya lanjutkan tes integrasi dan MR." Name the
-actual clone or profile path in the question. This
-poller needs a fresh bot mention to receive the reply. Do not return an empty answer
-or claim the task is done.
+Follow SOUL's **Quiet communication**, **Actionable blockers**, **Ask and
+confirmation**, and **GitLab communication**. For GitLab events, the gateway posts
+the final answer once to the triggering discussion. When input is needed there,
+ask the recipient to include a fresh bot mention in their reply so the poller
+receives it. Follow SOUL's private-DM/on-disk procedure for secrets.
 
 ## Knowledge handoff
 
-Before the final answer, save reusable, verified procedures according to
-`TAXONOMY.md` in `memories/semantic/workflows/<slug>.md`; link them from the index
-and repository note. These files live in the profile and are shared across its
-worktrees. Update the existing procedure rather than creating a note per worktree.
-
-Capture the applicable repo/commit, clone and authentication prerequisites, worktree
-creation, dependency install, variable names and secret-file locations, migrations
-and seed data, build/test commands, start/stop commands, port allocation, health
-checks, user-facing URL and how the user obtains access. Record only observed steps,
-the verification date, expected results and unresolved limits. Keep credentials and
-temporary access tokens out of memory. Link source docs rather than duplicating them.
-For clone/review recovery, include the runtime user/profile, working clone transport,
-credential mechanism (no values), CLI version, exact successful command and verified
-review commits. Record failed attempts and unresolved setup as such; only promote
-a recovery procedure to verified knowledge after observing it succeed in that runtime.
+Before the final answer, save knowledge only when this task established a new
+reusable procedure or verified a correction/change. Otherwise leave memory unchanged.
+Update only the changed information in the existing profile workflow note under
+`memories/semantic/workflows/`, following `TAXONOMY.md`; link new notes from the
+index and repository note. Include source/revision, verification date, expected
+results and limits. For clone/review recovery, retain the runtime user/profile,
+transport, credential mechanism (no values), CLI version, successful command and
+verified commits as applicable. Keep failed/unverified attempts labeled as such;
+never promote them to a verified procedure or save credentials/access tokens.
