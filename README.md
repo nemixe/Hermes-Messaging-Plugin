@@ -112,7 +112,7 @@ when using the management page.
 
 The management page saves repository IDs and profile routes. No YAML editing is
 required for that. Optional settings in the default profile's existing `config.yaml`
-can set the polling interval/tool access or start the connector idle before onboarding:
+can set the polling interval or start the connector idle before onboarding:
 
 ```yaml
 gateway:
@@ -127,7 +127,6 @@ platforms:
       require_profile_route: true
       poll_interval: 30
       max_workers: 5
-      toolsets: [web, terminal, file, skills, memory]
 ```
 
 `poll_interval` is seconds, minimum 5. The empty repository list lets the poller
@@ -491,11 +490,13 @@ formatting/comments may change.
 
 Registration does not clone or index code. The Codev workflow provisions clones
 when needed, using existing authenticated tools, or asks on GitLab when setup is
-blocked. The connector defaults to `web`, `terminal`, `file`, `skills` and `memory`.
-An explicit `extra.toolsets` list is preserved; installations using `[web]` must
-enable the coding tools before Codev can create worktrees. Restart the gateway
-after changing that setting. No live credentials or permissions are changed by
-extracting the plugin package.
+blocked. GitLab sessions use the selected project profile's **Capabilities → Tools**
+settings, the same toolsets its CLI sessions use. The old
+`platforms.gitlab.extra.toolsets` setting no longer controls them. Enable Browser
+Automation there to expose `browser_exec` and `browser_vault_fill` when the backend
+is available. Menu changes apply on the next GitLab turn; restart the gateway
+after updating the plugin. No live
+credentials or permissions are changed by extracting the plugin package.
 
 ### Menu opens the chat instead of the page
 

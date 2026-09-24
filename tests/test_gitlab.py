@@ -665,10 +665,6 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("system context", event.text)
         self.assertFalse(event.allow_gateway_control)
         self.assertEqual(event.auto_skill, "gitlab-workflow")
-        self.assertIn("terminal", self.adapter.toolsets_for_source(event.source))
-        self.assertIn("browser", self.adapter.toolsets_for_source(event.source))
-        self.adapter.config.extra["toolsets"] = ["web"]
-        self.assertEqual(self.adapter.toolsets_for_source(event.source), ["web"])
         self.assertIn("clone: workspace/42\n", event.text)
         self.assertIn("conversation: 42:issues:3\n", event.text)
         self.assertIn("worktree: workspace/42/.worktrees/42-issues-3\n", event.text)
@@ -677,6 +673,17 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
             self.assertTrue((await self.adapter.send(event.source.chat_id, "Try this fix")).success)
         self.assertEqual([post[0] for post in self.posts],
                          ["/api/v4/projects/42/issues/3/discussions", "/api/v4/projects/42/merge_requests/8/discussions"])
+
+    def test_gitlab_tools_follow_profile_capabilities(self):
+        from gateway.run import GatewayRunner
+
+        runner = GatewayRunner.__new__(GatewayRunner)
+        runner._delivery_adapter_for = lambda source: self.adapter
+        self.adapter.config.extra["toolsets"] = ["web"]  # Legacy connector setting must not mask the profile menu.
+        config = {"platform_toolsets": {"gitlab": ["file"]}}
+        with patch("hermes_cli.config.load_config", return_value={"platform_toolsets": {"cli": ["terminal", "browser"]}}):
+            self.assertEqual(runner._resolve_enabled_toolsets_for_source(config, None, "gitlab"),
+                             ["browser", "terminal"])
 
     async def test_native_replies_follow_triggering_discussion_including_later_pages(self):
         self.discussions = [{"id": "a" * 40, "notes": [{"id": 7, "system": False}]},

@@ -911,7 +911,9 @@ class GitLabAdapter(BasePlatformAdapter):
         return {"name": f"GitLab {chat_id}", "type": "group"}
 
     def toolsets_for_source(self, source):
-        return self.config.extra.get("toolsets", ["web", "terminal", "file", "skills", "memory", "browser"])
+        from hermes_cli.config import load_config
+        from hermes_cli.tools_config import _get_platform_tools
+        return sorted(_get_platform_tools(load_config(), "cli"))
 
 
 def register(ctx):
