@@ -202,12 +202,14 @@ try {
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
       assert(screen.getByText('1k in · 200 out'));
+      assert(screen.getByRole('columnheader',{name:'Cost % · Pro 5x/week'}));
+      assert(screen.getByRole('cell',{name:'≈0.52%'}));
       assert(!document.body.textContent.includes('$'), 'subscription display does not convert dollars into quota');
       fireEvent.click(screen.getByRole('button',{name:/Fix login/}));
       await screen.findByText('@alice');
       assert(screen.getAllByText('Related project').length >= 2);
       assert(screen.getByText('Pro 5x weekly price equivalent'));
-      assert(screen.getByText('≈0.52%'));
+      assert.equal(screen.getAllByText('≈0.52%').length, 2);
       assert(screen.getByText(/Price comparison only; not actual quota use/));
       assert(screen.getByRole('button',{name:'Open in GitLab'}));
       fireEvent.click(screen.getByRole('button',{name:'Open session'}));

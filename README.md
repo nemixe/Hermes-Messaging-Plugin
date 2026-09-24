@@ -1,10 +1,10 @@
-# Hermes GitLab messaging · 0.3.24
+# Hermes GitLab messaging · 0.3.25
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
 Desktop. **Mappings** registers repositories to Hermes project profiles.
 **Sessions** lists GitLab-triggered Hermes sessions — globally or for one project —
-with tokens and the related project when a row is selected.
+with tokens and the estimated cost percentage of a Pro 5x week.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
@@ -175,9 +175,9 @@ for this shared connection management page.
 
 Open **GitLab Projects** below **Kanban**. **Mappings** is the registry; click a
 row for repositories, recent sessions, and edit/delete. **Sessions** lists GitLab
-sessions for all projects or one project; click a row for tokens, related project,
-card, and the option to open the session. The session detail compares its USD
-cost estimate with the weekly share of the $100/month Pro 5x price (~$23.08/week).
+sessions for all projects or one project. Its cost column and session detail compare
+each session's USD estimate with the weekly share of the $100/month Pro 5x price
+(~$23.08/week). Click a row for tokens, related project, card, and the option to open it.
 That percentage is a price comparison, not measured subscription quota use.
 
 1. Select an existing profile, or create a new project/profile with a name and description.

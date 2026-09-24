@@ -60,7 +60,7 @@ const locales = {
     recentSessions: 'Recent sessions', allSessions: 'All sessions',
     card: 'Card', session: 'Session', relatedProject: 'Related project',
     tokenUsage: 'Tokens', totalTokens: 'Total tokens', subscription: 'ChatGPT subscription', quotaScope: 'Account-wide · includes usage outside GitLab; not attributable to individual projects or sessions.', quotaLoading: 'Loading quota…', quotaUnavailable: 'Quota unavailable. Check the ChatGPT login on this backend and retry.', refreshQuota: 'Refresh quota', sessionWindow: '5 hours', weeklyWindow: 'Weekly', quotaUsed: n => `${n}% used`, quotaReset: date => `Resets ${date}`, tokens: (input, output) => `${input} in · ${output} out`,
-    weeklyPriceEquivalent: 'Pro 5x weekly price equivalent', weeklyPriceHint: 'Session USD estimate ÷ ~$23.08/week (Pro 5x at $100/month). Price comparison only; not actual quota use.',
+    costPercentage: 'Cost % · Pro 5x/week', weeklyPriceEquivalent: 'Pro 5x weekly price equivalent', weeklyPriceHint: 'Session USD estimate ÷ ~$23.08/week (Pro 5x at $100/month). Price comparison only; not actual quota use.',
     openSession: 'Open session', openInGitlab: 'Open in GitLab', openSessionFailed: 'Could not open this session.',
     justNow: 'now',
     ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
@@ -117,7 +117,7 @@ const locales = {
     recentSessions: '最近のセッション', allSessions: 'すべてのセッション',
     card: 'カード', session: 'セッション', relatedProject: '関連プロジェクト',
     tokenUsage: 'トークン', totalTokens: '合計トークン', subscription: 'ChatGPT サブスクリプション', quotaScope: 'アカウント全体 · GitLab 以外の利用を含みます。プロジェクトやセッション別には集計できません。', quotaLoading: '利用枠を読み込み中…', quotaUnavailable: '利用枠を取得できません。このバックエンドの ChatGPT ログインを確認し、再試行してください。', refreshQuota: '利用枠を更新', sessionWindow: '5時間', weeklyWindow: '週間', quotaUsed: n => `${n}% 使用済み`, quotaReset: date => `リセット ${date}`, tokens: (input, output) => `${input} 入力 · ${output} 出力`,
-    weeklyPriceEquivalent: 'Pro 5x の週間料金換算', weeklyPriceHint: 'セッションの推定 USD 額 ÷ 約 $23.08/週（Pro 5x は月額 $100）。料金の比較であり、実際の利用枠消費率ではありません。',
+    costPercentage: '費用比率 · Pro 5x/週', weeklyPriceEquivalent: 'Pro 5x の週間料金換算', weeklyPriceHint: 'セッションの推定 USD 額 ÷ 約 $23.08/週（Pro 5x は月額 $100）。料金の比較であり、実際の利用枠消費率ではありません。',
     openSession: 'セッションを開く', openInGitlab: 'GitLab で開く', openSessionFailed: 'このセッションを開けませんでした。',
     justNow: 'たった今',
     ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
@@ -169,7 +169,7 @@ const locales = {
     recentSessions: '最近会话', allSessions: '全部会话',
     card: '卡片', session: '会话', relatedProject: '相关项目',
     tokenUsage: 'Token', totalTokens: '总 Token', subscription: 'ChatGPT 订阅', quotaScope: '整个账号 · 包含 GitLab 以外的用量，无法归属到单个项目或会话。', quotaLoading: '正在加载额度…', quotaUnavailable: '无法获取额度。请检查此后端的 ChatGPT 登录状态并重试。', refreshQuota: '刷新额度', sessionWindow: '5 小时', weeklyWindow: '每周', quotaUsed: n => `已使用 ${n}%`, quotaReset: date => `重置时间 ${date}`, tokens: (input, output) => `${input} 输入 · ${output} 输出`,
-    weeklyPriceEquivalent: 'Pro 5x 每周价格等值', weeklyPriceHint: '会话预估美元成本 ÷ 约 $23.08/周（Pro 5x 每月 $100）。仅用于价格比较，不代表实际额度消耗。',
+    costPercentage: '费用占比 · Pro 5x/周', weeklyPriceEquivalent: 'Pro 5x 每周价格等值', weeklyPriceHint: '会话预估美元成本 ÷ 约 $23.08/周（Pro 5x 每月 $100）。仅用于价格比较，不代表实际额度消耗。',
     openSession: '打开会话', openInGitlab: '在 GitLab 中打开', openSessionFailed: '无法打开此会话。',
     justNow: '刚刚',
     ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
@@ -221,7 +221,7 @@ const locales = {
     recentSessions: '最近工作階段', allSessions: '全部工作階段',
     card: '卡片', session: '工作階段', relatedProject: '相關專案',
     tokenUsage: 'Token', totalTokens: '總 Token', subscription: 'ChatGPT 訂閱', quotaScope: '整個帳號 · 包含 GitLab 以外的用量，無法歸屬到個別專案或工作階段。', quotaLoading: '正在載入額度…', quotaUnavailable: '無法取得額度。請檢查此後端的 ChatGPT 登入狀態並重試。', refreshQuota: '重新整理額度', sessionWindow: '5 小時', weeklyWindow: '每週', quotaUsed: n => `已使用 ${n}%`, quotaReset: date => `重設時間 ${date}`, tokens: (input, output) => `${input} 輸入 · ${output} 輸出`,
-    weeklyPriceEquivalent: 'Pro 5x 每週價格等值', weeklyPriceHint: '工作階段預估美元成本 ÷ 約 $23.08/週（Pro 5x 每月 $100）。僅供價格比較，不代表實際額度用量。',
+    costPercentage: '費用佔比 · Pro 5x/週', weeklyPriceEquivalent: 'Pro 5x 每週價格等值', weeklyPriceHint: '工作階段預估美元成本 ÷ 約 $23.08/週（Pro 5x 每月 $100）。僅供價格比較，不代表實際額度用量。',
     openSession: '開啟工作階段', openInGitlab: '在 GitLab 開啟', openSessionFailed: '無法開啟此工作階段。',
     justNow: '剛剛',
     ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
@@ -746,9 +746,9 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       children: jsx(Button, { type: 'button', onClick: () => sessions.refetch(), children: t('retry') }) }) :
       sessions.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
       sessionRows.length ? jsxs('table', { className: 'hgl-table', children: [
-        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', children: t('tokenUsage') })] })] }),
+        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', children: t('tokenUsage') }), jsx('th', { className: 'hgl-num', title: t('weeklyPriceHint'), children: t('costPercentage') })] })] }),
         jsx('tbody', { children: sessionRows.map(session => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
-          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${formatTokens(session, t)}`,
+          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${formatTokens(session, t)} ${weeklyPriceEquivalent(session) || '—'}`,
           'aria-current': inspectSession?.id === session.id,
           onClick: () => setInspect({ type: 'session', session }),
           onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'session', session }) } },
@@ -756,7 +756,8 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             jsx('td', { className: 'hgl-muted', children: age(session.last_activity_at, t) }),
             jsxs('td', { children: [jsx('div', { children: session.title || t('session') }), jsx('div', { className: 'hgl-subtle', children: [session.repository?.name, cardRef(session)].filter(Boolean).join(' ') })] }),
             jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(session.profile || '?'), session.profile || '—'] })] }),
-            jsx('td', { className: 'hgl-num', children: formatTokens(session, t) })
+            jsx('td', { className: 'hgl-num', children: formatTokens(session, t) }),
+            jsx('td', { className: 'hgl-num', children: weeklyPriceEquivalent(session) || '—' })
           ] }, session.id)) })
       ] }) : jsx(EmptyState, { title: t('noSessions'), description: t('noSessionsHint') }) }),
     inspectSession ? sessionDrawer : null
