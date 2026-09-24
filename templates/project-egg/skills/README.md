@@ -6,3 +6,7 @@ The bundled GitLab, preview and worktree-cleanup skills live in
 Place each skill in its own folder with a `SKILL.md` file and any supporting assets.
 Additional folders here are copied with the starter profile into new projects.
 Use different names from the shared skills to avoid shadowing them.
+
+Keep lifecycle and shared policy in profile-root `SOUL.md`. Each skill declares its
+applicable `Nodes`, matching SOUL's routing row, and documents only specific cases
+and tool mechanics. Node entry alone does not trigger every listed skill.

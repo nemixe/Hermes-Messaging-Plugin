@@ -225,7 +225,7 @@ model in the bundled configuration inherits the default profile's model selectio
 once, when the template is first created. Other default-profile files are not imported.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-gitlab`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,
+profile. Bundled `gitlab-workflow`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,
 `close-worktree`, `mattermost-dm` and `mattermost-onboarding` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
@@ -286,8 +286,12 @@ may have unknown names/URLs until saved with repository metadata; the numeric ID
 and configured server let the agent discover them with available authenticated tools.
 Credentials are never included in this inventory.
 
-A managed **Project orientation and capabilities** block in `SOUL.md` tells the agent
-to read that inventory, consult saved knowledge, then inspect the README and code
+A managed **Project orientation and capabilities** block in `SOUL.md` defines
+the task lifecycle through one Mermaid state diagram. Prompts and shared skills cite
+its node IDs, retaining only personality, guards and operational details outside it.
+Keeping the diagram in this block includes it in existing profile copy/sync behavior.
+The block tells the agent to read that inventory, consult saved knowledge, then
+inspect the README and code
 before asking the user for project context. It applies to Mattermost, GitLab and
 Desktop conversations routed to the profile, and distinguishes supported tasks from
 the tools, credentials and permissions actually available. Mattermost still needs
@@ -314,9 +318,10 @@ For a manual refresh after editing routes or updating the plugin, run
 `hermes -p default gitlab sync-knowledge`. This updates bundled skills once in
 `global-project`, backing up changed files under its `backups/gitlab-skills/sync-*/`.
 It links the installed `project-egg` starter and registered or retained GitLab
-profiles to the shared skills. Legacy local `codev-gitlab` and `gitlab-cli` folders
-are moved intact to each profile's `backups/gitlab-skills/sync-*/`, so they no longer
-shadow the shared versions. Printed backup paths retain customizations and supporting
+profiles to the shared skills. Retired `codev-gitlab` folders in shared/project profiles
+and local copies of bundled skills are moved intact to each profile's
+`backups/gitlab-skills/sync-*/`, so they no longer shadow the shared versions.
+SOUL references are updated to `gitlab-workflow`. Printed backup paths retain customizations and supporting
 files for recovery. Other skills and learned knowledge stay in their profiles.
 Identical shared files are left alone; failed backups stop replacements. Automatic
 startup seeds missing shared files but preserves existing shared and local skills.
@@ -381,7 +386,7 @@ replies and evidence.
 The plugin supplies `card`, `conversation`, `clone`, `project`, `worktree`,
 `owned_repository_ids` and `gitlab_url` in each event. Clone paths are profile-relative
 `workspace/<numeric-repository-id>` locations; they do not imply a clone exists.
-The `codev-gitlab` skill is bound to new GitLab sessions; later events reuse its full
+The `gitlab-workflow` skill is bound to new GitLab sessions; later events reuse its full
 body in context. Call `skill_view` only if that body is missing or stale (for example,
 after a skill sync); a catalog description alone is insufficient. Other skill
 references follow the same rule, without skipping current task/account checks.

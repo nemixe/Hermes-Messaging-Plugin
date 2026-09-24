@@ -1,6 +1,6 @@
 ---
 name: tunnel-preview
-description: Use when the user requests a temporary public preview through Pinggy, needs separate public URLs for application services, or says close tunnel, stop preview, or refresh a preview and restore its environment.
+description: Use for a requested temporary Pinggy preview, separate public service URLs, reconnect, or preview shutdown and environment restoration.
 metadata:
   hermes:
     tags: [preview, tunnel, development]
@@ -8,157 +8,101 @@ metadata:
 
 # Tunnel preview
 
-Expose the requested application's web/API services through Pinggy and temporarily
-configure the app to work through their public HTTPS URLs. This skill is shared in
-`global-project`; keep `HERMES_HOME`, worktrees, environment files and preview state
-in the active project profile. Creating/installing this skill does not start tunnels.
-For `close tunnel`, `stop preview`, or `/tunnel-preview close <session-or-worktree>`,
-go directly to **Close tunnel and restore**; do not start new tunnels.
+Nodes: `Validating`, `AwaitingReview`, `Blocked`, `Completed`.
+Shared contract: `$HERMES_HOME/SOUL.md`.
+Close requests go directly to restoration.
 
-## Discover and prepare
+## Requested preview — `Validating`, `AwaitingReview`
 
-1. Read the project's repository/setup knowledge and inspect its actual start
-   commands, environment variable usages and configuration precedence. For GitLab
-   repository work, use the `codev-gitlab` skill's verified worktree. Identify each
-   requested HTTP service, health path and dependencies. Read its startup output
-   and inspect listening sockets (`lsof -nP -iTCP -sTCP:LISTEN` or `ss -ltnp` on
-   Linux). Match the listener's PID/process to the intended service and confirm
-   its HTTP response. Configuration files alone do not prove which port is bound:
-   if a dev server falls back from 3000 to 3001, tunnel 3001. Use one tunnel per
-   service; `8080` below is only an example, never a default for an unknown port. Databases,
-   caches, management consoles and unrelated listeners are outside an app preview.
-2. Run SSH on the host/network namespace where `localhost:<port>` reaches that
-   service. For containers, use an existing published local port or approved local
-   forwarding. Use the host-published port, not the container-internal port. Check
-   the local response and service identity from the SSH runtime before exposing it;
-   resolve a missing or ambiguous listener rather than guessing a port.
-   Keep loopback binding when sufficient; preserve the application's authentication
-   and use development data. Avoid exposing a development server that serves secrets
-   or directory listings; use the project's supported preview mode instead.
-3. Before changes, create a private session directory under the active profile's
-   `backups/tunnel-preview/` (directory mode `0700`, state/backups `0600`). Record
-   service names, worktrees, ports, owned process/session handles, touched files and
-   keys, their original state including absent keys/files, the latest session-applied
-   values, each service's pre-preview running/stopped state, and restart/restore
-   commands. Preserve the original baseline across
-   reconnects; update only the session-applied values for comparison during cleanup.
-   Keep secret-bearing snapshots on disk, never in chat or shared skills. Reuse an
-   existing preview only after verifying its ownership and health. Concurrent
-   previews must have separate worktrees/configuration and ports.
+Inspect actual app commands, environment consumers/precedence and setup notes; use
+`gitlab-workflow`'s verified checkout. Identify requested HTTP services, health paths
+and dependencies. Verify listener PID/process and HTTP response from the SSH runtime
+(`lsof -nP -iTCP -sTCP:LISTEN` or Linux `ss -ltnp`). Use actual bound ports, including
+auto-selected fallbacks and container host-published ports, not config defaults.
+Run SSH in the network namespace that reaches them; use existing/authorized forwarding.
+Exclude databases, caches, admin consoles and unrelated listeners. Preserve loopback
+binding when sufficient, authentication and development data; a server exposing
+secrets/directory listings needs a supported safe preview mode.
 
-## Open tunnels
+Before changing anything, save private state in `$HERMES_HOME/backups/tunnel-preview/`
+(directory `0700`, files `0600`): services, worktrees, ports, process/session handles,
+touched files/keys, original values/absence, latest applied values, prior running
+state and restart/restore commands. Preserve the original baseline across reconnects.
+Separate concurrent previews' checkout/config/ports; verify ownership/health before
+reuse.
 
-Start each service using its documented command, then run one persistent terminal
-session/process per service, substituting its verified local port:
+For each service, start its documented command and a managed persistent SSH session
+(replace the example port):
 
 ```sh
 ssh -p 443 -R0:localhost:8080 qr@free.pinggy.io
 ```
 
-Keep SSH attached to the terminal tool's managed background session so output and
-shutdown remain accessible. `qr` requests a terminal QR code; do not add `-N`, which
-Pinggy discourages. Keep host-key verification enabled; do not pass project secrets
-or forward your SSH agent to Pinggy. If SSH needs interaction, use the terminal's
-input facility and resolve the actual prompt without changing global SSH settings.
+Keep host-key verification enabled, omit `-N`, and send neither secrets nor SSH agent
+forwarding. Resolve interactive prompts through terminal input without global SSH
+changes. Save actual output's HTTPS URL with service/port/process; a PID/QR is not
+reachability evidence. Obtain every required URL before configuring dependents.
+If any required tunnel fails, stop this attempt's tunnels and restore changes.
 
-Capture the HTTPS URL from each process's actual output and save the service →
-port → URL → process mapping. A running PID or QR code alone does not prove the
-service is reachable. Obtain all required URLs before updating their dependents.
-If opening a required tunnel fails, stop the tunnels created for this attempt and
-restore any changes instead of reporting a working multi-service preview.
+## Public app configuration — `Validating`
 
-## Adapt the environment for this session
+Trace each setting to its consumer; use only supported settings:
 
-Trace each setting to its consumer before editing it. Apply only settings the app
-actually supports; these are roles, not prescribed variable names:
-
-| Setting role | Temporary value |
+| Consumer | Temporary setting |
 | --- | --- |
-| Public application URL, asset origin, redirects | That service's HTTPS tunnel URL, retaining required path prefixes |
-| Browser-facing API URL | The API's HTTPS tunnel URL and its existing API path |
-| Server-to-server API, database, cache connection | Keep its existing internal address unless the code requires public routing |
-| Allowed hosts, CORS, CSRF trusted origins | Exact tunnel hostname/origin in the syntax the framework expects |
-| Browser WebSocket/HMR endpoint, when used | Correct tunnel hostname, `wss` and public port `443` |
-| Authentication callback/base URL, cookies | Correct public callback path; host-only cookies where supported and HTTPS-compatible flags |
+| Public app/assets/redirects | Service HTTPS URL plus required path |
+| Browser API | API HTTPS URL plus existing API path |
+| Server API/database/cache | Existing internal address unless public routing is required |
+| Hosts/CORS/CSRF | Exact tunnel host/origin in framework syntax |
+| Browser WebSocket/HMR | Tunnel host, `wss`, public port `443` |
+| Auth callbacks/cookies | Public callback path, host-only cookies where supported, HTTPS flags |
 
-Prefer process-scoped overrides or the framework's supported ignored environment
-override file. If an existing `.env` or config must change, back it up first and
-modify only the identified keys. Keep comments and unrelated settings intact; never
-bulk-replace every `localhost`, dump the environment, or put server secrets in
-browser-exposed variables. Keep credentials, auth checks, CSRF and host validation
-enabled; use exact allowed origins rather than `*`.
+Prefer process overrides or supported ignored env overrides. Back up existing files;
+change only identified keys, preserving unrelated settings/comments. Never bulk-replace
+localhost, expose server secrets to browser variables, or disable auth/CSRF/host
+validation; exact origins, never wildcard. Restart affected services and rebuild
+compiled frontend env values while tunnels remain running. Recheck ports after
+restart; retarget changed ports, capture new URLs and update dependents. External
+callback registration needs its own authorization. For cross-site cookie limitations,
+use an existing same-origin proxy or report the limitation without weakening auth.
 
-Restart affected services with those settings; rebuild frontend assets if their
-public variables are compiled in. Keep tunnel processes running while restarting
-the local apps. Recheck listeners after each restart: if a service changes port,
-retarget its tunnel, capture the new public URL and update dependents again.
-If external OAuth/provider callback registration is also needed,
-report that dependency and use the task's authorization for any external changes;
-changing an `.env` alone cannot register a callback. Cross-site cookie restrictions
-can still block separate frontend/API domains: use the app's existing same-origin
-proxy when available, or report the limitation instead of disabling auth protections.
+Verify expected public health responses, not Pinggy screening pages. Exercise an
+API-backed flow in the public frontend and inspect network/console for localhost,
+mixed content, CORS, cookies, redirects and WebSockets. Curl alone cannot verify
+browser behavior; disclose unavailable browser/authenticated coverage. Preview output:
+service URLs, verified flows, expiry and exact stop/restore command. Keep active preview
+processes running; ephemeral URLs and handles stay in private state.
 
-## Verify and hand off
+## Expiry/reconnect — `AwaitingReview`, `Blocked`
 
-Check each public health route for the expected application response, not merely
-an HTTP 200 from Pinggy's browser screening page. Open the frontend through its
-public URL and exercise an API-backed flow. Inspect browser network/console output
-for localhost requests, mixed content, CORS, failed cookies, redirects and WebSockets
-when applicable. A curl success alone does not verify browser CORS or authentication.
-State explicitly if browser or authenticated-flow verification is unavailable.
+Record start/expiry; free tunnels have a 60-minute limit and new URLs on reconnect.
+Use an available supervisor/bounded cleanup job on exit/expiry; otherwise give manual
+cleanup without promising automatic restoration. Reconnect repeats URL propagation,
+restart/build and verification, never indefinite retries or stale dependent URLs.
 
-Return the working service URLs, verified flows, expiry expectation and the exact
-session stop/restore procedure. Keep the processes alive after delivering an active
-preview. Save reusable commands and variable names in the project's workflow
-knowledge; keep ephemeral URLs and process handles in the private session state.
+## Close/failure restoration — `Validating`, `AwaitingReview`, `Completed`, `Blocked`
 
-## Expiry and reconnect
+1. Match private state to selected session/worktree and live identities; resolve
+   ambiguous targets. Disable only its restart/reconnect/cleanup jobs, stop verified
+   SSH handles and preserve other previews/shared resources. Exited tunnels still
+   need settings restored.
+2. Compare each changed setting to its latest session-applied value. Restore the
+   original or remove an originally absent key only when it still matches; include
+   process overrides and authorized external-provider changes. Remove a created
+   override file only without newer edits. Preserve newer user edits/comments and
+   report conflicts by path/key, never value. Recover missing baselines from verified
+   backups or report the gap; never guess or replace an entire `.env` blindly.
+3. Restore pre-preview service state: restart previously running apps with original
+   settings; stop only preview-created processes. Rebuild compiled frontend settings.
+   During `close-worktree`, restore files without restarting its apps. Preserve shared
+   Docker services.
+4. Verify tunnel exit and loss of public app access; for normal close, check original
+   endpoints and an API-backed browser flow, including redirects/HMR as applicable.
+   Distinguish restored configuration from unavailable runtime/browser verification.
+   Mark closed only after required cleanup succeeds; retain backups/conflicts for
+   retry. Repeated close verifies state without new tunnels or unrelated restarts.
 
-Pinggy's free tunnels currently expire after 60 minutes and receive a new URL on
-reconnect. Record start time and this limit. Use the runtime's existing supervisor
-or bounded cleanup job to restore the preview when its tunnels exit or expire;
-if unavailable, clearly provide manual cleanup and do not promise automatic restore.
-On reconnect, capture new URLs, update every affected consumer, restart/rebuild and
-verify again. Do not leave dependents using old URLs or retry indefinitely.
+Closure output: tunnel IDs, restored key names, local URLs/state and restore conflicts.
 
-## Close tunnel and restore
-
-Use this flow for an explicit close request, failed setup or expiry cleanup.
-
-1. Match the selected session/worktree to its private state and live process
-   identities. If several previews match, resolve the target before stopping any.
-   Disable only its restart/reconnect/cleanup jobs, then terminate its verified SSH
-   tunnel handles. Preserve other previews and shared services. If the tunnels have
-   already exited, continue with restoration; tunnel exit does not restore settings.
-2. Compare each touched setting with the recorded latest session-applied value.
-   When it still matches, restore its original value, or remove the key if it was
-   originally absent. Undo process-level overrides as well as file edits. Restore
-   the original application/API/asset URLs, allowed hosts, CORS/CSRF origins,
-   callbacks, cookie flags and WebSocket/HMR settings wherever this session changed
-   them. For authorized external provider edits, undo only this session's changes.
-   Remove a session-created override file only if it contains no newer user edits.
-3. Preserve newer edits and unrelated keys/comments. Report conflicts by path/key
-   without exposing values; never replace a whole `.env` blindly. If the baseline
-   is missing or corrupt, recover verified originals from backups or report the
-   missing restoration data. Do not guess original values or claim full restoration.
-4. Return services to their pre-preview state: restart previously running services
-   with original settings, and stop only preview-created processes that were not
-   running before. Rebuild assets when changed public environment variables were
-   compiled into the frontend; restoring `.env` alone does not undo a built bundle.
-   During `close-worktree` teardown, restore configuration without restarting that
-   worktree's services. Leave shared Docker dependencies alone.
-5. Verify the selected tunnel processes are gone and the public URLs no longer
-   reach the app. For a normal preview close, check original local endpoints and an
-   API-backed browser flow, including redirects and HMR where used. Distinguish
-   configuration restoration from runtime/browser verification when tools are
-   unavailable. Mark the session closed only after required cleanup succeeds;
-   keep backups and record any conflicts or pending restore steps for retry.
-
-Report which tunnels closed, which setting names were restored, the resulting local
-service URLs/state, and any unresolved conflicts. Repeated close requests should
-verify already-restored state without restarting unrelated processes or creating a
-new tunnel.
-
-References: [SSH usage and QR](https://pinggy.io/docs/usages/),
-[HTTP tunnels](https://pinggy.io/docs/http_tunnels/),
-[free tunnel expiry](https://pinggy.io/help/).
+References: [SSH/QR](https://pinggy.io/docs/usages/),
+[HTTP tunnels](https://pinggy.io/docs/http_tunnels/), [expiry](https://pinggy.io/help/).

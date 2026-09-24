@@ -116,8 +116,10 @@ def sync_project_knowledge(profile, config=None):
     else:
         after = before + ("\n\n" if before else "") + block + "\n"
     after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
-    after = after.replace("read `skills/codev-gitlab/SKILL.md` and follow",
-                          "load `codev-gitlab` with `skill_view` and follow")
+    after = after.replace("`codev-gitlab`", "`gitlab-workflow`").replace(
+        "skills/codev-gitlab/", "skills/gitlab-workflow/")
+    after = after.replace("read `skills/gitlab-workflow/SKILL.md` and follow",
+                          "load `gitlab-workflow` with `skill_view` and follow")
     after = after.replace(STARTER_BRIEF, STARTER_QUIET).replace(STARTER_SURFACES, STARTER_QUIET)
     data = None
     if config is not None:
@@ -181,15 +183,18 @@ def sync_project_skills(profile, *, overwrite=True):
 
 
 def migrate_shared_skills(profile):
-    """Archive legacy local copies so Hermes resolves the shared skills by name."""
+    """Archive retired skills and local copies; retain current shared skills."""
     bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
     backup_root = profile / "backups" / "gitlab-skills"
-    legacy = [profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
-              if (skill / "SKILL.md").is_file()]
+    legacy = [profile / "skills/codev-gitlab"]
+    if profile.name != SHARED_PROFILE:
+        legacy.extend(profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
+                      if (skill / "SKILL.md").is_file())
     for path in [backup_root, *backup_root.parents, *(p for skill in legacy for p in (skill, *skill.parents))]:
         if path.is_relative_to(profile.parent) and path.is_symlink():
             raise ValueError(f"Skill migration paths must not be symlinked: {path}")
-    link_shared_skills(profile)
+    if profile.name != SHARED_PROFILE:
+        link_shared_skills(profile)
     legacy = [path for path in legacy if path.exists()]
     if legacy:
         backup_root.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -208,6 +213,7 @@ def refresh_project_knowledge(root, *, sync_skills=False):
         config = read_config(root / "config.yaml")
         if sync_skills:
             sync_project_skills(root / "profiles" / SHARED_PROFILE)
+            migrate_shared_skills(root / "profiles" / SHARED_PROFILE)
             migrate_shared_skills(root / "profiles" / TEMPLATE_PROFILE)
         mapped = {route.get("profile") for route in route_settings(config).get("profile_routes", [])
                   if managed_route(route)}

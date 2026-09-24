@@ -531,7 +531,7 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Earlier context", event.text)
         self.assertNotIn("system context", event.text)
         self.assertFalse(event.allow_gateway_control)
-        self.assertEqual(event.auto_skill, "codev-gitlab")
+        self.assertEqual(event.auto_skill, "gitlab-workflow")
         self.assertIn("terminal", self.adapter.toolsets_for_source(event.source))
         self.adapter.config.extra["toolsets"] = ["web"]
         self.assertEqual(self.adapter.toolsets_for_source(event.source), ["web"])

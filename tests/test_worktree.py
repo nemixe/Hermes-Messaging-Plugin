@@ -9,7 +9,7 @@ import unittest
 
 
 SCRIPT = (Path(__file__).parents[1] / "templates/global-project/skills"
-          / "codev-gitlab/scripts/worktree.py")
+          / "gitlab-workflow/scripts/worktree.py")
 
 
 class CardWorktree(unittest.TestCase):
