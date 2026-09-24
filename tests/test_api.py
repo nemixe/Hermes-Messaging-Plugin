@@ -298,6 +298,9 @@ class DesktopAPI(unittest.TestCase):
             self.assertAlmostEqual(local_days[1]["cost_usd"], 0.04185, places=5)
             self.assertEqual(client.get(base + "/activity?year=2026&month=8").json()["days"],
                              [{"date": "2026-08-31", "responses": 1, "cost_usd": 0.04}])
+            annual = client.get(base + "/activity?year=2026").json()["days"]
+            self.assertEqual([(day["date"], day["responses"]) for day in annual],
+                             [("2026-08-31", 1), ("2026-09-15", 2), ("2026-09-16", 1)])
             self.assertEqual(client.get(base + "/activity?year=2026&month=13").status_code, 422)
             self.assertEqual(client.get(base + "/activity?year=2026&month=9&timezone=Not/AZone").status_code, 422)
             state = client.get(base + "/projects").json()

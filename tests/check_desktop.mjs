@@ -91,7 +91,7 @@ try {
       plugin.register({register:c=>{if(c.area==='routes')page=c.render},onDispose:()=>{},i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options)=>{
         if(path==='/projects')return structuredClone(data);
         if(path.startsWith('/sessions'))return {sessions:structuredClone(sessions),next_page:null,session_count:2,cost_usd:0.12,cost_status:null};
-        if(path.startsWith('/activity?'))return {days:[{date:new URL('http://fixture'+path).searchParams.get('year')+'-'+new URL('http://fixture'+path).searchParams.get('month').padStart(2,'0')+'-14',responses:2,cost_usd:0.12}]};
+        if(path.startsWith('/activity?'))return {days:[{date:new URL('http://fixture'+path).searchParams.get('year')+'-01-01',responses:2,cost_usd:0.12}]};
         if(path==='/gateway/restart')return {restart_started:true,restart_pid:321};
         if(path.startsWith('/gateway/restart/status'))return {status:'finished'};
         if(path.startsWith('/repositories')){const q=new URL('http://fixture'+path).searchParams.get('q')||'';return {repositories:repos.filter(r=>r.name.includes(q)),next_page:null}};
@@ -147,7 +147,7 @@ try {
         if (path === '/projects') return structuredClone(data);
         if (path.startsWith('/activity?')) {
           const params = new URL('http://fixture'+path).searchParams;
-          return {days:[{date:params.get('year')+'-'+params.get('month').padStart(2,'0')+'-14',responses:2,cost_usd:0.12}]};
+          return {days:[{date:params.get('year')+'-01-01',responses:2,cost_usd:0.12}]};
         }
         if (path.startsWith('/sessions')) {
           const q = new URL('http://fixture'+path).searchParams;
@@ -191,16 +191,26 @@ try {
       assert.equal(calls.some(call => call.path === '/subscription'), false);
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);
       fireEvent.click(screen.getByRole('tab',{name:'Heatmap'}));
-      fireEvent.change(await screen.findByLabelText('Month and year'), {target:{value:'2026-08'}});
+      const currentYear = new Date().getFullYear();
       await waitFor(()=>assert(calls.some(call=>{
         const url = new URL('http://fixture'+call.path);
-        return url.pathname==='/activity' && url.searchParams.get('year')==='2026' && url.searchParams.get('month')==='8';
+        return url.pathname==='/activity' && url.searchParams.get('year')===String(currentYear) && !url.searchParams.has('month');
       })));
-      const day = document.querySelector('[data-date="2026-08-14"]');
-      assert(day);
+      const day = await waitFor(()=>{
+        const found = document.querySelector('[data-date="'+currentYear+'-01-01"]');
+        assert(found); return found;
+      });
       assert.match(day.title, /2 responses/);
       assert(day.title.includes('$0.12'));
       assert(day.title.includes('≈0.52%'));
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+      if(tomorrow.getFullYear()===currentYear) {
+        const date = currentYear+'-'+String(tomorrow.getMonth()+1).padStart(2,'0')+'-'+String(tomorrow.getDate()).padStart(2,'0');
+        assert.equal(document.querySelector('[data-date="'+date+'"]'), null);
+      }
+      fireEvent.change(screen.getByRole('combobox',{name:'Year'}), {target:{value:String(currentYear-1)}});
+      await waitFor(()=>assert(calls.some(call=>call.path.startsWith('/activity?year='+(currentYear-1)+'&'))));
+      await waitFor(()=>assert(document.querySelector('[data-date="'+(currentYear-1)+'-12-31"]')));
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);

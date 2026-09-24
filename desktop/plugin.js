@@ -51,7 +51,7 @@ const locales = {
     deleteHint: name => `This permanently deletes the Hermes profile ${name}, including its memories, sessions, credentials, skills, and repository mappings. GitLab repositories are kept. Type ${name} to confirm.`,
     deleted: name => `Project ${name} deleted. Restart required.`,
     deleteError: (name, removed) => removed ? `Registration removed, but Hermes profile ${name} was not deleted. Restart the gateway to apply the registration removal. Retry to delete the profile.` : `Project ${name} was not deleted.`,
-    sessions: 'Sessions', heatmap: 'Heatmap', monthYear: 'Month and year',
+    sessions: 'Sessions', heatmap: 'Heatmap', year: 'Year',
     activityHint: 'Local days · GitLab assistant responses. Session token cost is split evenly across responses for this estimate.',
     activityDay: (date, count, cost, percent) => `${date} · ${count} ${count === 1 ? 'response' : 'responses'} · ${cost} token cost · ${percent} of Pro 5x/week`,
     loadActivityError: 'Could not load activity',
@@ -111,7 +111,7 @@ const locales = {
     deleteHint: name => `Hermes プロファイル ${name} と、そのメモリ、セッション、認証情報、スキル、リポジトリの登録を完全に削除します。GitLab リポジトリは保持されます。確認のため ${name} と入力してください。`,
     deleted: name => `プロジェクト ${name} を削除しました。再起動が必要です。`,
     deleteError: (name, removed) => removed ? `登録を削除しましたが、Hermes プロファイル ${name} は削除されませんでした。ゲートウェイを再起動して登録の削除を適用してください。再試行するとプロファイルを削除します。` : `プロジェクト ${name} は削除されませんでした。`,
-    sessions: 'セッション', heatmap: 'ヒートマップ', monthYear: '年月',
+    sessions: 'セッション', heatmap: 'ヒートマップ', year: '年',
     activityHint: '現地の日付 · GitLab のアシスタント応答。推定トークン費用はセッション内の応答に均等配分します。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 件の応答 · トークン費用 ${cost} · Pro 5x/週の ${percent}`,
     loadActivityError: 'アクティビティを読み込めません',
@@ -166,7 +166,7 @@ const locales = {
     deleteHint: name => `这将永久删除 Hermes 配置文件 ${name}，包括其记忆、会话、凭据、技能和仓库注册。GitLab 仓库将保留。请输入 ${name} 以确认。`,
     deleted: name => `项目 ${name} 已删除。需要重启。`,
     deleteError: (name, removed) => removed ? `注册已移除，但 Hermes 配置文件 ${name} 未删除。请重启网关以应用注册移除。重试以删除配置文件。` : `项目 ${name} 未删除。`,
-    sessions: '会话', heatmap: '热力图', monthYear: '年月',
+    sessions: '会话', heatmap: '热力图', year: '年份',
     activityHint: '本地日期 · GitLab 助手回复。会话的估算 Token 成本平均分摊到每次回复。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 次回复 · Token 成本 ${cost} · Pro 5x/周的 ${percent}`,
     loadActivityError: '无法加载活动记录',
@@ -221,7 +221,7 @@ const locales = {
     deleteHint: name => `這將永久刪除 Hermes 設定檔 ${name}，包括其記憶、工作階段、憑證、技能與儲存庫註冊。GitLab 儲存庫將保留。請輸入 ${name} 以確認。`,
     deleted: name => `專案 ${name} 已刪除。需要重新啟動。`,
     deleteError: (name, removed) => removed ? `註冊已移除，但 Hermes 設定檔 ${name} 未刪除。請重新啟動閘道以套用註冊移除。重試以刪除設定檔。` : `專案 ${name} 未刪除。`,
-    sessions: '工作階段', heatmap: '熱力圖', monthYear: '年月',
+    sessions: '工作階段', heatmap: '熱力圖', year: '年份',
     activityHint: '本地日期 · GitLab 助理回覆。工作階段的預估 Token 費用平均分配至每次回覆。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 次回覆 · Token 費用 ${cost} · Pro 5x/週的 ${percent}`,
     loadActivityError: '無法載入活動紀錄',
@@ -273,10 +273,14 @@ const css = `
 .hgl-num { font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
 .hgl-table th.hgl-num { text-align:right; }
 .hgl-heatmap-view { flex:1; min-height:0; overflow:auto; padding:20px 28px; }
-.hgl-heatmap-picker { width:180px; max-width:100%; margin-bottom:12px; }
-.hgl-heatmap-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:640px; margin-top:18px; }
-.hgl-heatmap-weekday { text-align:center; color:var(--ui-text-secondary); font-size:.6875rem; }
-.hgl-heatmap-day { min-height:54px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; background:var(--ui-bg-quaternary); color:var(--ui-text-primary); cursor:help; font:inherit; }
+.hgl-heatmap-picker { width:110px; max-width:100%; margin-bottom:12px; padding:5px 8px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; background:var(--ui-bg-editor); color:var(--ui-text-primary); }
+.hgl-heatmap-scroll { max-width:100%; overflow-x:auto; margin-top:18px; }
+.hgl-heatmap-chart { width:max-content; }
+.hgl-heatmap-months { display:grid; grid-template-columns:repeat(var(--hgl-weeks),10px); gap:2px; margin-left:28px; height:18px; color:var(--ui-text-secondary); font-size:.625rem; white-space:nowrap; }
+.hgl-heatmap-row { display:flex; gap:4px; }
+.hgl-heatmap-weekdays { display:grid; grid-template-rows:repeat(7,10px); gap:2px; width:24px; color:var(--ui-text-secondary); font-size:.5625rem; line-height:10px; }
+.hgl-heatmap-grid { display:grid; grid-template-columns:repeat(var(--hgl-weeks),10px); grid-template-rows:repeat(7,10px); gap:2px; }
+.hgl-heatmap-day { width:10px; height:10px; padding:0; border:1px solid var(--ui-stroke-secondary); border-radius:2px; background:var(--ui-bg-quaternary); cursor:help; }
 .hgl-heatmap-day[data-level="1"] { background:color-mix(in srgb,var(--ui-accent) 22%,var(--ui-bg-editor)); }
 .hgl-heatmap-day[data-level="2"] { background:color-mix(in srgb,var(--ui-accent) 40%,var(--ui-bg-editor)); }
 .hgl-heatmap-day[data-level="3"] { background:color-mix(in srgb,var(--ui-accent) 60%,var(--ui-bg-editor)); }
@@ -470,10 +474,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const [projectScope, setProjectScope] = useState('all')
   const [sessionQuery, setSessionQuery] = useState('')
   const [sessionPage, setSessionPage] = useState(1)
-  const [activityMonth, setActivityMonth] = useState(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  })
+  const [activityYear, setActivityYear] = useState(() => String(new Date().getFullYear()))
   const [draft, setDraft] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -532,12 +533,11 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     }
   })
   const activity = useQuery({
-    queryKey: [ID, scope, 'activity', activityMonth], retry: false,
+    queryKey: [ID, scope, 'activity', activityYear], retry: false,
     enabled: Boolean(data) && pane === 'heatmap',
     queryFn: () => {
       if (scopeNow() !== scope) throw new Error('Backend changed')
-      const [year, month] = activityMonth.split('-')
-      const params = new URLSearchParams({ year, month: String(Number(month)),
+      const params = new URLSearchParams({ year: activityYear,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' })
       return ctx.rest(`/activity?${params}`)
     }
@@ -814,37 +814,51 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       onChange: event => { setSessionQuery(event.target.value.slice(0, 200)); setSessionPage(1) } }),
     jsx(Button, { type: 'button', variant: 'ghost', className: 'hgl-primary', disabled: locked || sessions.isFetching, onClick: () => sessions.refetch(), children: t('refresh') })
   ] })
-  const [activityYear, activityMonthNumber] = activityMonth.split('-').map(Number)
-  const leadingDays = (new Date(Date.UTC(activityYear, activityMonthNumber - 1, 1)).getUTCDay() + 6) % 7
-  const daysInMonth = new Date(Date.UTC(activityYear, activityMonthNumber, 0)).getUTCDate()
+  const year = Number(activityYear)
+  const today = new Date()
+  const yearStart = Date.UTC(year, 0, 1)
+  const daysInYear = (Date.UTC(year + 1, 0, 1) - yearStart) / 86400000
+  const visibleDays = year === today.getFullYear() ?
+    Math.floor((Date.UTC(year, today.getMonth(), today.getDate()) - yearStart) / 86400000) + 1 : daysInYear
+  const leadingDays = (new Date(yearStart).getUTCDay() + 6) % 7
+  const weeks = Math.ceil((leadingDays + visibleDays) / 7)
   const activityByDate = new Map((activity.data?.days || []).map(day => [day.date, day]))
   const heatmap = jsxs('div', { className: 'hgl-heatmap-view', children: [
-    jsx(Input, { type: 'month', min: '2000-01', max: '2100-12', className: 'hgl-heatmap-picker', value: activityMonth,
-      'aria-label': t('monthYear'), onChange: event => {
-        if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) setActivityMonth(event.target.value)
-      } }),
+    jsx('select', { className: 'hgl-heatmap-picker', 'aria-label': t('year'), value: activityYear,
+      onChange: event => setActivityYear(event.target.value), children: Array.from({ length: today.getFullYear() - 1999 }, (_, index) => {
+        const option = String(today.getFullYear() - index)
+        return jsx('option', { value: option, children: option }, option)
+      }) }),
     jsx('p', { className: 'hgl-subtle', children: t('activityHint') }),
     activity.isError ? jsx(ErrorState, { className: 'hgl-center', title: t('loadActivityError'), description: errorText(activity.error),
       children: jsx(Button, { type: 'button', onClick: () => activity.refetch(), children: t('retry') }) }) :
       activity.isPending ? jsx(Skeleton, { className: 'hgl-skeleton' }) :
-      jsx('div', { className: 'hgl-heatmap-grid', children: [
-        ...Array.from({ length: 7 }, (_, index) => jsx('span', { className: 'hgl-heatmap-weekday', children:
-          new Date(Date.UTC(2024, 0, index + 1)).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }) }, index)),
-        ...Array.from({ length: leadingDays }, (_, index) => jsx('span', { 'aria-hidden': true }, `blank-${index}`)),
-        ...Array.from({ length: daysInMonth }, (_, index) => {
-          const number = index + 1
-          const date = `${activityMonth}-${String(number).padStart(2, '0')}`
+      jsx('div', { className: 'hgl-heatmap-scroll', children:
+        jsxs('div', { className: 'hgl-heatmap-chart', style: { '--hgl-weeks': weeks }, children: [
+          jsx('div', { className: 'hgl-heatmap-months', children: Array.from({ length: 12 }, (_, month) => {
+            const offset = (Date.UTC(year, month, 1) - yearStart) / 86400000
+            return offset < visibleDays ? jsx('span', { style: { gridColumn: Math.floor((leadingDays + offset) / 7) + 1 },
+              children: new Date(Date.UTC(year, month, 1)).toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' }) }, month) : null
+          }) }),
+          jsxs('div', { className: 'hgl-heatmap-row', children: [
+            jsx('div', { className: 'hgl-heatmap-weekdays', 'aria-hidden': true, children: [0, 2, 4].map(index =>
+              jsx('span', { style: { gridRow: index + 1 }, children:
+                new Date(Date.UTC(2024, 0, index + 1)).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }) }, index)) }),
+            jsx('div', { className: 'hgl-heatmap-grid', children: Array.from({ length: visibleDays }, (_, index) => {
+          const dayDate = new Date(yearStart + index * 86400000)
+          const date = dayDate.toISOString().slice(0, 10)
           const day = activityByDate.get(date) || { responses: 0, cost_usd: 0 }
           const cost = Number(day.cost_usd) || 0
           const costText = cost > 0 ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 6 }).format(cost) : day.responses ? '—' : '$0.00'
           const percentage = cost > 0 ? weeklyPriceEquivalent(day) : day.responses ? '—' : '0%'
-          const dateText = new Date(Date.UTC(activityYear, activityMonthNumber - 1, number)).toLocaleDateString(undefined,
-            { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+          const dateText = dayDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
           const tooltip = t('activityDay', dateText, day.responses, costText, percentage)
           return jsx('button', { type: 'button', className: 'hgl-heatmap-day', 'data-level': Math.min(4, day.responses),
-            'data-date': date, title: tooltip, 'aria-label': tooltip, children: number }, date)
-        })
-      ] })
+            'data-date': date, title: tooltip, 'aria-label': tooltip,
+            style: { gridColumn: Math.floor((leadingDays + index) / 7) + 1, gridRow: (leadingDays + index) % 7 + 1 } }, date)
+        }) })
+          ] })
+        ] }) })
   ] })
   return jsxs('div', { className: 'hgl', children: [
     jsxs('header', { className: 'hgl-head', children: [

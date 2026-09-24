@@ -556,9 +556,10 @@ def load_activity(root, year, month, timezone):
     profiles = {name: path for name, path in profiles_to_serve(True) if name not in cli.RESERVED_PROFILES}
     names = sorted(({name for name, path in profiles.items() if cli.is_project_profile(path)}
                     | {r["profile"] for r in routes if r.get("profile")}) - cli.RESERVED_PROFILES)
-    start = datetime.datetime(year, month, 1, tzinfo=timezone).timestamp()
-    following = datetime.datetime(year + (month == 12), month % 12 + 1, 1,
-                                  tzinfo=timezone).timestamp()
+    start = datetime.datetime(year, month or 1, 1, tzinfo=timezone).timestamp()
+    following = (datetime.datetime(year + 1, 1, 1, tzinfo=timezone) if month is None else
+                 datetime.datetime(year + (month == 12), month % 12 + 1, 1,
+                                   tzinfo=timezone)).timestamp()
     days = {}
     for name in names:
         try:
@@ -602,7 +603,7 @@ def load_activity(root, year, month, timezone):
 
 
 @router.get("/activity")
-def activity(year: int = Query(..., ge=2000, le=2100), month: int = Query(..., ge=1, le=12),
+def activity(year: int = Query(..., ge=2000, le=2100), month: int | None = Query(None, ge=1, le=12),
              timezone: str = Query("UTC", max_length=64)):
     try:
         zone = ZoneInfo(timezone)
