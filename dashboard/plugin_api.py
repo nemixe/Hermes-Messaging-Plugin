@@ -5,7 +5,6 @@ import datetime
 import hashlib
 import importlib
 import json
-import math
 from pathlib import Path
 import re
 import sqlite3
@@ -47,29 +46,6 @@ def root_scope():
         if secret_token is not None:
             reset_secret_scope(secret_token)
         reset_hermes_home_override(home_token)
-
-
-@router.get("/subscription")
-def subscription():
-    # Account-wide limits, never an attribution of usage to a project/session.
-    unavailable = {"available": False, "plan": None, "fetched_at": None, "windows": []}
-    with root_scope():
-        try:
-            from agent.account_usage import fetch_account_usage
-        except ImportError:
-            return unavailable
-        snapshot = fetch_account_usage("openai-codex")
-    if snapshot is None or not snapshot.available:
-        return unavailable
-    windows = []
-    for window in snapshot.windows:
-        used = window.used_percent
-        valid = type(used) in (int, float) and math.isfinite(used) and used >= 0
-        windows.append({"label": window.label, "used_percent": min(100, used) if valid else None,
-                        "resets_at": window.reset_at.isoformat() if window.reset_at else None})
-    # Whitelist display fields: raw provider responses and credentials stay on the backend.
-    return {"available": any(w["used_percent"] is not None for w in windows),
-            "plan": snapshot.plan, "fetched_at": snapshot.fetched_at.isoformat(), "windows": windows}
 
 
 def settings(root):

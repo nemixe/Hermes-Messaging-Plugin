@@ -81,34 +81,11 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(client.get(base + "/projects").status_code, 401)
             self.assertEqual(client.get(base + "/events").status_code, 401)
             self.assertEqual(client.get(base + "/sessions").status_code, 401)
-            self.assertEqual(client.get(base + "/subscription").status_code, 401)
             self.assertEqual(client.put(base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.request("DELETE", base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.post(base + "/gateway/restart").status_code, 401)
             client.headers["Authorization"] = "Bearer " + host._SESSION_TOKEN
-            from agent.account_usage import AccountUsageSnapshot, AccountUsageWindow
-            from datetime import datetime, timezone
-            stamp = datetime(2026, 9, 23, tzinfo=timezone.utc)
-            snapshot = AccountUsageSnapshot("openai-codex", "usage_api", stamp, plan="Pro",
-                windows=(AccountUsageWindow("Session", 37, stamp), AccountUsageWindow("Weekly", 0)),
-                raw={"private": "must-not-reach-ui"})
-            with patch("agent.account_usage.fetch_account_usage", return_value=snapshot) as fetch:
-                response = client.get(base + "/subscription")
-                self.assertEqual(response.status_code, 200, response.text)
-                self.assertEqual(response.json(), {"available": True, "plan": "Pro",
-                    "fetched_at": stamp.isoformat(), "windows": [
-                        {"label": "Session", "used_percent": 37, "resets_at": stamp.isoformat()},
-                        {"label": "Weekly", "used_percent": 0, "resets_at": None}]})
-                fetch.assert_called_once_with("openai-codex")
-            with patch("agent.account_usage.fetch_account_usage", return_value=None):
-                self.assertEqual(client.get(base + "/subscription").json(),
-                                 {"available": False, "plan": None, "fetched_at": None, "windows": []})
-            malformed = AccountUsageSnapshot("openai-codex", "usage_api", stamp,
-                windows=tuple(AccountUsageWindow("Session", value) for value in (None, float("nan"), -1, True)))
-            with patch("agent.account_usage.fetch_account_usage", return_value=malformed):
-                usage = client.get(base + "/subscription").json()
-                self.assertFalse(usage["available"])
-                self.assertTrue(all(w["used_percent"] is None for w in usage["windows"]))
+            self.assertEqual(client.get(base + "/subscription").status_code, 404)
             response = client.get(base + "/projects")
             self.assertEqual(response.status_code, 200, response.text)
             state = response.json()
