@@ -38,7 +38,7 @@ try {
     import {contributedRoutes,ROUTES_AREA,NEW_CHAT_ROUTE} from '${native}/app/routes';
     const $activeConnectionId=atom('local'),$activeGatewayProfile=atom('default'),$gateway=atom(null),$gatewayState=atom('closed');
     const ChatView=()=> <p>Chat fallback</p>;
-    const ModelMenuPanel=()=>null,ReasoningMenuPanel=()=>null,SkillsView=()=>null,MessagingView=()=>null,ArtifactsView=()=>null,LegacySessionRedirect=()=>null,Navigate=()=>null;
+    const ModelMenuPanel=()=>null,ReasoningMenuPanel=()=>null,SkillsView=()=>null,MessagingView=()=>null,CapabilitiesView=()=>null,ArtifactsView=()=>null,LegacySessionRedirect=()=>null,Navigate=()=>null;
     const ContribBoundary=({children})=>children,ContribRender=({render:Page})=><Page/>;
     const latestChatActions=()=>({}),setStatusbarItemGroup=()=>{};
     const BUILTIN_PAGES={};

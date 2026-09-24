@@ -59,7 +59,8 @@ const locales = {
     noSessions: 'No sessions', noSessionsHint: 'Mentions and assignments open sessions here after the next poll.',
     recentSessions: 'Recent sessions', allSessions: 'All sessions',
     card: 'Card', session: 'Session', relatedProject: 'Related project',
-    cost: 'Cost', totalCost: 'Total cost', includedCost: 'Included', tokens: (input, output) => `${input} in · ${output} out`,
+    tokenUsage: 'Tokens', totalTokens: 'Total tokens', subscription: 'ChatGPT subscription', quotaScope: 'Account-wide · includes usage outside GitLab; not attributable to individual projects or sessions.', quotaLoading: 'Loading quota…', quotaUnavailable: 'Quota unavailable. Check the ChatGPT login on this backend and retry.', refreshQuota: 'Refresh quota', sessionWindow: '5 hours', weeklyWindow: 'Weekly', quotaUsed: n => `${n}% used`, quotaReset: date => `Resets ${date}`, tokens: (input, output) => `${input} in · ${output} out`,
+    weeklyPriceEquivalent: 'Pro 5x weekly price equivalent', weeklyPriceHint: 'Session USD estimate ÷ ~$23.08/week (Pro 5x at $100/month). Price comparison only; not actual quota use.',
     openSession: 'Open session', openInGitlab: 'Open in GitLab', openSessionFailed: 'Could not open this session.',
     justNow: 'now',
     ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
@@ -115,7 +116,8 @@ const locales = {
     noSessions: 'セッションはありません', noSessionsHint: 'メンションとアサインは次回のポーリング後にセッションとして表示されます。',
     recentSessions: '最近のセッション', allSessions: 'すべてのセッション',
     card: 'カード', session: 'セッション', relatedProject: '関連プロジェクト',
-    cost: 'コスト', totalCost: '合計コスト', includedCost: '含まれています', tokens: (input, output) => `${input} 入力 · ${output} 出力`,
+    tokenUsage: 'トークン', totalTokens: '合計トークン', subscription: 'ChatGPT サブスクリプション', quotaScope: 'アカウント全体 · GitLab 以外の利用を含みます。プロジェクトやセッション別には集計できません。', quotaLoading: '利用枠を読み込み中…', quotaUnavailable: '利用枠を取得できません。このバックエンドの ChatGPT ログインを確認し、再試行してください。', refreshQuota: '利用枠を更新', sessionWindow: '5時間', weeklyWindow: '週間', quotaUsed: n => `${n}% 使用済み`, quotaReset: date => `リセット ${date}`, tokens: (input, output) => `${input} 入力 · ${output} 出力`,
+    weeklyPriceEquivalent: 'Pro 5x の週間料金換算', weeklyPriceHint: 'セッションの推定 USD 額 ÷ 約 $23.08/週（Pro 5x は月額 $100）。料金の比較であり、実際の利用枠消費率ではありません。',
     openSession: 'セッションを開く', openInGitlab: 'GitLab で開く', openSessionFailed: 'このセッションを開けませんでした。',
     justNow: 'たった今',
     ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
@@ -166,7 +168,8 @@ const locales = {
     noSessions: '暂无会话', noSessionsHint: '提及和指派会在下次轮询后作为会话显示。',
     recentSessions: '最近会话', allSessions: '全部会话',
     card: '卡片', session: '会话', relatedProject: '相关项目',
-    cost: '费用', totalCost: '总费用', includedCost: '已包含', tokens: (input, output) => `${input} 输入 · ${output} 输出`,
+    tokenUsage: 'Token', totalTokens: '总 Token', subscription: 'ChatGPT 订阅', quotaScope: '整个账号 · 包含 GitLab 以外的用量，无法归属到单个项目或会话。', quotaLoading: '正在加载额度…', quotaUnavailable: '无法获取额度。请检查此后端的 ChatGPT 登录状态并重试。', refreshQuota: '刷新额度', sessionWindow: '5 小时', weeklyWindow: '每周', quotaUsed: n => `已使用 ${n}%`, quotaReset: date => `重置时间 ${date}`, tokens: (input, output) => `${input} 输入 · ${output} 输出`,
+    weeklyPriceEquivalent: 'Pro 5x 每周价格等值', weeklyPriceHint: '会话预估美元成本 ÷ 约 $23.08/周（Pro 5x 每月 $100）。仅用于价格比较，不代表实际额度消耗。',
     openSession: '打开会话', openInGitlab: '在 GitLab 中打开', openSessionFailed: '无法打开此会话。',
     justNow: '刚刚',
     ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
@@ -217,7 +220,8 @@ const locales = {
     noSessions: '尚無工作階段', noSessionsHint: '提及與指派會在下次輪詢後以工作階段顯示。',
     recentSessions: '最近工作階段', allSessions: '全部工作階段',
     card: '卡片', session: '工作階段', relatedProject: '相關專案',
-    cost: '費用', totalCost: '總費用', includedCost: '已包含', tokens: (input, output) => `${input} 輸入 · ${output} 輸出`,
+    tokenUsage: 'Token', totalTokens: '總 Token', subscription: 'ChatGPT 訂閱', quotaScope: '整個帳號 · 包含 GitLab 以外的用量，無法歸屬到個別專案或工作階段。', quotaLoading: '正在載入額度…', quotaUnavailable: '無法取得額度。請檢查此後端的 ChatGPT 登入狀態並重試。', refreshQuota: '重新整理額度', sessionWindow: '5 小時', weeklyWindow: '每週', quotaUsed: n => `已使用 ${n}%`, quotaReset: date => `重設時間 ${date}`, tokens: (input, output) => `${input} 輸入 · ${output} 輸出`,
+    weeklyPriceEquivalent: 'Pro 5x 每週價格等值', weeklyPriceHint: '工作階段預估美元成本 ÷ 約 $23.08/週（Pro 5x 每月 $100）。僅供價格比較，不代表實際額度用量。',
     openSession: '開啟工作階段', openInGitlab: '在 GitLab 開啟', openSessionFailed: '無法開啟此工作階段。',
     justNow: '剛剛',
     ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
@@ -271,6 +275,10 @@ const css = `
 .hgl-drawer-actions > * { flex:1 1 9rem; min-width:0; }
 .hgl-drawer-actions button { width:100%; justify-content:center; white-space:nowrap; }
 .hgl-notice { flex-shrink:0; margin:16px 28px 0; padding:12px 14px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; display:flex; flex-direction:column; gap:8px; background:var(--ui-bg-quaternary); }
+.hgl-quota { margin-top:12px; font-size:.75rem; }
+.hgl-quota-windows { display:flex; flex-wrap:wrap; gap:12px 24px; }
+.hgl-quota-window { flex:1 1 180px; display:flex; flex-direction:column; gap:4px; }
+.hgl-quota progress { width:100%; height:6px; accent-color:var(--ui-accent); }
 .hgl-form { display:flex; flex-direction:column; gap:20px; padding:20px 28px 28px; overflow:auto; }
 .hgl-field { display:flex; flex-direction:column; gap:6px; max-width:560px; }
 .hgl-field label { font-size:.75rem; font-weight:500; }
@@ -327,12 +335,13 @@ const compactNum = n => {
   if (value < 1000000) return `${Math.round(value / 100) / 10}k`.replace(/\.0k$/, 'k')
   return `${Math.round(value / 100000) / 10}M`.replace(/\.0M$/, 'M')
 }
-const formatCost = row => {
-  const amount = Number(row?.cost_usd) || 0
-  const approx = amount > 0 && (row?.cost_status === 'included' || row?.cost_status === 'estimated')
-  const prefix = approx ? '~' : ''
-  if (amount > 0 && amount < 0.01) return `${prefix}$${amount.toFixed(4)}`
-  return `${prefix}$${amount.toFixed(2)}`
+const formatTokens = (row, t) => row?.input_tokens == null || row?.output_tokens == null ? '—' :
+  t('tokens', compactNum(row.input_tokens), compactNum(row.output_tokens))
+const weeklyPriceEquivalent = row => {
+  const amount = Number(row?.cost_usd)
+  if (!Number.isFinite(amount) || amount <= 0) return null
+  // $100/month is ~$23.08/week; this compares prices, not Codex quota consumption.
+  return `≈${new Intl.NumberFormat(undefined, { maximumSignificantDigits: 2 }).format(amount / (100 * 12 / 52) * 100)}%`
 }
 const age = (iso, t) => {
   const ms = Date.now() - Date.parse(iso)
@@ -435,6 +444,14 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     if (scopeNow() !== scope) throw new Error('Backend changed')
     return ctx.rest('/projects')
   } })
+  const quota = useQuery({
+    queryKey: [ID, scope, 'subscription'], retry: false, enabled: Boolean(result.data),
+    staleTime: 60000, refetchInterval: 60000,
+    queryFn: () => {
+      if (scopeNow() !== scope) throw new Error('Backend changed')
+      return ctx.rest('/subscription', { timeoutMs: 45000 })
+    }
+  })
   const [selected, setSelected] = useState(null)
   const [inspect, setInspect] = useState(null)
   const [pane, setPane] = useState('mappings')
@@ -583,13 +600,13 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const sessionRows = sessions.data?.sessions || []
   const inspectProject = inspect?.type === 'project' ? projects.find(row => row.profile === inspect.profile) : null
   const inspectSession = inspect?.type === 'session' ? inspect.session : null
+  const sessionWeeklyPrice = weeklyPriceEquivalent(inspectSession)
   const switchPane = next => {
     if (locked) return
     setPane(next)
     setInspect(null)
     setSessionPage(1)
   }
-  const costCell = row => jsx('span', { className: Number(row.cost_usd) > 0 ? 'hgl-num' : 'hgl-num hgl-muted', children: formatCost(row) })
   const editor = draft && jsxs('form', { className: 'hgl-form', onSubmit: save, children: [
     jsx('h2', { children: draft.isNew ? t('newProject') : draft.profile }),
     draft.isNew && jsxs('div', { className: 'hgl-field', children: [
@@ -646,7 +663,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     inspectProject.description ? jsx('p', { className: 'hgl-subtle', children: inspectProject.description }) : null,
     !inspectProject.available && jsx('p', { className: 'hgl-subtle', children: t('missingHint') }),
     jsxs('dl', { className: 'hgl-dl', children: [
-      jsx('dt', { children: t('totalCost') }), jsx('dd', { className: 'hgl-num', children: formatCost(inspectProject) })
+      jsx('dt', { children: t('totalTokens') }), jsx('dd', { className: 'hgl-num', children: formatTokens(inspectProject, t) })
     ] }),
     jsx('h3', { children: t('repositories') }),
     inspectProject.repositories.length ? jsx('ul', { className: 'hgl-list', children: inspectProject.repositories.map(repo => jsx(Repository, { ctx, repo }, repo.id)) }) :
@@ -657,7 +674,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
         setPane('sessions'); setProjectScope(session.profile || 'all'); setInspect({ type: 'session', session })
       }, children: [
         jsx('span', { children: session.title || t('session') }),
-        jsx('span', { className: 'hgl-num', children: formatCost(session) }),
+        jsx('span', { className: 'hgl-num', children: formatTokens(session, t) }),
         jsx('span', { className: 'hgl-subtle', children: [session.profile, cardRef(session), age(session.last_activity_at, t)].filter(Boolean).join(' · ') })
       ] }, session.id)) }),
       jsx(Button, { type: 'button', variant: 'ghost', onClick: () => {
@@ -681,19 +698,20 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       jsx(Button, { type: 'button', variant: 'ghost', size: 'icon-xs', className: 'hgl-drawer-close', 'aria-label': t('closeDetail'), onClick: () => setInspect(null), children: jsx(Codicon, { name: 'close', size: '.875rem' }) })
     ] }),
     jsxs('div', { className: 'hgl-actions', children: [
-      jsx('span', { className: 'hgl-pill', children: formatCost(inspectSession) }),
+      jsx('span', { className: 'hgl-pill', children: formatTokens(inspectSession, t) }),
       inspectSession.last_activity_at && jsx('span', { className: 'hgl-pill', children: age(inspectSession.last_activity_at, t) }),
       inspectSession.model && jsx('span', { className: 'hgl-pill', children: inspectSession.model })
     ] }),
     inspectSession.author && jsx('p', { children: `@${inspectSession.author}` }),
     jsxs('dl', { className: 'hgl-dl', children: [
       jsx('dt', { children: t('relatedProject') }), jsxs('dd', { children: [glyph(inspectSession.profile || '?'), ' ', inspectSession.profile || '—'] }),
-      jsx('dt', { children: t('cost') }), jsxs('dd', { children: [formatCost(inspectSession),
-        inspectSession.input_tokens || inspectSession.output_tokens ? ` · ${t('tokens', compactNum(inspectSession.input_tokens), compactNum(inspectSession.output_tokens))}` : ''] }),
+      jsx('dt', { children: t('tokenUsage') }), jsx('dd', { children: formatTokens(inspectSession, t) }),
+      ...(sessionWeeklyPrice ? [jsx('dt', { children: t('weeklyPriceEquivalent') }), jsx('dd', { children: sessionWeeklyPrice })] : []),
       jsx('dt', { children: t('card') }), jsx('dd', { children: inspectSession.card || '—' }),
       jsx('dt', { children: t('session') }), jsx('dd', { children: inspectSession.id || '—' }),
       jsx('dt', { children: t('model') }), jsx('dd', { children: inspectSession.model || '—' })
     ] }),
+    sessionWeeklyPrice && jsx('p', { className: 'hgl-subtle', children: t('weeklyPriceHint') }),
     jsxs('div', { className: 'hgl-drawer-actions', children: [
       typeof host.openSession === 'function' && jsx(Button, { type: 'button', onClick: async () => {
         try { await host.openSession(inspectSession.id, { profile: inspectSession.profile }) }
@@ -707,7 +725,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   ] })
   const mappingTable = jsxs('div', { className: `hgl-split${inspectProject || deleting ? ' draw' : ''}`, children: [
     jsx('div', { className: 'hgl-table-wrap', children: visible.length ? jsxs('table', { className: 'hgl-table', children: [
-      jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('projects') }), jsx('th', { children: t('repositories') }), jsx('th', { className: 'hgl-num', children: t('cost') })] })] }),
+      jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('projects') }), jsx('th', { children: t('repositories') }), jsx('th', { className: 'hgl-num', children: t('tokenUsage') })] })] }),
       jsx('tbody', { children: visible.map(row => {
         const status = projectStatus(row, t)
         return jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button', 'aria-label': `${row.profile} ${status}`,
@@ -717,7 +735,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(row.profile), jsx('strong', { children: row.profile }),
               status !== t('count', row.repositories.length) && jsx('span', { className: `hgl-pill${row.available ? '' : ' hgl-pill-bad'}`, children: status }) ] })] }),
             jsx('td', { className: 'hgl-muted', children: row.repositories.length ? t('count', row.repositories.length) : t('unregistered') }),
-            jsx('td', { className: 'hgl-num', children: costCell(row) })
+            jsx('td', { className: 'hgl-num', children: formatTokens(row, t) })
           ] }, row.profile)
       }) })
     ] }) : jsx(EmptyState, { title: t('noProjects'), description: t('noProjectsHint') }) }),
@@ -728,9 +746,9 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       children: jsx(Button, { type: 'button', onClick: () => sessions.refetch(), children: t('retry') }) }) :
       sessions.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
       sessionRows.length ? jsxs('table', { className: 'hgl-table', children: [
-        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', children: t('cost') })] })] }),
+        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', children: t('tokenUsage') })] })] }),
         jsx('tbody', { children: sessionRows.map(session => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
-          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${formatCost(session)}`,
+          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${formatTokens(session, t)}`,
           'aria-current': inspectSession?.id === session.id,
           onClick: () => setInspect({ type: 'session', session }),
           onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'session', session }) } },
@@ -738,7 +756,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             jsx('td', { className: 'hgl-muted', children: age(session.last_activity_at, t) }),
             jsxs('td', { children: [jsx('div', { children: session.title || t('session') }), jsx('div', { className: 'hgl-subtle', children: [session.repository?.name, cardRef(session)].filter(Boolean).join(' ') })] }),
             jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(session.profile || '?'), session.profile || '—'] })] }),
-            jsx('td', { className: 'hgl-num', children: formatCost(session) })
+            jsx('td', { className: 'hgl-num', children: formatTokens(session, t) })
           ] }, session.id)) })
       ] }) : jsx(EmptyState, { title: t('noSessions'), description: t('noSessionsHint') }) }),
     inspectSession ? sessionDrawer : null
@@ -771,7 +789,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     jsx(Input, { className: 'hgl-search', value: sessionQuery, placeholder: t('filterSessions'), 'aria-label': t('filterSessions'),
       onChange: event => { setSessionQuery(event.target.value.slice(0, 200)); setSessionPage(1) } }),
     jsxs('span', { className: 'hgl-primary hgl-actions', children: [
-      sessions.data ? jsx('span', { className: 'hgl-subtle hgl-num', children: `${t('totalCost')} ${formatCost(sessions.data)}` }) : null,
+      sessions.data ? jsx('span', { className: 'hgl-subtle hgl-num', children: `${t('totalTokens')} ${formatTokens(sessions.data, t)}` }) : null,
       jsx(Button, { type: 'button', variant: 'ghost', disabled: locked || sessions.isFetching, onClick: () => sessions.refetch(), children: t('refresh') })
     ] })
   ] })
@@ -779,6 +797,26 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     jsxs('header', { className: 'hgl-head', children: [
       jsx('h1', { children: t('title') }),
       data && jsx('p', { className: 'hgl-subtle', children: t('capacity', Number(data.poll_interval) || 30, Number(data.max_workers) || 5) + (Number(data.open_count) > 0 ? ` · ${t('waiting', data.open_count)}` : '') }),
+      data && jsxs('section', { className: 'hgl-quota', 'aria-label': t('subscription'), children: [
+        jsxs('div', { className: 'hgl-actions', children: [
+          jsx('strong', { children: `${t('subscription')}${!quota.isError && quota.data?.plan ? ` · ${quota.data.plan}` : ''}` }),
+          jsx(Button, { type: 'button', variant: 'ghost', size: 'sm', disabled: quota.isFetching,
+            onClick: () => quota.refetch(), children: t('refreshQuota') })
+        ] }),
+        jsx('p', { className: 'hgl-subtle', children: t('quotaScope') }),
+        quota.isPending ? jsx('p', { role: 'status', children: t('quotaLoading') }) :
+          quota.isError || !quota.data?.available ? jsx('p', { role: 'status', children: t('quotaUnavailable') }) :
+          jsx('div', { className: 'hgl-quota-windows', children: quota.data.windows.map((window, index) => {
+            const label = window.label === 'Session' ? t('sessionWindow') : window.label === 'Weekly' ? t('weeklyWindow') : window.label
+            const used = typeof window.used_percent === 'number' && Number.isFinite(window.used_percent) ? window.used_percent : null
+            return jsxs('div', { className: 'hgl-quota-window', children: [
+              jsxs('div', { className: 'hgl-actions', children: [jsx('span', { children: label }),
+                jsx('strong', { children: used === null ? '—' : t('quotaUsed', Number(used.toFixed(1))) })] }),
+              used !== null && jsx('progress', { max: 100, value: used, 'aria-label': label }),
+              window.resets_at && jsx('span', { className: 'hgl-subtle', children: t('quotaReset', new Date(window.resets_at).toLocaleString()) })
+            ] }, index)
+          }) })
+      ] }),
       jsxs('div', { className: 'hgl-tabs', role: 'tablist', children: [
         jsx('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'mappings', disabled: locked, onClick: () => switchPane('mappings'), children: t('mappings') }),
         jsx('button', { type: 'button', className: 'hgl-tab', role: 'tab', 'aria-selected': pane === 'sessions', disabled: locked, onClick: () => switchPane('sessions'), children: t('sessions') })

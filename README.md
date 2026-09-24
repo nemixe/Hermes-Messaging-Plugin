@@ -1,10 +1,10 @@
-# Hermes GitLab messaging · 0.3.23
+# Hermes GitLab messaging · 0.3.24
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
 Desktop. **Mappings** registers repositories to Hermes project profiles.
 **Sessions** lists GitLab-triggered Hermes sessions — globally or for one project —
-with cost and the related project when a row is selected.
+with tokens and the related project when a row is selected.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
@@ -175,8 +175,10 @@ for this shared connection management page.
 
 Open **GitLab Projects** below **Kanban**. **Mappings** is the registry; click a
 row for repositories, recent sessions, and edit/delete. **Sessions** lists GitLab
-sessions for all projects or one project; click a row for cost, related project,
-card, and the option to open the session.
+sessions for all projects or one project; click a row for tokens, related project,
+card, and the option to open the session. The session detail compares its USD
+cost estimate with the weekly share of the $100/month Pro 5x price (~$23.08/week).
+That percentage is a price comparison, not measured subscription quota use.
 
 1. Select an existing profile, or create a new project/profile with a name and description.
 2. Search repositories accessible to the bot and select **Save and activate**.
@@ -219,9 +221,35 @@ templates/project-egg/
 
 When the enabled plugin first loads on the default backend, it copies this folder
 into `~/.hermes/profiles/project-egg/`. The template is installed atomically and
-existing `project-egg` customizations are preserved on reload or update. An omitted
-model in the bundled configuration inherits the default profile's model selection
-once, when the template is first created. Other default-profile files are not imported.
+existing `project-egg` customizations are preserved on reload or update. The bundled
+template defaults to `gpt-6-sol` through `openai-codex`; new projects copy the installed
+starter's model selection. Other default-profile files are not imported.
+
+### Shared Bitwarden secrets for project profiles
+
+Hermes already supports Bitwarden **Secrets Manager** as a profile secret source.
+Create a Secrets Manager project containing keys named for the environment variables
+the project profiles need (for example, `ANTHROPIC_API_KEY`). Give a machine account
+read access to that project, then configure the `project-egg` starter on the
+backend that runs the gateway:
+
+```sh
+hermes -p project-egg secrets bitwarden setup
+hermes -p project-egg secrets bitwarden status
+```
+
+Use the full **Secrets Manager machine account access token** from its
+**Access tokens** tab, not a Password Manager API key. The token starts with
+`0.`; a different token cannot decrypt the shared project.
+
+The setup wizard saves `secrets.bitwarden.project_id` and `enabled: true` in
+`project-egg/config.yaml`, and the machine account's `BWS_ACCESS_TOKEN` in its
+owner-only `.env`. New GitLab project profiles clone both files. For existing
+project profiles, run the same setup command with each profile name, then restart
+the default gateway. Run setup on each Hermes backend, including Mac Mini; the
+configuration and bootstrap token do not sync between machines. Keep the token
+out of the distributed plugin template.
+The GitLab bot PAT still belongs to the default profile's Messaging settings.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
 profile. Bundled `gitlab-workflow`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,

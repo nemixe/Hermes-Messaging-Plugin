@@ -133,6 +133,8 @@ class ProjectSetup(unittest.TestCase):
         self.run_command("add-project", "commerce", "--repos", "101,102", "--description", "Commerce services")
         profile = self.root / "profiles" / "commerce"
         self.assertTrue((profile / "config.yaml").is_file())
+        self.assertEqual(yaml.safe_load((profile / "config.yaml").read_text())["model"],
+                         {"default": "gpt-6-sol", "provider": "openai-codex"})
         self.assertTrue((profile / ".env").is_file())
         self.assertEqual(yaml.safe_load((profile / "profile.yaml").read_text())["description"], "Commerce services")
         memory = profile / "memories" / "MEMORY.md"
@@ -610,7 +612,7 @@ class ProjectSetup(unittest.TestCase):
         bundle = Path(__file__).parents[1] / "templates" / "project-egg"
         self.assertEqual((egg / "SOUL.md").read_bytes(), (bundle / "SOUL.md").read_bytes())
         config = yaml.safe_load((egg / "config.yaml").read_text())
-        self.assertEqual(config["model"]["default"], "example-model")
+        self.assertEqual(config["model"], {"default": "gpt-6-sol", "provider": "openai-codex"})
         config["model"] = {"default": "egg-model", "provider": "custom"}
         config["agent"] = {"max_turns": 42}
         config["compression"] = {"enabled": False}

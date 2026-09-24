@@ -154,10 +154,8 @@ logs, command arguments, commits and knowledge pages; report names/paths/results
 ### Triggers — `AwaitingContext`, `AwaitingAssignment`, `AwaitingReview`
 
 The graph does not create background monitoring. Review/QA/CI changes need a supported
-trigger. For a stopped task or GitLab reply needing attention, ask an authorized user
-for a fresh mention of the verified bot username in the issue/MR. Self-mentions are
-ignored; unchanged assignment or board movement may not wake a worker. Report resumed
-work only after observing execution.
+trigger. Self-mentions are ignored; unchanged assignment or board movement may not
+wake a worker. Report resumed work only after observing execution.
 
 ### Tools and knowledge by node
 

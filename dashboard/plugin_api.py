@@ -5,6 +5,7 @@ import datetime
 import hashlib
 import importlib
 import json
+import math
 from pathlib import Path
 import re
 import sqlite3
@@ -46,6 +47,29 @@ def root_scope():
         if secret_token is not None:
             reset_secret_scope(secret_token)
         reset_hermes_home_override(home_token)
+
+
+@router.get("/subscription")
+def subscription():
+    # Account-wide limits, never an attribution of usage to a project/session.
+    unavailable = {"available": False, "plan": None, "fetched_at": None, "windows": []}
+    with root_scope():
+        try:
+            from agent.account_usage import fetch_account_usage
+        except ImportError:
+            return unavailable
+        snapshot = fetch_account_usage("openai-codex")
+    if snapshot is None or not snapshot.available:
+        return unavailable
+    windows = []
+    for window in snapshot.windows:
+        used = window.used_percent
+        valid = type(used) in (int, float) and math.isfinite(used) and used >= 0
+        windows.append({"label": window.label, "used_percent": min(100, used) if valid else None,
+                        "resets_at": window.reset_at.isoformat() if window.reset_at else None})
+    # Whitelist display fields: raw provider responses and credentials stay on the backend.
+    return {"available": any(w["used_percent"] is not None for w in windows),
+            "plan": snapshot.plan, "fetched_at": snapshot.fetched_at.isoformat(), "windows": windows}
 
 
 def settings(root):
@@ -163,6 +187,8 @@ def projects():
             row["last_session"] = latest_session.get(row["profile"])
             row["cost_usd"] = cost
             row["cost_status"] = status
+            for key in ("input_tokens", "output_tokens"):
+                row[key] = sum(session[key] for session in by_profile.get(row["profile"], []))
         return {"projects": rows, "revision": revision, "url": url, "connection_configured": configured,
                 "multiplex_enabled": GatewayConfig.from_dict(config).multiplex_profiles,
                 "poll_interval": extra.get("poll_interval", 30),
@@ -404,7 +430,7 @@ def parse_card(chat_id):
 def compact_session(session):
     return {key: session[key] for key in (
         "id", "title", "last_activity_at", "cost_usd", "cost_status", "card", "iid",
-        "target_type", "repository") if key in session}
+        "target_type", "repository", "input_tokens", "output_tokens") if key in session}
 
 def session_cost_summary(rows):
     total = 0.0
@@ -573,7 +599,9 @@ def sessions(profile: str = Query("", max_length=64), q: str = Query("", max_len
         chunk = filtered[start:start + per_page]
         cost, status = session_cost_summary(filtered)
         return {"sessions": chunk, "next_page": page + 1 if start + per_page < len(filtered) else None,
-                "session_count": len(rows), "cost_usd": cost, "cost_status": status}
+                "session_count": len(rows), "cost_usd": cost, "cost_status": status,
+                "input_tokens": sum(s["input_tokens"] for s in filtered),
+                "output_tokens": sum(s["output_tokens"] for s in filtered)}
 
 
 @router.get("/repositories")

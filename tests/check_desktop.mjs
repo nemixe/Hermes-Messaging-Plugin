@@ -133,7 +133,7 @@ try {
       const c = {id:'4',name:'acme/worker',url:'https://gitlab.example/acme/worker',enabled:true};
       const sessionList = [{id:'sess-101',last_activity_at:new Date(Date.now()-120000).toISOString(),profile:'acme',repository:a,title:'Fix login',author:'alice',cost_usd:0.12,cost_status:null,input_tokens:1000,output_tokens:200,card:'1:issues:3',conversation:'1:issues:3',target_type:'Issue',iid:'3',model:'gpt-5.6-terra'}];
       const original = {projects:[{profile:'acme',available:true,description:'Acme project',repositories:[a],cost_usd:0.12,cost_status:null,last_session:{id:'sess-101',title:'Fix login',last_activity_at:sessionList[0].last_activity_at,cost_usd:0.12,cost_status:null,card:'1:issues:3',iid:'3',target_type:'Issue',repository:a}},{profile:'other',available:true,description:'',repositories:[other],cost_usd:0,cost_status:null,last_session:null},{profile:'empty',available:true,description:'',repositories:[],cost_usd:0,cost_status:null,last_session:null}],revision:'a'.repeat(64),url:'https://gitlab.example',connection_configured:true,multiplex_enabled:true,poll_interval:30,max_workers:5,transport:'polling',open_count:2,session_count:1};
-      let data = structuredClone(original), failSave = false, pendingSave, deleteError, pendingDelete, nativeDeleteError, restartFails = false, restartStatus = 'finished', missingModel = false;
+      let data = structuredClone(original), failSave = false, pendingSave, deleteError, pendingDelete, nativeDeleteError, restartFails = false, restartStatus = 'finished', missingModel = false, usageFails = false;
       const calls = [], nativeDeletes = [], contributions = [], disposers = [], opened = [];
       host.openSession = async (id, options) => { opened.push({id, options}); };
       host.deleteProfile = async profile => {
@@ -143,6 +143,12 @@ try {
       };
       const ctx = {register: c => contributions.push(c), onDispose: fn => disposers.push(fn), i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options) => {
         calls.push({scope:[host.state.connectionId.get(),host.state.profile.get()],path,options});
+        if (path === '/subscription') {
+          if (usageFails) throw new Error('Unavailable');
+          return {available:true,plan:'Pro',fetched_at:'2026-09-23T00:00:00Z',windows:[
+            {label:'Session',used_percent:37,resets_at:'2099-09-23T05:00:00Z'},
+            {label:'Weekly',used_percent:0,resets_at:null}]};
+        }
         if (path === '/projects') return structuredClone(data);
         if (path.startsWith('/sessions')) {
           const q = new URL('http://fixture'+path).searchParams;
@@ -181,19 +187,35 @@ try {
       const mounted = render(<QueryClientProvider client={client}>{contributions.find(c=>c.area==='routes').render()}</QueryClientProvider>);
       const openProject = async name => fireEvent.click(await screen.findByRole('button',{name:new RegExp('^'+name+' ')}));
       await screen.findByText('Polling every 30s · 5 workers · 2 waiting');
+      await screen.findByText('37% used');
+      assert(screen.getByText('0% used'), 'zero usage is a real value');
+      assert(screen.getByText('5 hours'));
+      assert(screen.getByText('Weekly'));
+      assert(screen.getByText(/Account-wide/));
+      usageFails = true;
+      fireEvent.click(screen.getByRole('button',{name:'Refresh quota'}));
+      await screen.findByText('Quota unavailable. Check the ChatGPT login on this backend and retry.');
+      assert.equal(screen.queryByText('37% used'), null, 'a failed refresh must not show stale quota as current');
+      usageFails = false;
+      fireEvent.click(screen.getByRole('button',{name:'Refresh quota'}));
+      await screen.findByText('37% used');
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
-      assert(screen.getByText('$0.12'));
+      assert(screen.getByText('1k in · 200 out'));
+      assert(!document.body.textContent.includes('$'), 'subscription display does not convert dollars into quota');
       fireEvent.click(screen.getByRole('button',{name:/Fix login/}));
       await screen.findByText('@alice');
       assert(screen.getAllByText('Related project').length >= 2);
+      assert(screen.getByText('Pro 5x weekly price equivalent'));
+      assert(screen.getByText('≈0.52%'));
+      assert(screen.getByText(/Price comparison only; not actual quota use/));
       assert(screen.getByRole('button',{name:'Open in GitLab'}));
       fireEvent.click(screen.getByRole('button',{name:'Open session'}));
       assert.deepEqual(opened, [{id:'sess-101', options:{profile:'acme'}}]);
       fireEvent.click(screen.getByRole('tab',{name:'Mappings'}));
-      await screen.findByRole('columnheader',{name:'Cost'});
+      await screen.findByRole('columnheader',{name:'Tokens'});
       await openProject('acme');
-      await screen.findByText('Total cost');
+      await screen.findByText('Total tokens');
       await screen.findByText('Acme project');
       fireEvent.click(screen.getByRole('button',{name:'Edit registration'}));
       assert.equal(Boolean(screen.queryByLabelText('Description')),false,'existing description is create-only');

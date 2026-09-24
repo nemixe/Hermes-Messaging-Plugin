@@ -865,6 +865,7 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         from gateway.authz_mixin import GatewayAuthorizationMixin
         auth = GatewayAuthorizationMixin()
         auth._adapter_for_source = lambda source: self.adapter
+        auth._delivery_adapter_for = lambda source: self.adapter
         auth._adapter_profile_for_source = lambda source: None
         auth._pairing_store_for = lambda source: None
         # The real gateway accepts both YAML and environment wildcard grants.

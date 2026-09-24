@@ -81,10 +81,34 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(client.get(base + "/projects").status_code, 401)
             self.assertEqual(client.get(base + "/events").status_code, 401)
             self.assertEqual(client.get(base + "/sessions").status_code, 401)
+            self.assertEqual(client.get(base + "/subscription").status_code, 401)
             self.assertEqual(client.put(base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.request("DELETE", base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.post(base + "/gateway/restart").status_code, 401)
             client.headers["Authorization"] = "Bearer " + host._SESSION_TOKEN
+            from agent.account_usage import AccountUsageSnapshot, AccountUsageWindow
+            from datetime import datetime, timezone
+            stamp = datetime(2026, 9, 23, tzinfo=timezone.utc)
+            snapshot = AccountUsageSnapshot("openai-codex", "usage_api", stamp, plan="Pro",
+                windows=(AccountUsageWindow("Session", 37, stamp), AccountUsageWindow("Weekly", 0)),
+                raw={"private": "must-not-reach-ui"})
+            with patch("agent.account_usage.fetch_account_usage", return_value=snapshot) as fetch:
+                response = client.get(base + "/subscription")
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(response.json(), {"available": True, "plan": "Pro",
+                    "fetched_at": stamp.isoformat(), "windows": [
+                        {"label": "Session", "used_percent": 37, "resets_at": stamp.isoformat()},
+                        {"label": "Weekly", "used_percent": 0, "resets_at": None}]})
+                fetch.assert_called_once_with("openai-codex")
+            with patch("agent.account_usage.fetch_account_usage", return_value=None):
+                self.assertEqual(client.get(base + "/subscription").json(),
+                                 {"available": False, "plan": None, "fetched_at": None, "windows": []})
+            malformed = AccountUsageSnapshot("openai-codex", "usage_api", stamp,
+                windows=tuple(AccountUsageWindow("Session", value) for value in (None, float("nan"), -1, True)))
+            with patch("agent.account_usage.fetch_account_usage", return_value=malformed):
+                usage = client.get(base + "/subscription").json()
+                self.assertFalse(usage["available"])
+                self.assertTrue(all(w["used_percent"] is None for w in usage["windows"]))
             response = client.get(base + "/projects")
             self.assertEqual(response.status_code, 200, response.text)
             state = response.json()
@@ -110,7 +134,8 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(state["open_count"], 0)
             self.assertEqual(client.get(base + "/events").json(), {"events": [], "next_page": None, "open_count": 0})
             self.assertEqual(client.get(base + "/sessions").json(),
-                             {"sessions": [], "next_page": None, "session_count": 0, "cost_usd": 0.0, "cost_status": None})
+                             {"sessions": [], "next_page": None, "session_count": 0, "cost_usd": 0.0,
+                              "cost_status": None, "input_tokens": 0, "output_tokens": 0})
             self.assertNotIn("test-bot-pat", response.text)
             # A Desktop backend may have been launched in another profile. A
             # missing default PAT must not fall back to that process's credentials.
@@ -159,11 +184,12 @@ class DesktopAPI(unittest.TestCase):
             self.assertTrue(response.json()["created"])
             self.assertTrue(response.json()["restart_started"])
             self.assertEqual(response.json()["model_setup"],
-                             {"model": "gpt-5.6-terra", "provider": "openai-codex"})
+                             {"model": "gpt-6-sol", "provider": "openai-codex"})
             restart.assert_called_once_with("default")
             profile = root / "profiles" / "commerce"
             self.assertTrue((profile / "config.yaml").exists())
-            self.assertEqual(yaml.safe_load((profile / "config.yaml").read_text())["model"], config["model"])
+            self.assertEqual(yaml.safe_load((profile / "config.yaml").read_text())["model"],
+                             {"default": "gpt-6-sol", "provider": "openai-codex"})
             self.assertNotIn("test-bot-pat", (profile / ".env").read_text())
             from hermes_constants import set_hermes_home_override, reset_hermes_home_override
             from hermes_cli.auth import read_credential_pool
@@ -254,6 +280,7 @@ class DesktopAPI(unittest.TestCase):
             listed_sessions = client.get(base + "/sessions").json()
             self.assertEqual([session["id"] for session in listed_sessions["sessions"]], ["sess-paid", "sess-included"])
             self.assertEqual(listed_sessions["session_count"], 2)
+            self.assertEqual((listed_sessions["input_tokens"], listed_sessions["output_tokens"]), (1500, 240))
             self.assertAlmostEqual(listed_sessions["cost_usd"], 0.12185, places=5)
             self.assertEqual(listed_sessions["cost_status"], "estimated")
             self.assertEqual(listed_sessions["sessions"][0]["cost_usd"], 0.12)
@@ -270,6 +297,7 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(state["projects"][0]["last_session"]["id"], "sess-paid")
             self.assertEqual(state["projects"][0]["last_session"]["cost_usd"], 0.12)
             self.assertAlmostEqual(state["projects"][0]["cost_usd"], 0.12185, places=5)
+            self.assertEqual((state["projects"][0]["input_tokens"], state["projects"][0]["output_tokens"]), (1500, 240))
             self.assertEqual(state["projects"][0]["cost_status"], "estimated")
             self.assertEqual(state["open_count"], 2)
             self.assertEqual(state["projects"][0]["last_event"]["id"], "103")
@@ -346,7 +374,7 @@ class DesktopAPI(unittest.TestCase):
             state = client.get(base + "/projects").json()
             response = client.put(base + "/projects/no-model", json={"repositories": [], "revision": state["revision"]})
             self.assertEqual(response.status_code, 200, response.text)
-            self.assertEqual(response.json()["model_setup"]["model"], "gpt-5.6-terra",
+            self.assertEqual(response.json()["model_setup"]["model"], "gpt-6-sol",
                              "Projects use the installed egg snapshot, not later default settings")
             (root / "profiles" / "project-egg" / "config.yaml").write_text("{}")
             state = client.get(base + "/projects").json()
