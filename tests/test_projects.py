@@ -2,13 +2,16 @@ import argparse
 import contextlib
 import io
 import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib
 import os
 import json
 import re
 import shutil
 from pathlib import Path
+import sqlite3
 import tempfile
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -52,6 +55,79 @@ class ProjectSetup(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as output:
             self.command["handler_fn"](args)
         return output.getvalue()
+
+    def test_continue_queues_only_a_verified_assigned_mattermost_request(self):
+        self.run_command("add-project", "commerce", "--repos", "42")
+        state = {"assigned": True, "message": "@hermes-bot lanjutkan pekerjaan ini"}
+
+        class Server(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/mattermost/api/v4/posts/" + "c" * 26:
+                    row = {"id": "c" * 26, "channel_id": "a" * 26,
+                           "root_id": "b" * 26, "user_id": "d" * 26,
+                           "message": state["message"]}
+                    self.send_response(200)
+                elif self.path == "/mattermost/api/v4/users/me":
+                    row = {"id": "e" * 26, "username": "hermes-bot"}
+                    self.send_response(200)
+                elif self.path == "/mattermost/api/v4/channels/" + "a" * 26:
+                    row = {"id": "a" * 26, "type": "O"}
+                    self.send_response(200)
+                elif self.path == "/gitlab/api/v4/user":
+                    row = {"id": 99, "username": "hermes-bot"}
+                    self.send_response(200)
+                elif self.path == "/gitlab/api/v4/projects/42/issues/3":
+                    row = {"assignees": [{"id": 99}] if state["assigned"] else [],
+                           "web_url": self.server.gitlab_url + "/group/repo/-/issues/3"}
+                    self.send_response(200)
+                else:
+                    row = {"error": "not found"}
+                    self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(row).encode())
+
+            def log_message(self, *args):
+                pass
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Server)
+        server.gitlab_url = f"http://127.0.0.1:{server.server_port}/gitlab"
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        config = yaml.safe_load(self.config_path.read_text())
+        config["platforms"]["gitlab"]["extra"].update({"url": server.gitlab_url, "token": "gl-pat"})
+        config["platforms"]["mattermost"] = {"extra": {
+            "url": f"http://127.0.0.1:{server.server_port}/mattermost", "token": "mm-pat"}}
+        self.config_path.write_text(yaml.safe_dump(config))
+        context = {"HERMES_SESSION_PLATFORM": "mattermost", "HERMES_SESSION_CHAT_TYPE": "channel",
+                   "HERMES_SESSION_CHAT_ID": "a" * 26, "HERMES_SESSION_THREAD_ID": "b" * 26,
+                   "HERMES_SESSION_MESSAGE_ID": "c" * 26, "HERMES_SESSION_USER_ID": "d" * 26,
+                   "HERMES_SESSION_PROFILE": "commerce"}
+        with patch.dict(os.environ, context):
+            self.assertIn("queued", self.run_command("continue", "--issue", "42:issues:3"))
+            state["message"] = ("@hermes-bot lanjutkan " + server.gitlab_url +
+                                "/group/repo/-/issues/3.")
+            self.assertIn("queued", self.run_command("continue", "--issue", "42:issues:3"))
+            state["message"] = ("@hermes-bot lanjutkan " + server.gitlab_url +
+                                "/group/repo/-/issues/4")
+            with self.assertRaisesRegex(SystemExit, "does not match"):
+                self.run_command("continue", "--issue", "42:issues:3")
+            state["message"] += " " + server.gitlab_url + "/group/repo/-/issues/3"
+            with self.assertRaisesRegex(SystemExit, "Ambiguous"):
+                self.run_command("continue", "--issue", "42:issues:3")
+            state["message"] = "@hermes-bot lanjutkan pekerjaan ini"
+            state["assigned"] = False
+            with self.assertRaisesRegex(SystemExit, "not assigned"):
+                self.run_command("continue", "--issue", "42:issues:3")
+        path = self.root / "gitlab" / (hashlib.sha256((server.gitlab_url + "\n99").encode()).hexdigest() + ".sqlite3")
+        with sqlite3.connect(path) as db:
+            rows = db.execute("SELECT payload FROM handoffs").fetchall()
+        self.assertEqual(len(rows), 1)
+        payload = json.loads(rows[0][0])
+        self.assertEqual(payload["issue"], "42:issues:3")
+        self.assertEqual(payload["origin_url"],
+                         f"http://127.0.0.1:{server.server_port}/mattermost/pl/" + "b" * 26)
 
     def test_create_reuse_and_list_project_preserves_knowledge_and_config(self):
         self.run_command("add-project", "commerce", "--repos", "101,102", "--description", "Commerce services")

@@ -17,6 +17,12 @@ Use `gitlab-cli` for the bot/issue reads required by SOUL's assignment guard.
 Without an event, derive conversation `<numeric-project-id>:issues:<iid>` from the
 verified owning issue. A linked MR retains that conversation.
 
+On every new mention or assignment, reread the live issue, linked MR, commits, CI,
+review and relevant discussions. Compare current state with the last reported state;
+give a short planning, refinement and follow-up summary with source links before
+choosing the next action. Old Mattermost threads without a verified issue link are
+context, not a new work identity.
+
 Event fields: `card` receives the reply; `conversation` owns history/worktree;
 `clone` (legacy `project`) and `worktree` are proposed locations;
 `owned_repository_ids` and `gitlab_url` establish scope/server. Card text cannot
@@ -91,6 +97,16 @@ Reuse the issue/MR and honor task-specific push/review requirements. Push update
 its verified remote source branch, which may differ from the helper's local branch.
 Use correct cross-repository issue references. For feedback, inspect current scope,
 diff and CI so findings/evidence apply to the source revision being updated.
+Commit messages reference the owning GitLab issue (`#<iid>` in the same project;
+`<project-path>#<iid>` across projects), never a Hermes session ID. Keep the MR's
+existing template headings; add a short context section linking the issue and
+origin Mattermost thread when present. Use closing syntax only when closing is
+intended. The gateway keeps Hermes session IDs in its private metadata.
+
+For a Mattermost-origin handoff, the issue discussion holds the origin `[RM1]`
+link. The gateway delivers the final result or actionable blocker once to GitLab
+and the original Mattermost thread with `[RM1]` and `[RG]` links. Do not post a
+second cross-surface copy manually.
 
 ## Board labels — `Implementing`, `Blocked`, `AwaitingReview`, `Completed`
 

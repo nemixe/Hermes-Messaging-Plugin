@@ -39,9 +39,11 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                         manager._plugins["hermes-gitlab"].error)
         self.posts, self.requests, self.todos, self.events = [], [], [], []
         self.discussions = []
+        self.issue_notes = None
         self.posted_discussions = {}
         self.closing_issues, self.related_issues = [], []
         self.fail_context = self.fail_send = self.fail_list = False
+        self.issue_assigned = True
         self.fail_list_page = None
         self.sort_todos = True
         self.page_size = 100
@@ -130,14 +132,15 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
                     return web.json_response({"error": "missing discussion"}, status=404)
                 return web.json_response({"id": discussion_id, "notes": notes})
             if request.path.endswith("/notes"):
-                return web.json_response([
+                return web.json_response(self.issue_notes if self.issue_notes is not None else [
                     {"id": 7, "body": "Earlier context", "system": False,
                      "author": {"username": "alice"}},
                     {"id": 6, "body": "system context", "system": True,
                      "author": {"username": "alice"}},
                 ])
             return web.json_response({"title": "Fix login", "description": "Login fails",
-                                      "assignees": [{"id": 99}]})
+                                      "assignees": [{"id": 99}] if self.issue_assigned else [],
+                                      "web_url": str(self.api.make_url("/group/repo/-/issues/3"))})
 
         api_app = web.Application()
         api_app.router.add_route("*", "/api/v4/{tail:.*}", api)
@@ -198,6 +201,136 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         note = {"id": note_id, "body": body, "author": {"id": 7}, "system": False}
         self.discussions = [{"id": "commands", "notes": [note]}]
         return self.todo(todo_id, body=body, target_url=f"https://gitlab.example/#note_{note_id}", **overrides)
+
+    async def test_mattermost_handoff_uses_the_existing_issue_session(self):
+        store = self.session_store()
+        existing = store.get_or_create_session(self.adapter._card_source(
+            "42:issues:3", {"id": 7, "username": "alice"}))
+        store.append_to_transcript(existing.session_id, {"role": "user", "content": "Earlier GitLab decision"})
+        handoff = {
+            "issue": "42:issues:3", "profile": "default",
+            "origin_channel": "a" * 26, "origin_root": "b" * 26,
+            "origin_post": "c" * 26, "origin_user": "d" * 26,
+            "origin_url": "https://mattermost.example/pl/" + "b" * 26,
+            "issue_url": "https://gitlab.example/group/repo/-/issues/3",
+            "request": "Lanjutkan pekerjaan ini",
+        }
+        identity = self.module.enqueue_handoff(self.adapter.state_path, handoff)
+        self.assertEqual(identity, self.module.enqueue_handoff(self.adapter.state_path, handoff))
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 1)
+        self.assertEqual(self.events[0].source.chat_id, "42:issues:3")
+        self.assertTrue(self.events[0].source.role_authorized)
+        self.assertEqual(store.get_or_create_session(self.events[0].source).session_id, existing.session_id)
+        self.assertEqual(self.events[0].message_id, identity)
+        self.assertIn("Lanjutkan pekerjaan ini", self.events[0].text)
+        self.assertIn(handoff["origin_url"], self.events[0].text)
+        self.assertEqual(len([post for path, post in self.posts
+                              if path == "/api/v4/projects/42/issues/3/notes"
+                              and "[RM1](" in post.get("body", "")]), 1)
+        self.assertEqual(self.adapter._db.execute(
+            "SELECT completed FROM handoffs WHERE id = ?", (identity,)).fetchone(), (1,))
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 1)
+
+    async def test_handoff_waits_when_issue_assignment_is_removed(self):
+        handoff = {
+            "issue": "42:issues:3", "profile": "default",
+            "origin_channel": "a" * 26, "origin_root": "b" * 26,
+            "origin_post": "c" * 26, "origin_user": "d" * 26,
+            "origin_url": "https://mattermost.example/pl/" + "b" * 26,
+            "issue_url": "https://gitlab.example/group/repo/-/issues/3",
+            "request": "Lanjutkan pekerjaan ini",
+        }
+        identity = self.module.enqueue_handoff(self.adapter.state_path, handoff)
+        self.issue_assigned = False
+        await self.adapter._poll_once()
+        self.assertEqual(self.events, [])
+        self.assertEqual(self.adapter._db.execute(
+            "SELECT completed FROM handoffs WHERE id = ?", (identity,)).fetchone(), (0,))
+        self.issue_assigned = True
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 1)
+
+    async def test_handoff_refreshes_ci_and_review_discussion_on_next_mention(self):
+        handoff = {
+            "issue": "42:issues:3", "profile": "default",
+            "origin_channel": "a" * 26, "origin_root": "b" * 26,
+            "origin_post": "c" * 26, "origin_user": "d" * 26,
+            "origin_url": "https://mattermost.example/pl/" + "b" * 26,
+            "issue_url": "https://gitlab.example/group/repo/-/issues/3",
+            "request": "Cek kelanjutan pekerjaan",
+        }
+        self.issue_notes = [{"id": 7, "body": "CI pending; review belum ada", "system": False,
+                             "author": {"username": "alice"}}]
+        self.module.enqueue_handoff(self.adapter.state_path, handoff)
+        await self.adapter._poll_once()
+        self.assertIn("CI pending", self.events[-1].text)
+        self.issue_notes = [{"id": 8, "body": "CI gagal; review meminta perbaikan", "system": False,
+                             "author": {"username": "alice"}}]
+        handoff["origin_post"] = "e" * 26
+        self.module.enqueue_handoff(self.adapter.state_path, handoff)
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 2)
+        self.assertIn("CI gagal; review meminta perbaikan", self.events[-1].text)
+        self.assertIn("Verify current issue assignment and live MR, CI, review", self.events[-1].text)
+
+    async def test_handoff_report_retries_mattermost_without_reposting_gitlab(self):
+        mm_posts = []
+
+        async def mattermost_post(request):
+            self.assertEqual(request.headers.get("Authorization"), "Bearer mm-pat")
+            mm_posts.append(await request.json())
+            if len(mm_posts) == 1:
+                return web.json_response({"error": "temporary"}, status=503)
+            return web.json_response({"id": "e" * 26}, status=201)
+
+        app = web.Application()
+        app.router.add_post("/api/v4/posts", mattermost_post)
+        async def mattermost_root(request):
+            return web.json_response({"id": "b" * 26, "channel_id": "a" * 26, "root_id": ""})
+
+        app.router.add_get("/api/v4/posts/{post_id}", mattermost_root)
+        mm = TestServer(app)
+        self.addAsyncCleanup(mm.close)
+        await mm.start_server()
+        origin = str(mm.make_url("/pl/" + "b" * 26))
+        handoff = {
+            "issue": "42:issues:3", "profile": "default",
+            "origin_channel": "a" * 26, "origin_root": "b" * 26,
+            "origin_post": "c" * 26, "origin_user": "d" * 26,
+            "origin_url": origin, "request": "Lanjutkan pekerjaan ini",
+            "issue_url": str(self.api.make_url("/group/repo/-/issues/3")),
+        }
+        identity = self.module.enqueue_handoff(self.adapter.state_path, handoff)
+        results = []
+
+        async def capture(event):
+            self.events.append(event)
+            result = await self.adapter.send("42:issues:3", "Selesai dan sudah diuji.",
+                                             reply_to=identity,
+                                             metadata={"notify": True, "hermes_profile": "default"})
+            results.append(result.success)
+            event._heartbeat_execution_started = True
+            event._gateway_accepted = True
+            await self.adapter.on_processing_complete(event, ProcessingOutcome.SUCCESS)
+
+        self.adapter.handle_message = capture
+        with patch.dict(os.environ, {"MATTERMOST_URL": str(mm.make_url("/")),
+                                     "MATTERMOST_TOKEN": "mm-pat"}):
+            await self.adapter._poll_once()
+            self.assertEqual(len(mm_posts), 1)
+            await self.adapter.disconnect()
+            self.adapter = await self.new_adapter()
+            await self.adapter._poll_once()
+        self.assertEqual(results, [True])
+        self.assertEqual(len(self.events), 1)
+        self.assertEqual(len([post for path, post in self.posts
+                              if post.get("body", "").startswith("Selesai")]), 1)
+        self.assertEqual(len(mm_posts), 2)
+        self.assertEqual(mm_posts[-1]["root_id"], "b" * 26)
+        self.assertIn("[RM1](", mm_posts[-1]["message"])
+        self.assertIn("[RG](", mm_posts[-1]["message"])
 
     async def test_commands_bypass_busy_card_and_execute_only_once(self):
         started, release = asyncio.Event(), asyncio.Event()
@@ -533,6 +666,7 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(event.allow_gateway_control)
         self.assertEqual(event.auto_skill, "gitlab-workflow")
         self.assertIn("terminal", self.adapter.toolsets_for_source(event.source))
+        self.assertIn("browser", self.adapter.toolsets_for_source(event.source))
         self.adapter.config.extra["toolsets"] = ["web"]
         self.assertEqual(self.adapter.toolsets_for_source(event.source), ["web"])
         self.assertIn("clone: workspace/42\n", event.text)

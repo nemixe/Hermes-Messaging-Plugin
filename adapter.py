@@ -3,10 +3,12 @@ import asyncio
 from datetime import datetime, timezone
 import fcntl
 import hashlib
+import importlib.util
 import json
 import logging
 import math
 import os
+from pathlib import Path
 import re
 import sqlite3
 import time
@@ -64,6 +66,38 @@ def worker_count(value):
 
 def _escape_gitlab_body(content):
     return re.sub(r"(?m)^([ \t]*)/", r"\1\\/", content)
+
+
+def enqueue_handoff(state_path, payload):
+    """Queue one Mattermost request for its owning GitLab issue session."""
+    if not re.fullmatch(r"[1-9][0-9]*:issues:[1-9][0-9]*", str(payload.get("issue", ""))):
+        raise ValueError("A numeric GitLab issue identity is required")
+    for field in ("origin_channel", "origin_root", "origin_post", "origin_user"):
+        if not re.fullmatch(r"[a-z0-9]{26}", str(payload.get(field, ""))):
+            raise ValueError(f"Invalid Mattermost {field}")
+    if not isinstance(payload.get("request"), str) or not payload["request"].strip():
+        raise ValueError("A Mattermost request is required")
+    if not all(isinstance(payload.get(field), str) and urlsplit(payload[field]).scheme in {"http", "https"}
+               for field in ("origin_url", "issue_url")):
+        raise ValueError("Handoff source links are required")
+    identity = "handoff:" + hashlib.sha256(
+        f"{payload['issue']}\n{payload['origin_post']}".encode()).hexdigest()[:32]
+    with sqlite3.connect(state_path, timeout=5) as db:
+        db.execute("""CREATE TABLE IF NOT EXISTS handoffs (
+            id TEXT PRIMARY KEY, payload TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0,
+            attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT,
+            gitlab_note_id TEXT, mattermost_post_id TEXT, report_body TEXT)""")
+        db.execute("INSERT OR IGNORE INTO handoffs (id, payload) VALUES (?, ?)",
+                   (identity, json.dumps(payload)))
+    return identity
+
+
+def _mattermost_access():
+    path = Path(__file__).parent / "templates/global-project/skills/mattermost-access/scripts/access.py"
+    spec = importlib.util.spec_from_file_location("hermes_gitlab_mattermost_access", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class GitLabAdapter(BasePlatformAdapter):
@@ -127,6 +161,10 @@ class GitLabAdapter(BasePlatformAdapter):
             self._db.execute("""CREATE TABLE IF NOT EXISTS inbox (
                 id INTEGER PRIMARY KEY, payload TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0,
                 attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT)""")
+            self._db.execute("""CREATE TABLE IF NOT EXISTS handoffs (
+                id TEXT PRIMARY KEY, payload TEXT NOT NULL, completed INTEGER NOT NULL DEFAULT 0,
+                attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT,
+                gitlab_note_id TEXT, mattermost_post_id TEXT, report_body TEXT)""")
             # Existing pending requests are imported regardless of age. Historical done requests
             # predate this checkpoint and are ignored; retain the cutoff across restarts.
             for project in self.projects:
@@ -287,7 +325,20 @@ class GitLabAdapter(BasePlatformAdapter):
                     await self._collect(state)
                 except (aiohttp.ClientError, asyncio.TimeoutError, ValueError, TypeError, KeyError):
                     log.warning("GitLab to-do fetch failed; retrying on the next poll")
+            await self._retry_handoff_reports()
             await self._dispatch_saved()
+
+    async def _retry_handoff_reports(self):
+        rows = self._db.execute("""SELECT id, payload, report_body FROM handoffs
+            WHERE gitlab_note_id IS NOT NULL AND mattermost_post_id IS NULL""").fetchall()
+        for identity, payload, body in rows:
+            try:
+                await self._send_handoff_report(identity, json.loads(payload), body)
+                with self._db:
+                    self._db.execute("UPDATE handoffs SET completed = 1, last_error = NULL WHERE id = ?",
+                                     (identity,))
+            except (OSError, ValueError, KeyError, TypeError, sqlite3.Error):
+                log.warning("Mattermost report delivery failed; will retry without rerunning GitLab work")
 
     async def _dispatch_saved(self):
         rows = self._db.execute(
@@ -302,6 +353,17 @@ class GitLabAdapter(BasePlatformAdapter):
                         "UPDATE inbox SET last_error = 'context or dispatch failed' WHERE id = ?",
                         (todo_id,))
                 log.warning("GitLab request context or dispatch failed; inspect its saved inbox status")
+        rows = self._db.execute(
+            "SELECT id, payload FROM handoffs WHERE completed = 0 AND gitlab_note_id IS NULL ORDER BY rowid").fetchall()
+        for identity, payload in rows:
+            try:
+                await self._dispatch(None, None, handoff=(identity, json.loads(payload)))
+            except Exception:
+                self._inflight.pop(identity, None)
+                with self._db:
+                    self._db.execute("UPDATE handoffs SET last_error = 'context or dispatch failed' WHERE id = ?",
+                                     (identity,))
+                log.warning("Mattermost handoff dispatch failed; saved request will be retried")
 
     def _workers_full(self):
         return len(set(self._inflight.values())) >= self.max_workers
@@ -324,21 +386,32 @@ class GitLabAdapter(BasePlatformAdapter):
         except Exception:
             log.warning("GitLab queue drain failed; saved requests will be retried")
 
-    async def _dispatch(self, todo_id, todo):
+    async def _dispatch(self, todo_id, todo, *, handoff=None):
         # Keep ownership in our durable inbox while native startup restores old turns.
         # Its startup queue replays the same event later, after an early SUCCESS callback.
         if getattr(self.gateway_runner, "_startup_restore_in_progress", False):
             return
-        trigger = self._trigger(todo)
-        if trigger is None:
-            return
-        project, resource, iid, user, reason, body, identity = trigger
+        if handoff:
+            identity, request = handoff
+            project, resource, iid = request["issue"].split(":")
+            if project not in self.projects or resource != "issues":
+                raise ValueError("Handoff issue is no longer registered")
+            user = {"id": self.bot_id, "username": self.bot_username}
+            reason = "Continue the assigned issue from its linked Mattermost request."
+            body = request["request"]
+        else:
+            trigger = self._trigger(todo)
+            if trigger is None:
+                return
+            project, resource, iid, user, reason, body, identity = trigger
         chat_id = f"{project}:{resource}:{iid}"
         if identity in self._inflight:
             return
         route = f"projects/{project}/{resource}/{iid}"
-        source = self._card_source(chat_id, user)
-        command = self._comment_command(todo)
+        source = self._card_source(chat_id, user, trusted_handoff=bool(handoff))
+        if handoff and request.get("profile") != (source.profile or "default"):
+            raise ValueError("Mattermost handoff profile no longer matches the GitLab route")
+        command = None if handoff else self._comment_command(todo)
         if not command and self._source_session_key(source) in self._inflight.values():
             return
         # Commands stay immediate. A full worker set leaves this card in the inbox.
@@ -366,12 +439,23 @@ class GitLabAdapter(BasePlatformAdapter):
             return
         if self._workers_full():
             return
-        discussion = await self._discussion_for_todo(todo, route)
+        discussion = None if handoff else await self._discussion_for_todo(todo, route)
         with self._db:
-            self._db.execute("UPDATE inbox SET attempts = attempts + 1, last_error = NULL WHERE id = ?", (todo_id,))
+            table, key = ("handoffs", identity) if handoff else ("inbox", todo_id)
+            self._db.execute(f"UPDATE {table} SET attempts = attempts + 1, last_error = NULL WHERE id = ?", (key,))
         item, notes = await asyncio.gather(
             self._api("GET", route),
             self._api("GET", route + "/notes", params={"sort": "desc", "order_by": "created_at", "per_page": 20}))
+        if handoff:
+            if str(self.bot_id) not in {str(row.get("id")) for row in item.get("assignees") or []}:
+                raise ValueError("GitLab issue is no longer assigned to the bot")
+            origin_key = f"origin_note:{request['issue']}"
+            if not self._db.execute("SELECT 1 FROM meta WHERE key = ?", (origin_key,)).fetchone():
+                note = await self._api("POST", route + "/notes", json={
+                    "body": f"Konteks awal Mattermost: [RM1]({request['origin_url']})"})
+                with self._db:
+                    self._db.execute("INSERT OR IGNORE INTO meta VALUES (?, ?)",
+                                     (origin_key, str(note["id"])))
         history = "\n".join(
             f"@{note.get('author', {}).get('username', 'unknown')}: {str(note.get('body', ''))[:4000]}"
             for note in reversed(notes) if not note.get("system"))[-40000:]
@@ -397,6 +481,11 @@ class GitLabAdapter(BasePlatformAdapter):
                       f"Description: {str(item.get('description') or '')[:20000]}\n"
                       f"Recent comments:\n{history}\n"
                       f"Current request from @{user.get('username', user['id'])}:\n{body[:20000]}")
+        if handoff:
+            event.text += ("\nMattermost origin: " + request["origin_url"] + "\n"
+                           "Verify current issue assignment and live MR, CI, review, commit and discussion progress. "
+                           "Continue this issue's existing session; report the final outcome or blocker here "
+                           "and to the recorded Mattermost origin thread. Use [RM1] and [RG] source links.")
         if not await self._continue_card_session(source, chat_id):
             return
         # A resumed native turn can claim the session during the context requests above.
@@ -517,11 +606,12 @@ class GitLabAdapter(BasePlatformAdapter):
                                metadata={**(prompt.metadata or {}), "is_approval_prompt": True,
                                          "gitlab_approval_request_id": matches[0]["request_id"]})
 
-    def _card_source(self, chat_id, user):
+    def _card_source(self, chat_id, user, *, trusted_handoff=False):
         project, _, iid = chat_id.split(":")
         source = self.build_source(chat_id, chat_name=f"GitLab {chat_id}", chat_type="group",
                                    parent_chat_id=f"repo:{project}", thread_id=iid,
-                                   user_id=str(user["id"]), user_name=user.get("username"))
+                                   user_id=str(user["id"]), user_name=user.get("username"),
+                                   role_authorized=trusted_handoff)
         if self.config.extra.get("require_profile_route"):
             routes = getattr(getattr(self.gateway_runner, "config", None), "profile_routes", [])
             expected = {route.profile for route in routes
@@ -628,7 +718,8 @@ class GitLabAdapter(BasePlatformAdapter):
     async def on_processing_complete(self, event, outcome):
         if event.message_id not in self._inflight or self._db is None:
             return
-        todo_id = int(event.message_id.removeprefix("todo:"))
+        handoff = event.message_id.startswith("handoff:")
+        todo_id = event.message_id if handoff else int(event.message_id.removeprefix("todo:"))
         # Base SUCCESS also covers a delivered admission-refusal notice or an early None.
         # Hermes stamps this marker immediately before _run_agent (also used by its heartbeat
         # accounting). Require actual execution when attached to the native runner.
@@ -637,12 +728,30 @@ class GitLabAdapter(BasePlatformAdapter):
                    or (outcome == ProcessingOutcome.CANCELLED and event.message_id in self._command_cancellations))
         error = None if success else ("processing or delivery failed" if executed else "gateway did not execute request")
         with self._db:
-            self._db.execute("UPDATE inbox SET completed = ?, last_error = ? WHERE id = ?",
+            self._db.execute(f"UPDATE {'handoffs' if handoff else 'inbox'} SET completed = ?, last_error = ? WHERE id = ?",
                              (int(success), error, todo_id))
         self._inflight.pop(event.message_id, None)
         if not success:
             log.warning("GitLab processing or delivery failed; saved request will be retried")
         self._schedule_queue_drain()
+
+    async def _send_handoff_report(self, identity, payload, content):
+        row = self._db.execute("SELECT mattermost_post_id FROM handoffs WHERE id = ?", (identity,)).fetchone()
+        if row and row[0]:
+            return
+        refs = f"[RM1]({payload['origin_url']}) · [RG]({payload['issue_url']})"
+        message = content[:3500].rstrip()
+        if refs not in message:
+            message += "\n\nRujukan: " + refs
+        access = _mattermost_access()
+        base_url, _ = access.api_client(home=get_default_hermes_root())
+        if access.resolve_post_id(payload["origin_url"], base_url) != payload["origin_root"]:
+            raise ValueError("Mattermost origin no longer matches the configured server")
+        result = await asyncio.to_thread(access.post_channel, payload["origin_channel"], message,
+                                         payload["origin_root"], home=get_default_hermes_root())
+        with self._db:
+            self._db.execute("UPDATE handoffs SET mattermost_post_id = ? WHERE id = ?",
+                             (result["post_id"], identity))
 
     async def send(self, chat_id, content, reply_to=None, metadata=None):
         match = self._card_match(chat_id)
@@ -666,15 +775,28 @@ class GitLabAdapter(BasePlatformAdapter):
             if approval_id not in {a.get("request_id") for a in list_gateway_approvals(self._source_session_key(source))}:
                 approval_id = None
         # Keep generated /close, /assign, etc. as text rather than GitLab quick actions.
+        handoff_report = (str(reply_to or "").startswith("handoff:")
+                          and (metadata or {}).get("notify")
+                          and not (metadata or {}).get("is_approval_prompt"))
         content = _escape_gitlab_body(content)
         try:
             async with self._reply_lock:
+                handoff_row = self._db.execute(
+                    "SELECT payload, gitlab_note_id, report_body FROM handoffs WHERE id = ?",
+                    (reply_to,)).fetchone() if handoff_report and self._db else None
+                if handoff_report and not handoff_row:
+                    raise ValueError("Mattermost handoff is unavailable")
+                handoff_payload = json.loads(handoff_row[0]) if handoff_row else None
+                if handoff_payload:
+                    refs = (f"[RM1]({handoff_payload['origin_url']}) · "
+                            f"[RG]({handoff_payload['issue_url']})")
+                    content = handoff_row[2] or (content.rstrip() + "\n\nRujukan: " + refs)
                 thread = str((metadata or {}).get("thread_id") or "")
                 discussion = thread.removeprefix("discussion:") if thread.startswith("discussion:") else None
                 if thread and not discussion and thread != match[3]:
                     raise ValueError("Invalid GitLab reply thread")
                 profile = (metadata or {}).get("hermes_profile") or getattr(self, "_owner_profile", None) or "default"
-                delivery_key = (f"delivery:{reply_to}" if str(reply_to or "").startswith("todo:")
+                delivery_key = (f"delivery:{reply_to}" if str(reply_to or "").startswith(("todo:", "handoff:"))
                                 else f"delivery:last:{profile}:{chat_id}")
                 row = self._db.execute("SELECT value FROM meta WHERE key = ?", (delivery_key,)).fetchone() if self._db else None
                 # A pre-upgrade resumed event still carries its actual discussion.
@@ -709,18 +831,30 @@ class GitLabAdapter(BasePlatformAdapter):
                     raise ValueError("Invalid GitLab discussion ID")
                 route = f"projects/{match[1]}/{match[2]}/{match[3]}/discussions"
                 # Heartbeats reuse the last matching Working note in this discussion.
-                note = await self._update_matching_status_note(match, discussion, content)
-                if note is None and discussion:
-                    note = await self._api("POST", route + f"/{discussion}/notes", json={"body": content})
-                elif note is None:
-                    created = await self._api("POST", route, json={"body": content})
-                    discussion = str(created["id"])
-                    if not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
-                        raise ValueError("Invalid GitLab discussion ID")
-                    note = created["notes"][0]
-                    if self._db is not None:
+                if handoff_row and handoff_row[1]:
+                    note = {"id": handoff_row[1]}
+                else:
+                    note = await self._update_matching_status_note(match, discussion, content)
+                    if note is None and discussion:
+                        note = await self._api("POST", route + f"/{discussion}/notes", json={"body": content})
+                    elif note is None:
+                        created = await self._api("POST", route, json={"body": content})
+                        discussion = str(created["id"])
+                        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
+                            raise ValueError("Invalid GitLab discussion ID")
+                        note = created["notes"][0]
+                        if self._db is not None:
+                            with self._db:
+                                self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, discussion))
+                    if handoff_row:
                         with self._db:
-                            self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, discussion))
+                            self._db.execute("UPDATE handoffs SET gitlab_note_id = ?, report_body = ? WHERE id = ?",
+                                             (str(note["id"]), content, reply_to))
+                if handoff_row:
+                    try:
+                        await self._send_handoff_report(reply_to, handoff_payload, content)
+                    except (OSError, ValueError, KeyError, TypeError, sqlite3.Error):
+                        log.warning("Mattermost report delivery failed; will retry without rerunning GitLab work")
                 if approval_key and approval_id and self._db is not None:
                     with self._db:
                         self._db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)",
@@ -777,7 +911,7 @@ class GitLabAdapter(BasePlatformAdapter):
         return {"name": f"GitLab {chat_id}", "type": "group"}
 
     def toolsets_for_source(self, source):
-        return self.config.extra.get("toolsets", ["web", "terminal", "file", "skills", "memory"])
+        return self.config.extra.get("toolsets", ["web", "terminal", "file", "skills", "memory", "browser"])
 
 
 def register(ctx):

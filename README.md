@@ -359,6 +359,18 @@ issue-only requests without assigning the bot. For an authorized assignment, it
 returns the issue link and leaves implementation with the GitLab worker, avoiding
 duplicate work from Desktop/TUI/CLI.
 
+A Mattermost mention about previous work can continue the owning GitLab issue session.
+Resolve the issue from an explicit link or verified MR relation; for older unlinked
+threads, search the mapped project and confirm uncertain matches. After reading the
+relevant planning, refinement and follow-up context, the Mattermost session runs
+`hermes -p default gitlab continue --issue '<project-id>:issues:<iid>'`. The command
+verifies the live mention, route and bot assignment, then records a restart-safe
+request in the existing GitLab queue. The issue session handles the next turn under
+the existing worker limit, refreshes issue/MR/commit/CI/review state, and reports its
+result or blocker in GitLab and the original Mattermost thread. Repeated calls for
+the same mention queue one request. Mattermost activity without a mention does not
+wake GitLab work; failed Mattermost report delivery retries without rerunning work.
+
 Codev owns assigned work through implementation, review feedback and QA verification.
 It traces relevant UI/API/business-rule/authorization/data effects, makes routine
 technical choices and asks the responsible team member for business scope or major

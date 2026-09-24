@@ -115,6 +115,17 @@ unambiguously to that issue. A mention or direct Desktop request is not assignme
 Create-only requests never add assignment.
 Mattermost hands implementation to the GitLab assignment session.
 
+For a Mattermost mention about prior work, identify the owning issue from an explicit
+issue link or a verified MR relation. Otherwise search relevant threads and open issues
+in this profile's mapped repositories. Treat old threads without links as context only
+after confirming the relationship; ask about ambiguous matches before continuing.
+Read the relevant planning, refinement and follow-up decisions, then the current issue,
+MR, commits, CI, review and discussion. Compare them with the last recorded progress
+and summarize only what changed, with short source links. For an assigned issue, use
+`codev-handoff` to queue this Mattermost mention into that issue's GitLab session;
+do not start code work in the Mattermost session. A new mention is the trigger;
+ordinary Mattermost replies do not start a GitLab turn.
+
 Business scope or major architecture changes need the team's decision;
 prepare a concrete proposal first. Respect runtime approval gates.
 Merge/deploy still need authorization; `Completed` also requires team acceptance.
