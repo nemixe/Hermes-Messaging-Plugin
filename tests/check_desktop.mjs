@@ -91,6 +91,7 @@ try {
       plugin.register({register:c=>{if(c.area==='routes')page=c.render},onDispose:()=>{},i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options)=>{
         if(path==='/projects')return structuredClone(data);
         if(path.startsWith('/sessions'))return {sessions:structuredClone(sessions),next_page:null,session_count:2,cost_usd:0.12,cost_status:null};
+        if(path.startsWith('/activity?'))return {days:[{date:new URL('http://fixture'+path).searchParams.get('year')+'-'+new URL('http://fixture'+path).searchParams.get('month').padStart(2,'0')+'-14',responses:2,cost_usd:0.12}]};
         if(path==='/gateway/restart')return {restart_started:true,restart_pid:321};
         if(path.startsWith('/gateway/restart/status'))return {status:'finished'};
         if(path.startsWith('/repositories')){const q=new URL('http://fixture'+path).searchParams.get('q')||'';return {repositories:repos.filter(r=>r.name.includes(q)),next_page:null}};
@@ -144,6 +145,10 @@ try {
       const ctx = {register: c => contributions.push(c), onDispose: fn => disposers.push(fn), i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options) => {
         calls.push({scope:[host.state.connectionId.get(),host.state.profile.get()],path,options});
         if (path === '/projects') return structuredClone(data);
+        if (path.startsWith('/activity?')) {
+          const params = new URL('http://fixture'+path).searchParams;
+          return {days:[{date:params.get('year')+'-'+params.get('month').padStart(2,'0')+'-14',responses:2,cost_usd:0.12}]};
+        }
         if (path.startsWith('/sessions')) {
           const q = new URL('http://fixture'+path).searchParams;
           let rows = sessionList.filter(session => data.projects.some(p=>p.profile===session.profile));
@@ -181,9 +186,21 @@ try {
       const mounted = render(<QueryClientProvider client={client}>{contributions.find(c=>c.area==='routes').render()}</QueryClientProvider>);
       const openProject = async name => fireEvent.click(await screen.findByRole('button',{name:new RegExp('^'+name+' ')}));
       await screen.findByText('Polling every 30s · 5 workers · 2 waiting');
+      assert(screen.getByRole('tab',{name:'Projects'}));
       assert.equal(screen.queryByRole('region',{name:'ChatGPT subscription'}), null);
       assert.equal(calls.some(call => call.path === '/subscription'), false);
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);
+      fireEvent.click(screen.getByRole('tab',{name:'Heatmap'}));
+      fireEvent.change(await screen.findByLabelText('Month and year'), {target:{value:'2026-08'}});
+      await waitFor(()=>assert(calls.some(call=>{
+        const url = new URL('http://fixture'+call.path);
+        return url.pathname==='/activity' && url.searchParams.get('year')==='2026' && url.searchParams.get('month')==='8';
+      })));
+      const day = document.querySelector('[data-date="2026-08-14"]');
+      assert(day);
+      assert.match(day.title, /2 responses/);
+      assert(day.title.includes('$0.12'));
+      assert(day.title.includes('≈0.52%'));
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);
@@ -200,7 +217,7 @@ try {
       assert(screen.getByRole('button',{name:'Open in GitLab'}));
       fireEvent.click(screen.getByRole('button',{name:'Open session'}));
       assert.deepEqual(opened, [{id:'sess-101', options:{profile:'acme'}}]);
-      fireEvent.click(screen.getByRole('tab',{name:'Mappings'}));
+      fireEvent.click(screen.getByRole('tab',{name:'Projects'}));
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);
       await openProject('acme');
       await screen.findByText('Total tokens');

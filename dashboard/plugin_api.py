@@ -1,6 +1,6 @@
 """Desktop management API. Mounted behind Hermes's existing session/OAuth auth."""
 import asyncio
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import datetime
 import hashlib
 import importlib
@@ -10,6 +10,7 @@ import re
 import sqlite3
 import time
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import aiohttp
 from fastapi import APIRouter, HTTPException, Query
@@ -547,6 +548,68 @@ def load_sessions(root):
             database.close()
     sessions.sort(key=lambda session: session.get("last_activity_at") or "", reverse=True)
     return sessions
+
+
+def load_activity(root, year, month, timezone):
+    config, extra, _ = settings(root)
+    routes = [r for r in cli.route_settings(config).get("profile_routes", []) if cli.managed_route(r)]
+    profiles = {name: path for name, path in profiles_to_serve(True) if name not in cli.RESERVED_PROFILES}
+    names = sorted(({name for name, path in profiles.items() if cli.is_project_profile(path)}
+                    | {r["profile"] for r in routes if r.get("profile")}) - cli.RESERVED_PROFILES)
+    start = datetime.datetime(year, month, 1, tzinfo=timezone).timestamp()
+    following = datetime.datetime(year + (month == 12), month % 12 + 1, 1,
+                                  tzinfo=timezone).timestamp()
+    days = {}
+    for name in names:
+        try:
+            path = Path(cli.get_profile_dir(name)) / "state.db"
+            if not path.is_file():
+                continue
+            with closing(sqlite3.connect(str(path), timeout=2)) as database:
+                database.row_factory = sqlite3.Row
+                database.execute("PRAGMA query_only=ON")
+                columns = {row[1] for row in database.execute("PRAGMA table_info(sessions)")}
+                message_columns = {row[1] for row in database.execute("PRAGMA table_info(messages)")}
+                if not {"id", "source", "started_at"} <= columns or not {"session_id", "role", "timestamp"} <= message_columns:
+                    continue
+                select = ", ".join(col for col in SESSION_COLUMNS if col in columns)
+                where = ["source = 'gitlab'", "started_at < ?",
+                         "COALESCE(last_activity_at, started_at) >= ?" if "last_activity_at" in columns else "started_at >= ?"]
+                if "hidden" in columns:
+                    where.append("IFNULL(hidden, 0) = 0")
+                if "archived" in columns:
+                    where.append("IFNULL(archived, 0) = 0")
+                for session in database.execute(f"SELECT {select} FROM sessions WHERE {' AND '.join(where)}",
+                                                (following, start)):
+                    try:
+                        stamps = {float(row[0]) for row in database.execute(
+                            "SELECT CAST(timestamp AS REAL) FROM messages WHERE session_id = ? AND role = 'assistant'",
+                            (session["id"],)) if row[0] is not None and row[0] > 0}
+                        if not stamps:
+                            continue
+                        cost = public_session(name, session, extra.get("repository_info") or {})["cost_usd"]
+                    except (sqlite3.Error, TypeError, ValueError, KeyError):
+                        continue
+                    for stamp in stamps:
+                        if start <= stamp < following:
+                            date = datetime.datetime.fromtimestamp(stamp, timezone).date().isoformat()
+                            day = days.setdefault(date, {"date": date, "responses": 0, "cost_usd": 0.0})
+                            day["responses"] += 1
+                            day["cost_usd"] += cost / len(stamps)
+        except (sqlite3.Error, TypeError, ValueError, OSError):
+            continue
+    return [{**days[date], "cost_usd": round(days[date]["cost_usd"], 6)} for date in sorted(days)]
+
+
+@router.get("/activity")
+def activity(year: int = Query(..., ge=2000, le=2100), month: int = Query(..., ge=1, le=12),
+             timezone: str = Query("UTC", max_length=64)):
+    try:
+        zone = ZoneInfo(timezone)
+    except (ValueError, ZoneInfoNotFoundError):
+        raise HTTPException(status_code=422, detail="Invalid timezone")
+    with errors(), root_scope() as root:
+        return {"days": load_activity(root, year, month, zone)}
 
 
 @router.get("/sessions")

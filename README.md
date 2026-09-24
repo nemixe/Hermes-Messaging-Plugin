@@ -1,10 +1,11 @@
-# Hermes GitLab messaging · 0.3.26
+# Hermes GitLab messaging · 0.3.27
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
-Desktop. **Mappings** registers repositories to Hermes project profiles.
+Desktop. **Projects** registers repositories to Hermes project profiles.
 **Sessions** lists GitLab-triggered Hermes sessions — globally or for one project —
 with the estimated cost percentage of a Pro 5x week. Token counts remain in session details.
+**Heatmap** shows daily GitLab assistant activity with a month and year filter.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
@@ -173,12 +174,16 @@ for this shared connection management page.
 
 ## Manage projects
 
-Open **GitLab Projects** below **Kanban**. **Mappings** is the registry; click a
+Open **GitLab Projects** below **Kanban**. **Projects** is the registry; click a
 row for repositories, recent sessions, and edit/delete. **Sessions** lists GitLab
 sessions for all projects or one project. Its cost column and session detail compare
 each session's USD estimate with the weekly share of the $100/month Pro 5x price
 (~$23.08/week). Click a row for tokens, related project, card, and the option to open it.
 That percentage is a price comparison, not measured subscription quota use.
+**Heatmap** uses local calendar days. Hover or focus a day to see its assistant
+response count, estimated token cost, and percentage of that weekly price. Hermes
+stores cost per session, so the heatmap divides each session's cost equally among
+its assistant responses; daily amounts are approximate.
 
 1. Select an existing profile, or create a new project/profile with a name and description.
 2. Search repositories accessible to the bot and select **Save and activate**.

@@ -1,5 +1,6 @@
 """Real Hermes API mounting/auth, temporary profiles and a loopback GitLab."""
 import contextlib
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib
 import json
@@ -81,6 +82,7 @@ class DesktopAPI(unittest.TestCase):
             self.assertEqual(client.get(base + "/projects").status_code, 401)
             self.assertEqual(client.get(base + "/events").status_code, 401)
             self.assertEqual(client.get(base + "/sessions").status_code, 401)
+            self.assertEqual(client.get(base + "/activity?year=2026&month=9").status_code, 401)
             self.assertEqual(client.put(base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.request("DELETE", base + "/projects/commerce", json={}).status_code, 401)
             self.assertEqual(client.post(base + "/gateway/restart").status_code, 401)
@@ -242,7 +244,9 @@ class DesktopAPI(unittest.TestCase):
                                      "parent_chat_id": "repo:42", "profile": "commerce"})
                 state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     ("sess-paid", "gitlab", "Fix login rounding", "42:issues:3", origin, "commerce",
-                     "gpt-5.6-terra", 0.12, 0.15, None, 1000, 200, 4, 1789482598.0, 1789482698.0, None, 0, 0))
+                     "gpt-5.6-terra", 0.12, 0.15, None, 1000, 200, 4,
+                     datetime(2026, 8, 30, tzinfo=timezone.utc).timestamp(),
+                     datetime(2026, 9, 16, 11, tzinfo=timezone.utc).timestamp(), None, 0, 0))
                 state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     ("sess-included", "gitlab", "Export invoices", "42:issues:8",
                      origin.replace("issues:3", "issues:8"), "commerce", "gpt-5.6-terra", 0.0, 0.0, "included",
@@ -253,6 +257,20 @@ class DesktopAPI(unittest.TestCase):
                 state_db.execute("INSERT INTO sessions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     ("sess-hidden", "gitlab", "Hidden", "42:issues:9", origin, "commerce", "gpt-5.6-terra",
                      9.0, 9.0, None, 10, 10, 1, 1789484000.0, 1789484000.0, None, 0, 1))
+                state_db.execute("CREATE TABLE messages (session_id TEXT, role TEXT, timestamp REAL)")
+                day_aug = datetime(2026, 8, 31, 10, tzinfo=timezone.utc).timestamp()
+                day_15 = datetime(2026, 9, 15, 14, tzinfo=timezone.utc).timestamp()
+                day_16 = datetime(2026, 9, 16, 10, tzinfo=timezone.utc).timestamp()
+                late_15 = datetime(2026, 9, 15, 23, tzinfo=timezone.utc).timestamp()
+                state_db.executemany("INSERT INTO messages VALUES (?,?,?)", [
+                    ("sess-paid", "assistant", day_aug),
+                    ("sess-paid", "assistant", day_15),
+                    ("sess-paid", "assistant", day_15),  # copied message after compaction
+                    ("sess-paid", "assistant", day_16),
+                    ("sess-included", "assistant", late_15),
+                    ("sess-desktop", "assistant", day_16),
+                    ("sess-hidden", "assistant", day_16),
+                ])
             state_db.close()
             listed_sessions = client.get(base + "/sessions").json()
             self.assertEqual([session["id"] for session in listed_sessions["sessions"]], ["sess-paid", "sess-included"])
@@ -269,6 +287,19 @@ class DesktopAPI(unittest.TestCase):
             self.assertAlmostEqual(listed_sessions["sessions"][1]["cost_usd"], 0.00185, places=5)
             self.assertEqual(client.get(base + "/sessions?q=invoices").json()["sessions"][0]["id"], "sess-included")
             self.assertEqual(client.get(base + "/sessions?profile=missing").json()["sessions"], [])
+            activity = client.get(base + "/activity?year=2026&month=9").json()
+            self.assertEqual([(day["date"], day["responses"]) for day in activity["days"]],
+                             [("2026-09-15", 2), ("2026-09-16", 1)])
+            self.assertAlmostEqual(activity["days"][0]["cost_usd"], 0.04185, places=5)
+            self.assertAlmostEqual(activity["days"][1]["cost_usd"], 0.04, places=5)
+            local_days = client.get(base + "/activity?year=2026&month=9&timezone=Asia/Jakarta").json()["days"]
+            self.assertEqual([(day["date"], day["responses"]) for day in local_days],
+                             [("2026-09-15", 1), ("2026-09-16", 2)])
+            self.assertAlmostEqual(local_days[1]["cost_usd"], 0.04185, places=5)
+            self.assertEqual(client.get(base + "/activity?year=2026&month=8").json()["days"],
+                             [{"date": "2026-08-31", "responses": 1, "cost_usd": 0.04}])
+            self.assertEqual(client.get(base + "/activity?year=2026&month=13").status_code, 422)
+            self.assertEqual(client.get(base + "/activity?year=2026&month=9&timezone=Not/AZone").status_code, 422)
             state = client.get(base + "/projects").json()
             self.assertEqual(state["session_count"], 2)
             self.assertEqual(state["projects"][0]["last_session"]["id"], "sess-paid")
