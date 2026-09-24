@@ -146,7 +146,7 @@ class ProjectSetup(unittest.TestCase):
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
                 for name in ("gitlab-workflow", "codev-handoff", "tunnel-preview", "close-worktree",
-                                 "mattermost-dm", "mattermost-onboarding"):
+                                 "mattermost-access", "mattermost-onboarding"):
                     viewed = json.loads(skill_view(name))
                     self.assertEqual(Path(viewed["_source_path"]).resolve(),
                                      (shared / "skills" / name / "SKILL.md").resolve())
@@ -170,22 +170,32 @@ class ProjectSetup(unittest.TestCase):
             old.mkdir(exist_ok=True)
             (old / "SKILL.md").write_text("Old customized workflow")
             (old / "notes.md").write_text("Keep supporting files")
+            old_dm = profile / "skills/mattermost-dm"
+            old_dm.mkdir(exist_ok=True)
+            (old_dm / "SKILL.md").write_text("Old customized DM skill")
             if profile.name != "global-project":
                 with (profile / "SOUL.md").open("a") as soul:
-                    soul.write("\nread `skills/codev-gitlab/SKILL.md` and follow its rules.\n")
+                    soul.write("\nread `skills/codev-gitlab/SKILL.md` and follow its rules.\n"
+                               "Use `mattermost-dm` for personal messages.\n")
         shared_config = (profiles[0] / "config.yaml").read_bytes()
         cli.ensure_template()
         self.assertTrue(all((profile / "skills/codev-gitlab").exists() for profile in profiles))
         self.run_command("sync-knowledge")
         for profile in profiles:
             self.assertFalse((profile / "skills/codev-gitlab").exists())
+            self.assertFalse((profile / "skills/mattermost-dm").exists())
             backup = list(profile.glob("backups/gitlab-skills/*/codev-gitlab/SKILL.md"))
             self.assertEqual(len(backup), 1)
             self.assertEqual(backup[0].read_text(), "Old customized workflow")
             self.assertEqual((backup[0].parent / "notes.md").read_text(), "Keep supporting files")
+            old_dm_backup = list(profile.glob("backups/gitlab-skills/*/mattermost-dm/SKILL.md"))
+            self.assertEqual(len(old_dm_backup), 1)
+            self.assertEqual(old_dm_backup[0].read_text(), "Old customized DM skill")
             if profile.name != "global-project":
                 soul = (profile / "SOUL.md").read_text()
                 self.assertNotIn("codev-gitlab", soul)
+                self.assertNotIn("mattermost-dm", soul)
+                self.assertIn("mattermost-access", soul)
                 self.assertIn("load `gitlab-workflow` with `skill_view` and follow its rules", soul)
         self.assertEqual((profiles[0] / "config.yaml").read_bytes(), shared_config)
         self.assertTrue((profiles[0] / "skills/gitlab-workflow/scripts/worktree.py").is_file())
@@ -402,7 +412,7 @@ class ProjectSetup(unittest.TestCase):
         self.assertIn("### Assignment guard", block)
         self.assertIn("codev-handoff", block)
         self.assertIn("assigned to this profile's bot", block)
-        self.assertIn("mattermost-dm", block)
+        self.assertIn("mattermost-access", block)
         self.assertIn("chat personally", block)
         self.assertIn("confidential material", block)
         config = yaml.safe_load(

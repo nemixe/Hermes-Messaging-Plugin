@@ -1,4 +1,4 @@
-"""Send a Mattermost DM using the default profile's messaging bot token."""
+"""Read and post Mattermost messages with the default profile's bot token."""
 import argparse
 import fcntl
 import json
@@ -209,6 +209,92 @@ def send_dm(user, message, *, environ=None, home=None, request=None):
     }
 
 
+def api_client(environ=None, home=None, request=None):
+    url, token, _allowed, _root = credentials(environ, home)
+    base_url = validate_url(url)
+    return base_url, request or (lambda method, path, payload=None: http_request(base_url, token, method, path, payload))
+
+
+def require_id(value, kind):
+    if not USER_ID.fullmatch(value or ""):
+        raise ValueError(f"Supply a Mattermost {kind} ID")
+    return value
+
+
+def resolve_post_id(value, base_url):
+    if USER_ID.fullmatch(value or ""):
+        return value
+    source = urlsplit(value or "")
+    base = urlsplit(base_url)
+    match = re.search(r"/pl/([a-z0-9]{26})/?$", source.path)
+    same_server = ((source.scheme, source.netloc) == (base.scheme, base.netloc)
+                   or (source.scheme == "mattermost" and source.netloc == base.netloc))
+    if not same_server or source.username or source.password or source.query or source.fragment or not match:
+        raise ValueError("Supply a post ID or a permalink on this Mattermost server")
+    return match.group(1)
+
+
+def ordered_posts(data, channel_id=None):
+    posts = data.get("posts") or {}
+    order = data.get("order") or []
+    return [posts[post_id] for post_id in order
+            if post_id in posts and (channel_id is None or posts[post_id].get("channel_id") == channel_id)]
+
+
+def read_thread(post, page=0, per_page=60, *, environ=None, home=None, request=None):
+    if page < 0 or not 1 <= per_page <= 200:
+        raise ValueError("Page must be nonnegative and per-page must be 1–200")
+    base_url, api = api_client(environ, home, request)
+    post_id = resolve_post_id(post, base_url)
+    data = api("GET", f"posts/{post_id}/thread?page={page}&per_page={per_page}")
+    return {"ok": True, "page": page, "posts": ordered_posts(data),
+            "next_post_id": data.get("next_post_id")}
+
+
+def recent_posts(channel, page=0, per_page=60, *, environ=None, home=None, request=None):
+    channel_id = require_id(channel, "channel")
+    if page < 0 or not 1 <= per_page <= 200:
+        raise ValueError("Page must be nonnegative and per-page must be 1–200")
+    _base_url, api = api_client(environ, home, request)
+    data = api("GET", f"channels/{channel_id}/posts?page={page}&per_page={per_page}")
+    return {"ok": True, "channel_id": channel_id, "page": page,
+            "posts": ordered_posts(data, channel_id)}
+
+
+def search_posts(channel, terms, page=0, per_page=60, *, environ=None, home=None, request=None):
+    channel_id = require_id(channel, "channel")
+    if not (terms or "").strip():
+        raise ValueError("Supply Mattermost search terms or filters")
+    if page < 0 or not 1 <= per_page <= 200:
+        raise ValueError("Page must be nonnegative and per-page must be 1–200")
+    _base_url, api = api_client(environ, home, request)
+    data = api("POST", "posts/search", {"terms": f"in:{channel_id} {terms.strip()}",
+                                           "is_or_search": False, "page": page, "per_page": per_page})
+    return {"ok": True, "channel_id": channel_id, "page": page,
+            "posts": ordered_posts(data, channel_id)}
+
+
+def post_channel(channel, message, root=None, *, environ=None, home=None, request=None):
+    channel_id = require_id(channel, "channel")
+    if not (message or "").strip():
+        raise ValueError("Supply the Mattermost post text")
+    if len(message) > MAX_POST_LENGTH:
+        raise ValueError(f"Mattermost post text must be at most {MAX_POST_LENGTH} characters")
+    base_url, api = api_client(environ, home, request)
+    payload = {"channel_id": channel_id, "message": message}
+    if root:
+        parent = api("GET", f"posts/{resolve_post_id(root, base_url)}")
+        if parent.get("channel_id") != channel_id:
+            raise ValueError("The reply target belongs to another channel")
+        payload["root_id"] = require_id(parent.get("root_id") or parent.get("id"), "reply root")
+    post = api("POST", "posts", payload)
+    post_id = str((post or {}).get("id") or "")
+    if not USER_ID.fullmatch(post_id):
+        raise ValueError("Mattermost did not return a post ID")
+    return {"ok": True, "channel_id": channel_id, "post_id": post_id,
+            "root_id": payload.get("root_id") or post_id}
+
+
 def store_dir(environ=None, home=None):
     home_root = messaging_home(environ, home)
     runtime = home_root / "runtime"
@@ -366,6 +452,14 @@ def _run(args):
         if not args.user or args.message is None:
             raise ValueError("send requires --user and --message")
         return send_dm(args.user, args.message, home=args.home)
+    if args.command == "thread":
+        return read_thread(args.post, args.page, args.per_page, home=args.home)
+    if args.command == "recent":
+        return recent_posts(args.channel, args.page, args.per_page, home=args.home)
+    if args.command == "search":
+        return search_posts(args.channel, args.terms, args.page, args.per_page, home=args.home)
+    if args.command == "post":
+        return post_channel(args.channel, args.message, args.root, home=args.home)
     if args.command == "request":
         if not args.user or args.message is None or not args.dest:
             raise ValueError("request requires --user, --message and --dest")
@@ -382,22 +476,28 @@ def _run(args):
         if not args.id:
             raise ValueError("status requires --id")
         return status_dm(args.id, home=args.home)
-    raise ValueError("Unknown Mattermost DM command")
+    raise ValueError("Unknown Mattermost access command")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", nargs="?", default="send",
-                        choices=("send", "request", "pending", "complete", "status"))
+                        choices=("send", "request", "pending", "complete", "status",
+                                 "thread", "recent", "search", "post"))
     parser.add_argument("--user", help="Mattermost username, email, or user ID")
-    parser.add_argument("--message", help="DM text")
+    parser.add_argument("--message", help="Message text")
+    parser.add_argument("--post", help="Post ID or Mattermost permalink to read")
+    parser.add_argument("--root", help="Post ID or Mattermost permalink to reply to")
+    parser.add_argument("--terms", help="Mattermost search terms and filters")
+    parser.add_argument("--page", type=int, default=0)
+    parser.add_argument("--per-page", type=int, default=60)
     parser.add_argument("--dest", help="Profile path that will receive the confidential material")
     parser.add_argument("--keys", help="Comma-separated names of the confidential items to collect")
     parser.add_argument("--id", help="Personal-chat request id")
-    parser.add_argument("--channel", help="Mattermost DM channel ID")
+    parser.add_argument("--channel", help="Mattermost channel ID")
     parser.add_argument("--home", help="Default Hermes home whose .env holds Mattermost credentials")
     args = parser.parse_args()
     try:
         print(json.dumps(_run(args), separators=(",", ":")))
     except (OSError, ValueError, json.JSONDecodeError) as error:
-        parser.exit(1, f"Mattermost DM failed: {error}\n")
+        parser.exit(1, f"Mattermost access failed: {error}\n")

@@ -226,7 +226,7 @@ once, when the template is first created. Other default-profile files are not im
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
 profile. Bundled `gitlab-workflow`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,
-`close-worktree`, `mattermost-dm` and `mattermost-onboarding` skills are seeded there from
+`close-worktree`, `mattermost-access` and `mattermost-onboarding` skills are seeded there from
 `templates/global-project/skills/`, including the worktree helper. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
@@ -253,14 +253,17 @@ ownership. `close-worktree` checks these records before runtime shutdown/removal
 an issue/MR conversation match alone is insufficient. Legacy worktrees without
 creator records are not automatically claimed or cleaned up.
 
-`mattermost-dm` opens a private Mattermost DM as the bot configured on the
-default messaging profile. The DM is a separate session: it asks for
-confidential material, names the dest file (for example
+`mattermost-access` reads threads, follows forwarded post links, searches within a
+channel using Mattermost filters, and posts authorized replies, cross-thread notices,
+new channel threads or DMs using the bot on the default messaging profile. PIC DMs
+use verified responsibility from the project team map; unknown ownership is asked
+in the originating discussion. Confidential requests still open a separate DM
+session: it asks for the material, names the dest file (for example
 `$HERMES_HOME/memories/env.md`), and writes the reply there. The original
 thread reads that file on a later turn. It reads the default profile's
 Mattermost messaging settings: `MATTERMOST_URL` and `MATTERMOST_TOKEN` from
 `.env`, or `platforms.mattermost` `url`/`token` in `config.yaml`. Installing
-or syncing the skill does not send messages.
+or syncing the skill does not send messages. Existing DM handoff records remain valid.
 
 `mattermost-onboarding` starts on the first Mattermost conversation routed to a
 project after connection, or when explicitly requested. It records PM/BE/FE/QA

@@ -13,7 +13,7 @@ from urllib.request import Request
 
 
 SCRIPT = (Path(__file__).parents[1] / "templates/global-project/skills"
-          / "mattermost-dm/scripts/dm.py")
+          / "mattermost-access/scripts/access.py")
 BOT_ID = "b" * 26
 ALICE_ID = "a" * 26
 CHANNEL_ID = "c" * 26
@@ -318,6 +318,59 @@ class MattermostDM(unittest.TestCase):
                 self.dm.request_dm("alice", "hi", outside, environ={"HERMES_HOME": str(profile)},
                                    home=str(root), request=self.api)
             self.assertEqual(self.api.calls, [])
+
+    def test_reads_searches_and_posts_only_to_the_selected_mattermost_channel(self):
+        reply_id = "r" * 26
+        other_id = "o" * 26
+        other_channel = "d" * 26
+        root = {"id": POST_ID, "channel_id": CHANNEL_ID, "root_id": "", "message": "root"}
+        reply = {"id": reply_id, "channel_id": CHANNEL_ID, "root_id": POST_ID, "message": "reply"}
+        unrelated = {"id": other_id, "channel_id": other_channel, "message": "other"}
+        calls = []
+
+        def api(method, path, payload=None):
+            calls.append((method, path, payload))
+            if path.startswith(f"posts/{reply_id}/thread?"):
+                return {"order": [POST_ID, reply_id], "posts": {POST_ID: root, reply_id: reply}}
+            if path.startswith(f"channels/{CHANNEL_ID}/posts?"):
+                return {"order": [reply_id, POST_ID], "posts": {POST_ID: root, reply_id: reply}}
+            if path == "posts/search":
+                return {"order": [other_id, reply_id], "posts": {other_id: unrelated, reply_id: reply}}
+            if path == f"posts/{reply_id}":
+                return reply
+            if path == f"posts/{other_id}":
+                return unrelated
+            if path == "posts":
+                return {"id": "n" * 26}
+            raise AssertionError(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            self.write_env(directory, MATTERMOST_URL="https://mm.example.invalid", MATTERMOST_TOKEN=TOKEN)
+            link = f"https://mm.example.invalid/team/pl/{reply_id}"
+            thread = self.dm.read_thread(link, home=directory, request=api)
+            recent = self.dm.recent_posts(CHANNEL_ID, home=directory, request=api)
+            found = self.dm.search_posts(CHANNEL_ID, '"release plan" from:alice', home=directory, request=api)
+            posted = self.dm.post_channel(CHANNEL_ID, "Please review source link", reply_id,
+                                          home=directory, request=api)
+            fresh = self.dm.post_channel(CHANNEL_ID, "New discussion", home=directory, request=api)
+            with self.assertRaisesRegex(ValueError, "another channel"):
+                self.dm.post_channel(CHANNEL_ID, "wrong target", other_id, home=directory, request=api)
+            with self.assertRaisesRegex(ValueError, "this Mattermost server"):
+                self.dm.read_thread(f"https://other.example.invalid/team/pl/{reply_id}",
+                                    home=directory, request=api)
+
+        self.assertEqual([post["id"] for post in thread["posts"]], [POST_ID, reply_id])
+        self.assertEqual([post["id"] for post in recent["posts"]], [reply_id, POST_ID])
+        self.assertEqual([post["id"] for post in found["posts"]], [reply_id])
+        self.assertEqual(posted["root_id"], POST_ID)
+        self.assertEqual(fresh["root_id"], "n" * 26)
+        search_call = next(call for call in calls if call[1] == "posts/search")
+        self.assertEqual(search_call[2]["terms"], f'in:{CHANNEL_ID} "release plan" from:alice')
+        sent_posts = [call[2] for call in calls if call[:2] == ("POST", "posts")]
+        self.assertEqual(sent_posts, [
+            {"channel_id": CHANNEL_ID, "message": "Please review source link", "root_id": POST_ID},
+            {"channel_id": CHANNEL_ID, "message": "New discussion"},
+        ])
 
 
 if __name__ == "__main__":

@@ -118,6 +118,7 @@ def sync_project_knowledge(profile, config=None):
     after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
     after = after.replace("`codev-gitlab`", "`gitlab-workflow`").replace(
         "skills/codev-gitlab/", "skills/gitlab-workflow/")
+    after = after.replace("mattermost-dm", "mattermost-access")
     after = after.replace("read `skills/gitlab-workflow/SKILL.md` and follow",
                           "load `gitlab-workflow` with `skill_view` and follow")
     after = after.replace(STARTER_BRIEF, STARTER_QUIET).replace(STARTER_SURFACES, STARTER_QUIET)
@@ -186,7 +187,7 @@ def migrate_shared_skills(profile):
     """Archive retired skills and local copies; retain current shared skills."""
     bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
     backup_root = profile / "backups" / "gitlab-skills"
-    legacy = [profile / "skills/codev-gitlab"]
+    legacy = [profile / "skills/codev-gitlab", profile / "skills/mattermost-dm"]
     if profile.name != SHARED_PROFILE:
         legacy.extend(profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
                       if (skill / "SKILL.md").is_file())
