@@ -276,15 +276,18 @@ const css = `
 .hgl-heatmap-picker { width:110px; max-width:100%; margin-bottom:12px; padding:5px 8px; border:1px solid var(--ui-stroke-secondary); border-radius:4px; background:var(--ui-bg-editor); color:var(--ui-text-primary); }
 .hgl-heatmap-scroll { max-width:100%; overflow-x:auto; margin-top:18px; }
 .hgl-heatmap-chart { width:max-content; }
-.hgl-heatmap-months { display:grid; grid-template-columns:repeat(var(--hgl-weeks),10px); gap:2px; margin-left:28px; height:18px; color:var(--ui-text-secondary); font-size:.625rem; white-space:nowrap; }
+.hgl-heatmap-months { display:grid; grid-template-columns:repeat(var(--hgl-weeks),10px); gap:2px; margin-left:76px; height:18px; color:var(--ui-text-secondary); font-size:.625rem; white-space:nowrap; }
 .hgl-heatmap-row { display:flex; gap:4px; }
-.hgl-heatmap-weekdays { display:grid; grid-template-rows:repeat(7,10px); gap:2px; width:24px; color:var(--ui-text-secondary); font-size:.5625rem; line-height:10px; }
+.hgl-heatmap-weekdays { display:grid; grid-template-rows:repeat(7,10px); gap:2px; width:72px; color:var(--ui-text-secondary); font-size:.625rem; line-height:10px; white-space:nowrap; }
 .hgl-heatmap-grid { display:grid; grid-template-columns:repeat(var(--hgl-weeks),10px); grid-template-rows:repeat(7,10px); gap:2px; }
 .hgl-heatmap-day { width:10px; height:10px; padding:0; border:1px solid var(--ui-stroke-secondary); border-radius:2px; background:var(--ui-bg-quaternary); cursor:help; }
-.hgl-heatmap-day[data-level="1"] { background:color-mix(in srgb,var(--ui-accent) 22%,var(--ui-bg-editor)); }
-.hgl-heatmap-day[data-level="2"] { background:color-mix(in srgb,var(--ui-accent) 40%,var(--ui-bg-editor)); }
-.hgl-heatmap-day[data-level="3"] { background:color-mix(in srgb,var(--ui-accent) 60%,var(--ui-bg-editor)); }
-.hgl-heatmap-day[data-level="4"] { background:color-mix(in srgb,var(--ui-accent) 80%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="1"] { background:color-mix(in srgb,var(--ui-accent) 18%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="2"] { background:color-mix(in srgb,var(--ui-accent) 32%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="3"] { background:color-mix(in srgb,var(--ui-accent) 46%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="4"] { background:color-mix(in srgb,var(--ui-accent) 62%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="5"] { background:color-mix(in srgb,var(--ui-accent) 78%,var(--ui-bg-editor)); }
+.hgl-heatmap-day[data-level="6"] { background:color-mix(in srgb,var(--ui-accent) 94%,var(--ui-bg-editor)); }
+.hgl-heatmap-day:disabled { opacity:.35; cursor:default; }
 .hgl-heatmap-day:focus-visible { outline:2px solid var(--ui-accent); outline-offset:2px; }
 .hgl-row { cursor:pointer; }
 .hgl-row:hover td { background:var(--ui-row-hover-background); }
@@ -818,10 +821,10 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const today = new Date()
   const yearStart = Date.UTC(year, 0, 1)
   const daysInYear = (Date.UTC(year + 1, 0, 1) - yearStart) / 86400000
-  const visibleDays = year === today.getFullYear() ?
+  const elapsedDays = year === today.getFullYear() ?
     Math.floor((Date.UTC(year, today.getMonth(), today.getDate()) - yearStart) / 86400000) + 1 : daysInYear
-  const leadingDays = (new Date(yearStart).getUTCDay() + 6) % 7
-  const weeks = Math.ceil((leadingDays + visibleDays) / 7)
+  const leadingDays = new Date(yearStart).getUTCDay()
+  const weeks = Math.ceil((leadingDays + daysInYear) / 7)
   const activityByDate = new Map((activity.data?.days || []).map(day => [day.date, day]))
   const heatmap = jsxs('div', { className: 'hgl-heatmap-view', children: [
     jsx('select', { className: 'hgl-heatmap-picker', 'aria-label': t('year'), value: activityYear,
@@ -837,25 +840,28 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
         jsxs('div', { className: 'hgl-heatmap-chart', style: { '--hgl-weeks': weeks }, children: [
           jsx('div', { className: 'hgl-heatmap-months', children: Array.from({ length: 12 }, (_, month) => {
             const offset = (Date.UTC(year, month, 1) - yearStart) / 86400000
-            return offset < visibleDays ? jsx('span', { style: { gridColumn: Math.floor((leadingDays + offset) / 7) + 1 },
-              children: new Date(Date.UTC(year, month, 1)).toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' }) }, month) : null
+            return jsx('span', { style: { gridColumn: Math.floor((leadingDays + offset) / 7) + 1 },
+              children: new Date(Date.UTC(year, month, 1)).toLocaleDateString(undefined, { month: 'short', timeZone: 'UTC' }) }, month)
           }) }),
           jsxs('div', { className: 'hgl-heatmap-row', children: [
-            jsx('div', { className: 'hgl-heatmap-weekdays', 'aria-hidden': true, children: [0, 2, 4].map(index =>
+            jsx('div', { className: 'hgl-heatmap-weekdays', 'aria-hidden': true, children: Array.from({ length: 7 }, (_, index) =>
               jsx('span', { style: { gridRow: index + 1 }, children:
-                new Date(Date.UTC(2024, 0, index + 1)).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }) }, index)) }),
-            jsx('div', { className: 'hgl-heatmap-grid', children: Array.from({ length: visibleDays }, (_, index) => {
+                new Date(Date.UTC(2024, 0, index + 7)).toLocaleDateString(undefined, { weekday: 'long', timeZone: 'UTC' }) }, index)) }),
+            jsx('div', { className: 'hgl-heatmap-grid', children: Array.from({ length: daysInYear }, (_, index) => {
           const dayDate = new Date(yearStart + index * 86400000)
           const date = dayDate.toISOString().slice(0, 10)
+          const dateText = dayDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+          const position = { gridColumn: Math.floor((leadingDays + index) / 7) + 1, gridRow: (leadingDays + index) % 7 + 1 }
+          if (index >= elapsedDays) return jsx('button', { type: 'button', className: 'hgl-heatmap-day',
+            'data-date': date, disabled: true, title: dateText, 'aria-label': dateText, style: position }, date)
           const day = activityByDate.get(date) || { responses: 0, cost_usd: 0 }
           const cost = Number(day.cost_usd) || 0
           const costText = cost > 0 ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 6 }).format(cost) : day.responses ? '—' : '$0.00'
           const percentage = cost > 0 ? weeklyPriceEquivalent(day) : day.responses ? '—' : '0%'
-          const dateText = dayDate.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
           const tooltip = t('activityDay', dateText, day.responses, costText, percentage)
-          return jsx('button', { type: 'button', className: 'hgl-heatmap-day', 'data-level': Math.min(4, day.responses),
-            'data-date': date, title: tooltip, 'aria-label': tooltip,
-            style: { gridColumn: Math.floor((leadingDays + index) / 7) + 1, gridRow: (leadingDays + index) % 7 + 1 } }, date)
+          return jsx('button', { type: 'button', className: 'hgl-heatmap-day',
+            'data-level': day.responses ? Math.min(6, Math.floor(Math.log2(day.responses)) + 1) : 0,
+            'data-date': date, title: tooltip, 'aria-label': tooltip, style: position }, date)
         }) })
           ] })
         ] }) })

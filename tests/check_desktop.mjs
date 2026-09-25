@@ -91,7 +91,7 @@ try {
       plugin.register({register:c=>{if(c.area==='routes')page=c.render},onDispose:()=>{},i18n:{register:setBundles,t:translate},os:{openExternal:async()=>true},rest:async(path,options)=>{
         if(path==='/projects')return structuredClone(data);
         if(path.startsWith('/sessions'))return {sessions:structuredClone(sessions),next_page:null,session_count:2,cost_usd:0.12,cost_status:null};
-        if(path.startsWith('/activity?'))return {days:[{date:new URL('http://fixture'+path).searchParams.get('year')+'-01-01',responses:2,cost_usd:0.12}]};
+        if(path.startsWith('/activity?')){const year=new URL('http://fixture'+path).searchParams.get('year');return {days:[{date:year+'-01-01',responses:2,cost_usd:0.12},{date:year+'-01-02',responses:4,cost_usd:0.24},{date:year+'-01-03',responses:38,cost_usd:0.48}]}};
         if(path==='/gateway/restart')return {restart_started:true,restart_pid:321};
         if(path.startsWith('/gateway/restart/status'))return {status:'finished'};
         if(path.startsWith('/repositories')){const q=new URL('http://fixture'+path).searchParams.get('q')||'';return {repositories:repos.filter(r=>r.name.includes(q)),next_page:null}};
@@ -147,7 +147,8 @@ try {
         if (path === '/projects') return structuredClone(data);
         if (path.startsWith('/activity?')) {
           const params = new URL('http://fixture'+path).searchParams;
-          return {days:[{date:params.get('year')+'-01-01',responses:2,cost_usd:0.12}]};
+          const year=params.get('year');
+          return {days:[{date:year+'-01-01',responses:2,cost_usd:0.12},{date:year+'-01-02',responses:4,cost_usd:0.24},{date:year+'-01-03',responses:38,cost_usd:0.48}]};
         }
         if (path.startsWith('/sessions')) {
           const q = new URL('http://fixture'+path).searchParams;
@@ -203,14 +204,22 @@ try {
       assert.match(day.title, /2 responses/);
       assert(day.title.includes('$0.12'));
       assert(day.title.includes('≈0.52%'));
+      assert.deepEqual(Array.from(document.querySelectorAll('.hgl-heatmap-weekdays span'), node=>node.textContent),
+        ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']);
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
       if(tomorrow.getFullYear()===currentYear) {
         const date = currentYear+'-'+String(tomorrow.getMonth()+1).padStart(2,'0')+'-'+String(tomorrow.getDate()).padStart(2,'0');
-        assert.equal(document.querySelector('[data-date="'+date+'"]'), null);
+        const futureDay = document.querySelector('[data-date="'+date+'"]');
+        assert(futureDay?.disabled);
+        assert.equal(futureDay.getAttribute('data-level'), null);
       }
       fireEvent.change(screen.getByRole('combobox',{name:'Year'}), {target:{value:String(currentYear-1)}});
       await waitFor(()=>assert(calls.some(call=>call.path.startsWith('/activity?year='+(currentYear-1)+'&'))));
       await waitFor(()=>assert(document.querySelector('[data-date="'+(currentYear-1)+'-12-31"]')));
+      assert.equal(document.querySelector('[data-date="'+(currentYear-1)+'-12-31"]').disabled, false);
+      assert.equal(document.querySelector('[data-date="'+(currentYear-1)+'-01-01"]').dataset.level, '2');
+      assert.equal(document.querySelector('[data-date="'+(currentYear-1)+'-01-02"]').dataset.level, '3');
+      assert.equal(document.querySelector('[data-date="'+(currentYear-1)+'-01-03"]').dataset.level, '6');
       fireEvent.click(await screen.findByRole('tab',{name:/Sessions/}));
       await screen.findByText('Fix login');
       assert.equal(screen.queryByRole('columnheader',{name:'Tokens'}), null);

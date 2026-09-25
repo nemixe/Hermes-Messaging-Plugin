@@ -1,11 +1,11 @@
-# Hermes GitLab messaging · 0.3.28
+# Hermes GitLab messaging · 0.3.29
 
 GitLab mentions and issue assignments reach Hermes through **outbound polling**
 with a bot account PAT. **GitLab Projects** appears below **Kanban** in Hermes
 Desktop. **Projects** registers repositories to Hermes project profiles.
 **Sessions** lists GitLab-triggered Hermes sessions — globally or for one project —
 with the estimated cost percentage of a Pro 5x week. Token counts remain in session details.
-**Heatmap** shows a compact year of daily GitLab assistant activity; future dates are hidden.
+**Heatmap** shows a compact year of daily GitLab assistant activity with full weekday labels; future dates are disabled.
 
 One business project = one named Hermes profile. Multiple GitLab repositories
 share that profile's knowledge; each GitLab issue or standalone merge request
