@@ -52,7 +52,7 @@ const locales = {
     deleted: name => `Project ${name} deleted. Restart required.`,
     deleteError: (name, removed) => removed ? `Registration removed, but Hermes profile ${name} was not deleted. Restart the gateway to apply the registration removal. Retry to delete the profile.` : `Project ${name} was not deleted.`,
     sessions: 'Sessions', heatmap: 'Heatmap', year: 'Year',
-    activityHint: 'Local days · GitLab assistant responses. Session token cost is split evenly across responses for this estimate.',
+    activityHint: 'Local days · GitLab assistant responses. Token cost is split evenly across responses; weekly % is calibrated to one-third of the price ratio.',
     activityDay: (date, count, cost, percent) => `${date} · ${count} ${count === 1 ? 'response' : 'responses'} · ${cost} token cost · ${percent} of Pro 5x/week`,
     loadActivityError: 'Could not load activity',
     filterProjects: 'Filter projects or repositories', filterSessions: 'Filter sessions',
@@ -63,7 +63,7 @@ const locales = {
     recentSessions: 'Recent sessions', allSessions: 'All sessions',
     card: 'Card', session: 'Session', relatedProject: 'Related project',
     tokenUsage: 'Tokens', totalTokens: 'Total tokens', tokens: (input, output) => `${input} in · ${output} out`,
-    costPercentage: 'Cost % · Pro 5x/week', weeklyPriceEquivalent: 'Pro 5x weekly price equivalent', weeklyPriceHint: 'Session USD estimate ÷ ~$23.08/week (Pro 5x at $100/month). Price comparison only; not actual quota use.',
+    costPercentage: 'Est. use % · Pro 5x/week', weeklyUsageEstimate: 'Estimated Pro 5x weekly use', weeklyUsageHint: 'Rough estimate: session USD ÷ ~$23.08/week ÷ 3, calibrated from observed usage. Not measured quota.',
     openSession: 'Open session', openInGitlab: 'Open in GitLab', openSessionFailed: 'Could not open this session.',
     justNow: 'now',
     ageMin: n => `${n}m`, ageHr: n => `${n}h`, ageDay: n => `${n}d`,
@@ -112,7 +112,7 @@ const locales = {
     deleted: name => `プロジェクト ${name} を削除しました。再起動が必要です。`,
     deleteError: (name, removed) => removed ? `登録を削除しましたが、Hermes プロファイル ${name} は削除されませんでした。ゲートウェイを再起動して登録の削除を適用してください。再試行するとプロファイルを削除します。` : `プロジェクト ${name} は削除されませんでした。`,
     sessions: 'セッション', heatmap: 'ヒートマップ', year: '年',
-    activityHint: '現地の日付 · GitLab のアシスタント応答。推定トークン費用はセッション内の応答に均等配分します。',
+    activityHint: '現地の日付 · GitLab のアシスタント応答。推定トークン費用を応答に均等配分し、週間比率を料金比の3分の1に補正します。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 件の応答 · トークン費用 ${cost} · Pro 5x/週の ${percent}`,
     loadActivityError: 'アクティビティを読み込めません',
     filterProjects: 'プロジェクトまたはリポジトリを絞り込み', filterSessions: 'セッションを絞り込み',
@@ -123,7 +123,7 @@ const locales = {
     recentSessions: '最近のセッション', allSessions: 'すべてのセッション',
     card: 'カード', session: 'セッション', relatedProject: '関連プロジェクト',
     tokenUsage: 'トークン', totalTokens: '合計トークン', tokens: (input, output) => `${input} 入力 · ${output} 出力`,
-    costPercentage: '費用比率 · Pro 5x/週', weeklyPriceEquivalent: 'Pro 5x の週間料金換算', weeklyPriceHint: 'セッションの推定 USD 額 ÷ 約 $23.08/週（Pro 5x は月額 $100）。料金の比較であり、実際の利用枠消費率ではありません。',
+    costPercentage: '推定利用率 · Pro 5x/週', weeklyUsageEstimate: 'Pro 5x の推定週間利用率', weeklyUsageHint: '概算: セッションの推定 USD 額 ÷ 約 $23.08/週 ÷ 3。観測値に基づく補正であり、実際の利用枠消費率ではありません。',
     openSession: 'セッションを開く', openInGitlab: 'GitLab で開く', openSessionFailed: 'このセッションを開けませんでした。',
     justNow: 'たった今',
     ageMin: n => `${n}分`, ageHr: n => `${n}時間`, ageDay: n => `${n}日`,
@@ -167,7 +167,7 @@ const locales = {
     deleted: name => `项目 ${name} 已删除。需要重启。`,
     deleteError: (name, removed) => removed ? `注册已移除，但 Hermes 配置文件 ${name} 未删除。请重启网关以应用注册移除。重试以删除配置文件。` : `项目 ${name} 未删除。`,
     sessions: '会话', heatmap: '热力图', year: '年份',
-    activityHint: '本地日期 · GitLab 助手回复。会话的估算 Token 成本平均分摊到每次回复。',
+    activityHint: '本地日期 · GitLab 助手回复。估算 Token 成本平均分摊到回复；每周百分比按价格占比的三分之一校准。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 次回复 · Token 成本 ${cost} · Pro 5x/周的 ${percent}`,
     loadActivityError: '无法加载活动记录',
     filterProjects: '筛选项目或仓库', filterSessions: '筛选会话',
@@ -178,7 +178,7 @@ const locales = {
     recentSessions: '最近会话', allSessions: '全部会话',
     card: '卡片', session: '会话', relatedProject: '相关项目',
     tokenUsage: 'Token', totalTokens: '总 Token', tokens: (input, output) => `${input} 输入 · ${output} 输出`,
-    costPercentage: '费用占比 · Pro 5x/周', weeklyPriceEquivalent: 'Pro 5x 每周价格等值', weeklyPriceHint: '会话预估美元成本 ÷ 约 $23.08/周（Pro 5x 每月 $100）。仅用于价格比较，不代表实际额度消耗。',
+    costPercentage: '预估使用率 · Pro 5x/周', weeklyUsageEstimate: 'Pro 5x 每周预估使用率', weeklyUsageHint: '粗略估计：会话预估美元成本 ÷ 约 $23.08/周 ÷ 3，按观察到的使用率校准，并非实测额度。',
     openSession: '打开会话', openInGitlab: '在 GitLab 中打开', openSessionFailed: '无法打开此会话。',
     justNow: '刚刚',
     ageMin: n => `${n} 分钟`, ageHr: n => `${n} 小时`, ageDay: n => `${n} 天`,
@@ -222,7 +222,7 @@ const locales = {
     deleted: name => `專案 ${name} 已刪除。需要重新啟動。`,
     deleteError: (name, removed) => removed ? `註冊已移除，但 Hermes 設定檔 ${name} 未刪除。請重新啟動閘道以套用註冊移除。重試以刪除設定檔。` : `專案 ${name} 未刪除。`,
     sessions: '工作階段', heatmap: '熱力圖', year: '年份',
-    activityHint: '本地日期 · GitLab 助理回覆。工作階段的預估 Token 費用平均分配至每次回覆。',
+    activityHint: '本地日期 · GitLab 助理回覆。預估 Token 費用平均分配至回覆；每週百分比按價格佔比的三分之一校準。',
     activityDay: (date, count, cost, percent) => `${date} · ${count} 次回覆 · Token 費用 ${cost} · Pro 5x/週的 ${percent}`,
     loadActivityError: '無法載入活動紀錄',
     filterProjects: '篩選專案或儲存庫', filterSessions: '篩選工作階段',
@@ -233,7 +233,7 @@ const locales = {
     recentSessions: '最近工作階段', allSessions: '全部工作階段',
     card: '卡片', session: '工作階段', relatedProject: '相關專案',
     tokenUsage: 'Token', totalTokens: '總 Token', tokens: (input, output) => `${input} 輸入 · ${output} 輸出`,
-    costPercentage: '費用佔比 · Pro 5x/週', weeklyPriceEquivalent: 'Pro 5x 每週價格等值', weeklyPriceHint: '工作階段預估美元成本 ÷ 約 $23.08/週（Pro 5x 每月 $100）。僅供價格比較，不代表實際額度用量。',
+    costPercentage: '預估使用率 · Pro 5x/週', weeklyUsageEstimate: 'Pro 5x 每週預估使用率', weeklyUsageHint: '粗略估計：工作階段預估美元費用 ÷ 約 $23.08/週 ÷ 3，依觀察到的用量校準，並非實測額度。',
     openSession: '開啟工作階段', openInGitlab: '在 GitLab 開啟', openSessionFailed: '無法開啟此工作階段。',
     justNow: '剛剛',
     ageMin: n => `${n} 分鐘`, ageHr: n => `${n} 小時`, ageDay: n => `${n} 天`,
@@ -362,11 +362,11 @@ const compactNum = n => {
 }
 const formatTokens = (row, t) => row?.input_tokens == null || row?.output_tokens == null ? '—' :
   t('tokens', compactNum(row.input_tokens), compactNum(row.output_tokens))
-const weeklyPriceEquivalent = row => {
+const estimatedWeeklyUse = row => {
   const amount = Number(row?.cost_usd)
   if (!Number.isFinite(amount) || amount <= 0) return null
-  // $100/month is ~$23.08/week; this compares prices, not Codex quota consumption.
-  return `≈${new Intl.NumberFormat(undefined, { maximumSignificantDigits: 2 }).format(amount / (100 * 12 / 52) * 100)}%`
+  // Observed weekly use was ~1/3 of the raw $100/month price ratio; this is a rough calibration.
+  return `≈${new Intl.NumberFormat(undefined, { maximumSignificantDigits: 2 }).format(amount / (100 * 12 / 52 * 3) * 100)}%`
 }
 const age = (iso, t) => {
   const ms = Date.now() - Date.parse(iso)
@@ -628,7 +628,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
   const sessionRows = sessions.data?.sessions || []
   const inspectProject = inspect?.type === 'project' ? projects.find(row => row.profile === inspect.profile) : null
   const inspectSession = inspect?.type === 'session' ? inspect.session : null
-  const sessionWeeklyPrice = weeklyPriceEquivalent(inspectSession)
+  const sessionWeeklyUse = estimatedWeeklyUse(inspectSession)
   const switchPane = next => {
     if (locked) return
     setPane(next)
@@ -734,12 +734,12 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
     jsxs('dl', { className: 'hgl-dl', children: [
       jsx('dt', { children: t('relatedProject') }), jsxs('dd', { children: [glyph(inspectSession.profile || '?'), ' ', inspectSession.profile || '—'] }),
       jsx('dt', { children: t('tokenUsage') }), jsx('dd', { children: formatTokens(inspectSession, t) }),
-      ...(sessionWeeklyPrice ? [jsx('dt', { children: t('weeklyPriceEquivalent') }), jsx('dd', { children: sessionWeeklyPrice })] : []),
+      ...(sessionWeeklyUse ? [jsx('dt', { children: t('weeklyUsageEstimate') }), jsx('dd', { children: sessionWeeklyUse })] : []),
       jsx('dt', { children: t('card') }), jsx('dd', { children: inspectSession.card || '—' }),
       jsx('dt', { children: t('session') }), jsx('dd', { children: inspectSession.id || '—' }),
       jsx('dt', { children: t('model') }), jsx('dd', { children: inspectSession.model || '—' })
     ] }),
-    sessionWeeklyPrice && jsx('p', { className: 'hgl-subtle', children: t('weeklyPriceHint') }),
+    sessionWeeklyUse && jsx('p', { className: 'hgl-subtle', children: t('weeklyUsageHint') }),
     jsxs('div', { className: 'hgl-drawer-actions', children: [
       typeof host.openSession === 'function' && jsx(Button, { type: 'button', onClick: async () => {
         try { await host.openSession(inspectSession.id, { profile: inspectSession.profile }) }
@@ -773,9 +773,9 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
       children: jsx(Button, { type: 'button', onClick: () => sessions.refetch(), children: t('retry') }) }) :
       sessions.isPending ? jsx('div', { className: 'hgl-center', role: 'status', 'aria-label': t('loading'), children: [0, 1, 2].map(n => jsx(Skeleton, { className: 'hgl-skeleton' }, n)) }) :
       sessionRows.length ? jsxs('table', { className: 'hgl-table', children: [
-        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', title: t('weeklyPriceHint'), children: t('costPercentage') })] })] }),
+        jsxs('thead', { children: [jsxs('tr', { children: [jsx('th', { children: t('when') }), jsx('th', { children: t('session') }), jsx('th', { children: t('relatedProject') }), jsx('th', { className: 'hgl-num', title: t('weeklyUsageHint'), children: t('costPercentage') })] })] }),
         jsx('tbody', { children: sessionRows.map(session => jsxs('tr', { className: 'hgl-row', tabIndex: 0, role: 'button',
-          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${weeklyPriceEquivalent(session) || '—'}`,
+          'aria-label': `${session.title || t('session')} ${session.profile || ''} ${estimatedWeeklyUse(session) || '—'}`,
           'aria-current': inspectSession?.id === session.id,
           onClick: () => setInspect({ type: 'session', session }),
           onKeyDown: key => { if (key.key === 'Enter' || key.key === ' ') { key.preventDefault(); setInspect({ type: 'session', session }) } },
@@ -783,7 +783,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
             jsx('td', { className: 'hgl-muted', children: age(session.last_activity_at, t) }),
             jsxs('td', { children: [jsx('div', { children: session.title || t('session') }), jsx('div', { className: 'hgl-subtle', children: [session.repository?.name, cardRef(session)].filter(Boolean).join(' ') })] }),
             jsxs('td', { children: [jsxs('div', { className: 'hgl-actions', children: [glyph(session.profile || '?'), session.profile || '—'] })] }),
-            jsx('td', { className: 'hgl-num', children: weeklyPriceEquivalent(session) || '—' })
+            jsx('td', { className: 'hgl-num', children: estimatedWeeklyUse(session) || '—' })
           ] }, session.id)) })
       ] }) : jsx(EmptyState, { title: t('noSessions'), description: t('noSessionsHint') }) }),
     inspectSession ? sessionDrawer : null
@@ -857,7 +857,7 @@ function ProjectsContent({ ctx, scope, connectionId, connectionProfile }) {
           const day = activityByDate.get(date) || { responses: 0, cost_usd: 0 }
           const cost = Number(day.cost_usd) || 0
           const costText = cost > 0 ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 6 }).format(cost) : day.responses ? '—' : '$0.00'
-          const percentage = cost > 0 ? weeklyPriceEquivalent(day) : day.responses ? '—' : '0%'
+          const percentage = cost > 0 ? estimatedWeeklyUse(day) : day.responses ? '—' : '0%'
           const tooltip = t('activityDay', dateText, day.responses, costText, percentage)
           return jsx('button', { type: 'button', className: 'hgl-heatmap-day',
             'data-level': day.responses ? Math.min(6, Math.floor(Math.log2(day.responses)) + 1) : 0,
