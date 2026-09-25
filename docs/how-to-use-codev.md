@@ -92,7 +92,7 @@ Pindah kolom board (To Do → Doing, dan seterusnya) tidak memulai kerja Codev. 
 
 Di diskusi GitLab, Codev:
 
-- Mengirim preamble singkat (“Oke, saya cek.” / “Siap, saya kerjakan.”)
+- Mengirim preamble singkat yang menyebut langkah konkret berikutnya saat perlu menyelidiki
 - Menyiapkan workspace terpisah untuk kartu itu
 - Memastikan tujuan dan acceptance criteria, lalu menelusuri dampak UI, API, aturan bisnis, otorisasi, dan data yang relevan
 - Mengimplementasikan, menjalankan cek yang relevan, kirim branch, dan membuka atau memperbarui merge request
