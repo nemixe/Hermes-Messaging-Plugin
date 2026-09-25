@@ -786,6 +786,34 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(foreign.success)
         self.assertTrue(self.posts[-1][0].endswith("/discussions/foreign/notes"))
 
+    async def test_session_wait_updates_one_status_note_then_keeps_the_answer(self):
+        card = "42:issues:3"
+        statuses = [
+            "⏳ Another Hermes process is using this session; waiting for it to finish before starting your turn...",
+            "⏳ Still waiting for the other Hermes process on this session (15s)...",
+            "⏳ Still waiting for the other Hermes process on this session (31s)...",
+            "Session is free; loading the latest transcript...",
+        ]
+        first = await self.adapter.send(card, statuses[0])
+        self.assertTrue(first.success)
+        for status in statuses[1:]:
+            updated = await self.adapter.send(card, status)
+            self.assertTrue(updated.success)
+            self.assertEqual(updated.message_id, first.message_id)
+            self.assertEqual(self.posts[-1],
+                             (f"/api/v4/projects/42/issues/3/notes/{first.message_id}", {"body": status}))
+        self.assertEqual(len(self.posted_discussions["c" * 40]), 1)
+        self.assertEqual(self.posted_discussions["c" * 40][0]["body"], statuses[-1])
+
+        answer = await self.adapter.send(card, "The issue is fixed.", metadata={"notify": True})
+        self.assertTrue(answer.success)
+        self.assertNotEqual(answer.message_id, first.message_id)
+        self.assertEqual(len(self.posted_discussions["c" * 40]), 2)
+        next_turn = await self.adapter.send(card, statuses[0])
+        self.assertTrue(next_turn.success)
+        self.assertNotEqual(next_turn.message_id, first.message_id)
+        self.assertNotEqual(next_turn.message_id, answer.message_id)
+
     async def test_edit_message_updates_existing_note(self):
         result = await self.adapter.edit_message(
             "42:issues:3", "8", "⏳ Working — 12 min — iteration 32, waiting for provider response")

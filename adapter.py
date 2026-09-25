@@ -43,6 +43,11 @@ def ids(value):
 
 
 _WORKING_STATUS = re.compile(r"^\s*⏳\s+Working\s+[—-]\s+\d+\s+min(?:\s|$)", re.I)
+_SESSION_WAIT_STATUS = re.compile(
+    r"^(?:⏳ Another Hermes process is using this session; waiting for it to finish before starting your turn\.\.\."
+    r"|⏳ Still waiting for the other Hermes process on this session \(\d+s\)\.\.\."
+    r"|Session is free; loading the latest transcript\.\.\.)$"
+)
 DEFAULT_MAX_WORKERS = 5
 
 
@@ -830,7 +835,7 @@ class GitLabAdapter(BasePlatformAdapter):
                 if discussion and not re.fullmatch(r"[a-zA-Z0-9_-]{1,128}", discussion):
                     raise ValueError("Invalid GitLab discussion ID")
                 route = f"projects/{match[1]}/{match[2]}/{match[3]}/discussions"
-                # Heartbeats reuse the last matching Working note in this discussion.
+                # Reuse the last matching transient status in this discussion.
                 if handoff_row and handoff_row[1]:
                     note = {"id": handoff_row[1]}
                 else:
@@ -878,13 +883,15 @@ class GitLabAdapter(BasePlatformAdapter):
                                json={"body": content})
 
     async def _update_matching_status_note(self, match, discussion, content):
-        if not discussion or not _WORKING_STATUS.match(content):
+        status = next((pattern for pattern in (_WORKING_STATUS, _SESSION_WAIT_STATUS)
+                       if pattern.match(content)), None)
+        if not discussion or status is None:
             return None
         try:
             existing = await self._api("GET", f"projects/{match[1]}/{match[2]}/{match[3]}/discussions/{discussion}")
             notes = existing.get("notes") if isinstance(existing, dict) else None
             last = next((note for note in reversed(notes or []) if not note.get("system")), None)
-            if not last or not _WORKING_STATUS.match(str(last.get("body") or "")):
+            if not last or not status.match(str(last.get("body") or "")):
                 return None
             author = (last.get("author") or {}).get("id")
             if author is not None and str(author) != str(self.bot_id):
