@@ -444,8 +444,9 @@ discussion replies and does not depend on the older `gitlab-card` poller skill.
 `codev-handoff` prepares issues and authorized assignments on every surface;
 the Mattermost path ends with the verified link while the GitLab session implements.
 
-The agent follows that skill to verify or provision the clone, then runs its bundled
-`scripts/worktree.py` helper with a verified base commit. The helper uses native Git
+The agent follows that skill to verify or clone the repository with native Git
+over SSH, then runs its bundled `scripts/worktree.py` helper with a verified
+base commit. The helper uses native Git
 to prepare `.worktrees/<repository-id>-<issues|merge_requests>-<iid>` with a local
 `codev/` branch, preserving existing worktrees and unfinished edits. It rejects paths
 outside the active profile's workspace. It changes no process-global working directory:
@@ -472,7 +473,7 @@ to the starter apply to future projects; existing projects keep their independen
 except for the managed orientation/inventory refresh and explicit bundled-skill sync
 described above.
 
-To apply the latest bundled skills, including clone authentication and Codex review
+To apply the latest bundled skills, including SSH clone and Codex review
 guidance, run on the Hermes backend:
 
 ```sh
@@ -484,8 +485,8 @@ hermes -p default gateway restart
 Sync updates shared skills and archives legacy local copies, as described above.
 Merge reusable customizations into `global-project/skills/`; keep project-specific
 instructions in that project's SOUL or knowledge. `HERMES_HOME` remains the active
-project profile when executing shared skills. Sync does not provision Git credentials. Verify repository access
-as the Hermes runtime user before retrying; a fresh bot mention can resume the
+project profile when executing shared skills. Sync does not provision SSH
+credentials. Verify repository access as the Hermes runtime user before retrying; a fresh bot mention can resume the
 blocked GitLab conversation.
 
 Hermes's native clone excludes prior conversations, scheduled jobs, and runtime state.
@@ -523,9 +524,9 @@ before retrying. Saving re-enables selected registrations marked as disabled.
 Configuration is backed up and written atomically, although YAML
 formatting/comments may change.
 
-Registration does not clone or index code. The Codev workflow provisions clones
-when needed, using existing authenticated tools, or asks on GitLab when setup is
-blocked. GitLab sessions use the selected project profile's **Capabilities → Tools**
+Registration does not clone or index code. The Codev workflow clones with
+native Git over SSH when needed, or asks on GitLab when setup is blocked.
+GitLab sessions use the selected project profile's **Capabilities → Tools**
 settings, the same toolsets its CLI sessions use. The old
 `platforms.gitlab.extra.toolsets` setting no longer controls them. Enable Browser
 Automation there to expose `browser_exec` and `browser_vault_fill` when the backend

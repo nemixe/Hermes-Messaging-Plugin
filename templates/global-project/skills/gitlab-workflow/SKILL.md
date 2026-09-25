@@ -39,12 +39,12 @@ activity requires clarification before takeover.
 
 ## Clone/worktree setup — `InspectingRepository`
 
-- Missing clone: resolve HTTPS/SSH URLs from the configured host and numeric project
-  ID. Use existing runtime helper/askpass credentials for HTTPS or an available SSH
-  key; an API token alone does not authenticate Git. Verify with
-  `GIT_TERMINAL_PROMPT=0 git ls-remote <verified-clone-url>` before cloning.
-  For publickey failures, inspect runtime user, SSH agent/key and GitLab registration;
-  switch transport only when its credentials work. Retry after correcting the cause.
+- Missing clone: get `ssh_url_to_repo` for the numeric project ID from the configured
+  GitLab host. Verify the project ID and SSH host, then use native Git over SSH:
+  `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git ls-remote <verified-ssh-url>` before
+  `GIT_SSH_COMMAND='ssh -o BatchMode=yes' git clone <verified-ssh-url> "$HERMES_HOME/workspace/<project-id>"`.
+  If SSH fails, inspect the runtime user, SSH agent/key, host key and GitLab
+  registration. Fix access and retry the SSH command.
 - New checkout: fetch a verified base commit—repository default unless specified
   for an issue; current source commit for an MR. Verify MR source repository ownership
   and retain its remote source branch. Preserve older checkout branches/changes;
