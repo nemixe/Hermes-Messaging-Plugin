@@ -446,9 +446,10 @@ the Mattermost path ends with the verified link while the GitLab session impleme
 
 The agent follows that skill to verify or clone the repository with native Git
 over SSH, then runs its bundled `scripts/worktree.py` helper with a verified
-base commit. The helper uses native Git
-to prepare `.worktrees/<repository-id>-<issues|merge_requests>-<iid>` with a local
-`codev/` branch, preserving existing worktrees and unfinished edits. It rejects paths
+base commit. The helper uses native Git to prepare
+`.worktrees/<repository-id>-<issues|merge_requests>-<iid>` with a local `feature/`,
+`fix/`, or `chore/` branch based on the task, preserving existing worktrees and
+unfinished edits. It rejects paths
 outside the active profile's workspace. It changes no process-global working directory:
 the agent must use the returned directory for subsequent commands and file edits.
 Worktree preparation runs through the agent's terminal tool, not inside the poller.

@@ -30,17 +30,21 @@ class CardWorktree(unittest.TestCase):
                 "commit", "--allow-empty", "-qm", "Initial")
             initial = git("rev-parse", "HEAD")
 
-            def prepare(card, path=clone, *extra):
+            def prepare(card, path=clone, *extra, branch_type="feature"):
                 return subprocess.run([sys.executable, str(SCRIPT), "--clone", str(path),
-                                       "--card", card, "--start", initial, *extra],
+                                       "--card", card, "--start", initial,
+                                       *(["--branch-type", branch_type] if branch_type else []), *extra],
                                       env=env, text=True, capture_output=True)
 
             first = prepare("42:issues:3")
             self.assertEqual(first.returncode, 0, first.stderr)
             worktree = Path(first.stdout.strip())
             self.assertEqual(worktree, clone / ".worktrees/42-issues-3")
+            self.assertEqual(git("symbolic-ref", "--short", "HEAD", cwd=worktree),
+                             "feature/42-issues-3")
             owner_path = Path(git("rev-parse", "--absolute-git-dir", cwd=worktree)) / "codev-owner.json"
             owner = json.loads(owner_path.read_text())
+            self.assertEqual(owner["branch"], "feature/42-issues-3")
             self.assertEqual(owner["creator_session_id"], "creator-session")
             self.assertEqual(owner["conversation"], "42:issues:3")
             self.assertEqual(owner["worktree"], str(worktree))
@@ -52,6 +56,7 @@ class CardWorktree(unittest.TestCase):
                                         "0" * 32).returncode, 0)
             env["HERMES_SESSION_ID"] = "another-session"
             self.assertEqual(prepare("42:issues:3").returncode, 0, "Reuse does not transfer ownership")
+            self.assertEqual(prepare("42:issues:3", branch_type=None).returncode, 0)
             self.assertEqual(json.loads(owner_path.read_text()), owner)
             self.assertNotEqual(prepare("42:issues:3", clone, "--check-owner").returncode, 0)
             env["HERMES_SESSION_ID"] = "creator-session"
@@ -80,6 +85,17 @@ class CardWorktree(unittest.TestCase):
             self.assertEqual(again.returncode, 0, again.stderr)
             self.assertEqual(again.stdout, first.stdout)
             self.assertEqual((worktree / "draft.txt").read_text(), "Keep this draft")
+            self.assertNotEqual(prepare("42:issues:6", branch_type=None).returncode, 0)
+            self.assertNotEqual(prepare("42:issues:6", branch_type="codev").returncode, 0)
+            fixed = prepare("42:issues:6", branch_type="fix")
+            self.assertEqual(fixed.returncode, 0, fixed.stderr)
+            self.assertEqual(git("symbolic-ref", "--short", "HEAD", cwd=fixed.stdout.strip()),
+                             "fix/42-issues-6")
+            legacy = clone / ".worktrees/42-issues-10"
+            git("worktree", "add", "-q", "-b", "codev/42-issues-10", str(legacy), initial)
+            self.assertEqual(prepare("42:issues:10", branch_type=None).returncode, 0)
+            self.assertEqual(git("symbolic-ref", "--short", "HEAD", cwd=legacy),
+                             "codev/42-issues-10")
             for card in ("42:merge_requests:3", "43:issues:3"):
                 result = prepare(card)
                 self.assertEqual(result.returncode, 0, result.stderr)
@@ -89,7 +105,8 @@ class CardWorktree(unittest.TestCase):
             self.assertEqual(git("status", "--porcelain"), "")
             # Two prepares racing for one Card converge on one native worktree.
             commands = [subprocess.Popen([sys.executable, str(SCRIPT), "--clone", str(clone),
-                                         "--card", "42:issues:4", "--start", initial],
+                                         "--card", "42:issues:4", "--start", initial,
+                                         "--branch-type", "feature"],
                                         env={**env, "HERMES_SESSION_ID": f"racing-session-{index}"},
                                         text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         for index in range(2)]
@@ -105,9 +122,9 @@ class CardWorktree(unittest.TestCase):
             (occupied / "keep.txt").write_text("Keep this")
             self.assertNotEqual(prepare("42:issues:7").returncode, 0)
             self.assertEqual((occupied / "keep.txt").read_text(), "Keep this")
-            git("branch", "codev/42-issues-8", initial)
+            git("branch", "feature/42-issues-8", initial)
             self.assertNotEqual(prepare("42:issues:8").returncode, 0)
-            self.assertEqual(git("rev-parse", "codev/42-issues-8"), initial)
+            self.assertEqual(git("rev-parse", "feature/42-issues-8"), initial)
             for card, path in (("../../escape", clone), ("42:issues:3", root),
                                ("42:issues:3", worktree)):
                 self.assertNotEqual(prepare(card, path).returncode, 0)

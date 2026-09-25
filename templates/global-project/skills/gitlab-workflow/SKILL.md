@@ -53,9 +53,12 @@ activity requires clarification before takeover.
 
   ```sh
   python3 "$HERMES_HOME/../global-project/skills/gitlab-workflow/scripts/worktree.py" \
-    --clone "$HERMES_HOME/workspace/42" --card '42:issues:3' --start '<verified-commit>'
+    --clone "$HERMES_HOME/workspace/42" --card '42:issues:3' \
+    --start '<verified-commit>' --branch-type feature
   ```
 
+  For a new checkout, use `feature` for new behavior, `fix` for a bug, and
+  `chore` for other maintenance. Branches use `<type>/<project-id>-<card-type>-<iid>`.
   Existing checkouts are reused unchanged; `--start` applies only at creation. Use
   the returned absolute path for every command/file edit and read its repository
   instructions. Never switch/reset the shared clone. Use the same conversation key

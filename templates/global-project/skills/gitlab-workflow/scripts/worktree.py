@@ -9,7 +9,7 @@ import subprocess
 import uuid
 
 
-def prepare(clone, card, start=None, *, check_owner=False, creation_id=None):
+def prepare(clone, card, start=None, *, branch_type=None, check_owner=False, creation_id=None):
     if not re.fullmatch(r"[1-9][0-9]*:(issues|merge_requests):[1-9][0-9]*", card):
         raise ValueError("Use the conversation's repository:type:number identity")
     if not os.environ.get("HERMES_HOME"):
@@ -36,7 +36,6 @@ def prepare(clone, card, start=None, *, check_owner=False, creation_id=None):
     if parent.is_symlink():
         raise ValueError("The .worktrees directory must not be symlinked")
     target = parent / card.replace(":", "-")
-    branch = "codev/" + target.name
 
     def ownership_path():
         admin = Path(git("rev-parse", "--absolute-git-dir", cwd=target))
@@ -75,6 +74,9 @@ def prepare(clone, card, start=None, *, check_owner=False, creation_id=None):
             raise ValueError("Worktree creation requires the runtime's HERMES_SESSION_ID")
         if not start or start.startswith("-"):
             raise ValueError("Supply --start with a verified base ref or commit for a new worktree")
+        if branch_type not in ("feature", "fix", "chore"):
+            raise ValueError("Supply --branch-type feature, fix, or chore for a new worktree")
+        branch = f"{branch_type}/{target.name}"
         commit = git("rev-parse", "--verify", "--end-of-options", start + "^{commit}")
         parent.mkdir(exist_ok=True)
         exclude = common / "info/exclude"
@@ -104,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument("--clone", required=True)
     parser.add_argument("--card", required=True)
     parser.add_argument("--start")
+    parser.add_argument("--branch-type", choices=("feature", "fix", "chore"))
     parser.add_argument("--check-owner", action="store_true",
                         help="Only verify that this existing worktree was created by the current Hermes session")
     parser.add_argument("--creation-id", help="With --check-owner, require this worktree creation instance")
@@ -111,6 +114,7 @@ if __name__ == "__main__":
     try:
         if args.creation_id and not args.check_owner:
             raise ValueError("--creation-id requires --check-owner")
-        print(prepare(args.clone, args.card, args.start, check_owner=args.check_owner, creation_id=args.creation_id))
+        print(prepare(args.clone, args.card, args.start, branch_type=args.branch_type,
+                      check_owner=args.check_owner, creation_id=args.creation_id))
     except (OSError, ValueError) as error:
         parser.exit(1, f"Worktree setup failed: {error}\n")
