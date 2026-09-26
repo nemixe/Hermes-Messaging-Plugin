@@ -315,11 +315,9 @@ may have unknown names/URLs until saved with repository metadata; the numeric ID
 and configured server let the agent discover them with available authenticated tools.
 Credentials are never included in this inventory.
 
-A managed **Project orientation and capabilities** block in `SOUL.md` defines
-the task lifecycle through one Mermaid state diagram. Prompts and shared skills
-provide instructions for their specific tasks.
-Keeping the diagram in this block includes it in existing profile copy/sync behavior.
-The block tells the agent to read that inventory, consult saved knowledge, then
+The bundled `SOUL.md` defines the task lifecycle through one Mermaid state diagram.
+Prompts and shared skills provide instructions for their specific tasks.
+The SOUL tells the agent to read that inventory, consult saved knowledge, then
 inspect the README and code
 before asking the user for project context. It applies to Mattermost, GitLab and
 Desktop conversations routed to the profile, and distinguishes supported tasks from
@@ -335,16 +333,18 @@ tokens, keys, credentials, and other private values — for authorized tasks in
 verified private DMs on Mattermost or other messaging platforms, without treating
 private delivery alone as a leak. Shared/public or unverified conversations use
 a verified DM or local `.env` instead. Secret values stay out of replies, logs,
-Git and memories. This is agent guidance, not a transport filter; it updates with
-the managed orientation block during profile sync.
+Git and memories. This is agent guidance, not a transport filter; it updates
+when the bundled SOUL is synced explicitly.
 
 Mapping saves and removals refresh the affected inventory. Default-backend plugin
-startup backfills existing registered profiles, clears disabled mappings from their
-inventories and updates the marked orientation block, preserving custom SOUL
-text and memories. Legacy bundled skill references are migrated to lookup by name.
-It also adds this block to existing `project-egg` starters.
+startup backfills existing registered profiles and clears disabled mappings from their
+inventories while preserving custom SOUL text and memories. Legacy bundled skill
+references are migrated to lookup by name.
 For a manual refresh after editing routes or updating the plugin, run
-`hermes -p default gitlab sync-knowledge`. This updates bundled skills once in
+`hermes -p default gitlab sync-knowledge`. This replaces `project-egg/SOUL.md`
+and every managed project SOUL with the bundled version, saving changed originals
+under each profile's `backups/gitlab-soul/sync-*/SOUL.md`. Identical SOULs are left
+alone. The command also updates bundled skills once in
 `global-project`, backing up changed files under its `backups/gitlab-skills/sync-*/`.
 It links the installed `project-egg` starter and registered or retained GitLab
 profiles to the shared skills. Retired `codev-gitlab`, `codev-handoff`, `gitlab-cli`,

@@ -403,10 +403,12 @@ class ProjectSetup(unittest.TestCase):
         self.assertTrue(soul.startswith("Custom personality\n"))
         self.assertEqual(soul, "Custom personality\n")
         self.run_command("sync-knowledge")
-        self.assertEqual((profile / "SOUL.md").read_text(), soul)
+        self.assertEqual((profile / "SOUL.md").read_text(),
+                         (plugin / "templates/project-egg/SOUL.md").read_text())
+        self.assertEqual(next(profile.glob("backups/gitlab-soul/*/SOUL.md")).read_text(), soul)
         self.assertFalse((self.root / "profiles" / "personal" / "PROJECT.yaml").exists())
 
-    def test_sync_preserves_existing_persona_and_profile_knowledge(self):
+    def test_sync_replaces_project_souls_with_backups_and_preserves_knowledge(self):
         from agent.skill_utils import _external_dirs_cache_clear
         from tools.skills_tool import skill_view
 
@@ -421,7 +423,11 @@ class ProjectSetup(unittest.TestCase):
             (profile / "memories/INDEX.md").write_text("Our verified project notes\n")
         self.run_command("sync-knowledge")
         for profile in profiles:
-            self.assertEqual((profile / "SOUL.md").read_text(), existing)
+            self.assertEqual((profile / "SOUL.md").read_text(),
+                             (bundle / "project-egg/SOUL.md").read_text())
+            backups = list(profile.glob("backups/gitlab-soul/*/SOUL.md"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(), existing)
             self.assertEqual((profile / "memories/INDEX.md").read_text(), "Our verified project notes\n")
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
@@ -432,7 +438,9 @@ class ProjectSetup(unittest.TestCase):
                                      (bundle / "global-project/skills" / name / "SKILL.md").read_bytes())
         self.run_command("sync-knowledge")
         for profile in profiles:
-            self.assertEqual((profile / "SOUL.md").read_text(), existing)
+            self.assertEqual((profile / "SOUL.md").read_text(),
+                             (bundle / "project-egg/SOUL.md").read_text())
+            self.assertEqual(len(list(profile.glob("backups/gitlab-soul/*/SOUL.md"))), 1)
 
     def test_quiet_display_migrates_existing_profiles_without_losing_custom_settings(self):
         from gateway.display_config import resolve_display_setting
