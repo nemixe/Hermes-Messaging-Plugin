@@ -37,12 +37,12 @@ State idle (AwaitingRequest, AwaitingContext, AwaitingAssignment, AwaitingReview
 
 | State | Skill |
 |---|---|
-| Understanding | `superpowers/brainstorming`, saat user ingin brainstorming |
-| Planning | `superpowers/writing-plans` |
+| Planning | `superpowers/brainstorming` → `superpowers/writing-plans` |
 | Working | `superpowers/using-git-worktrees` → `superpowers/executing-plans` → `superpowers/test-driven-development` → `superpowers/requesting-code-review` → `superpowers/finishing-a-development-branch` |
 
 Detailnya ada di tool state. Terjemahan ke konteks CoDev, berlaku untuk semua skill superpowers:
 - "Your human partner" = tim di surface asal (thread Mattermost, issue/MR GitLab). Sesi Working bertanya lewat issue GitLab.
 - "Dispatch a subagent" = `delegate_task`; kalau tidak tersedia, kerjakan inline.
 - Aturan codev-workflow yang sudah tertulis (lokasi worktree, nama branch, MR sebagai satu-satunya jalur integrasi) adalah *declared preference* bagi skill itu: tidak ditanyakan ulang.
-- Kode, spec file, dan plan file hanya ditulis di Working dan AddressingFeedback. Sebelum itu, hasil brainstorming dan plan hidup di issue GitLab.
+- Kode, spec file, dan plan file hanya ditulis di Working dan AddressingFeedback. Sebelum itu, spec dan plan hidup di surface asal lalu di issue GitLab.
+- Brainstorming adalah bagian Planning, bukan Understanding: Understanding hanya memutuskan jenis request. Output Planning selalu plan hasil `writing-plans` di card, termasuk untuk path bounded; execution method selalu Native.

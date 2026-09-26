@@ -284,8 +284,8 @@ under a category directory because Hermes seeds its own `test-driven-development
 `systematic-debugging` and `requesting-code-review` into every profile and refuses
 a bare name that matches both; `skill_view("superpowers/<name>")` (and the
 `superpowers:<name>` references inside the skills) resolve unambiguously.
-`codev-workflow` wires them per state: `brainstorming` in Understanding,
-`writing-plans` in Planning, and `using-git-worktrees` → `executing-plans` →
+`codev-workflow` wires them per state: `brainstorming` → `writing-plans` in
+Planning (the plan lands in the GitLab card, not a file), and `using-git-worktrees` → `executing-plans` →
 `test-driven-development` → `requesting-code-review` →
 `finishing-a-development-branch` in Working.
 
