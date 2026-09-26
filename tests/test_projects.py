@@ -143,7 +143,7 @@ class ProjectSetup(unittest.TestCase):
         payload = json.loads(rows[0][0])
         self.assertEqual(payload["issue"], "42:issues:3")
         self.assertEqual(payload["origin_url"],
-                         f"http://127.0.0.1:{server.server_port}/mattermost/pl/" + "b" * 26)
+                         f"http://127.0.0.1:{server.server_port}/mattermost/_redirect/pl/" + "b" * 26)
 
     def test_create_reuse_and_list_project_preserves_knowledge_and_config(self):
         self.run_command("add-project", "commerce", "--repos", "101,102", "--description", "Commerce services")

@@ -346,9 +346,11 @@ class MattermostDM(unittest.TestCase):
                                     home=directory, request=api)
 
         self.assertEqual([post["id"] for post in thread["posts"]], [POST_ID, reply_id])
+        self.assertEqual(thread["permalink"], f"https://mm.example.invalid/_redirect/pl/{reply_id}")
         self.assertEqual([post["id"] for post in recent["posts"]], [reply_id, POST_ID])
         self.assertEqual([post["id"] for post in found["posts"]], [reply_id])
         self.assertEqual(posted["root_id"], POST_ID)
+        self.assertEqual(posted["permalink"], "https://mm.example.invalid/_redirect/pl/" + "n" * 26)
         self.assertEqual(fresh["root_id"], "n" * 26)
         search_call = next(call for call in calls if call[1] == "posts/search")
         self.assertEqual(search_call[2]["terms"], f'in:{CHANNEL_ID} "release plan" from:alice')

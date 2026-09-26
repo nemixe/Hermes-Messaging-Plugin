@@ -22,6 +22,8 @@ python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.
 
 `thread` returns the root and replies in pages. `search` scopes results to the channel; use Mattermost's `from:`, `before:`, `after:`, `on:`, quoted phrase and exclusion filters, then open relevant results with `thread`. Page through results when needed. `recent` is for browsing without a search term. Search visibility and relevance still govern what to read.
 
+For a Mattermost reference, use the `permalink` returned by `thread` or `post`, or the verified `origin_url` from a GitLab handoff. These links use the configured Mattermost server. Do not write or guess a Mattermost hostname yourself; if no verified permalink is available, cite the post ID without a link.
+
 ## Never post to the current routed conversation
 
 The gateway delivers your final reply to the thread, DM or GitLab discussion this session is routed to. `post` there is always a duplicate: the same text will arrive twice. Use `post` only when the destination is a different thread or channel from the one that will receive your final reply, and only when SOUL authorizes it. If you are unsure whether the destination is the current conversation, compare its root post ID with the session's routed thread; when they match, do not post. After a `post` to another thread, your final reply must not repeat that message, only reference it by permalink if needed.

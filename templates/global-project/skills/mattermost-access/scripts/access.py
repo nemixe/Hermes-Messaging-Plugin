@@ -221,6 +221,10 @@ def require_id(value, kind):
     return value
 
 
+def post_permalink(base_url, post_id):
+    return f"{base_url}/_redirect/pl/{require_id(post_id, 'post')}"
+
+
 def resolve_post_id(value, base_url):
     if USER_ID.fullmatch(value or ""):
         return value
@@ -247,7 +251,8 @@ def read_thread(post, page=0, per_page=60, *, environ=None, home=None, request=N
     base_url, api = api_client(environ, home, request)
     post_id = resolve_post_id(post, base_url)
     data = api("GET", f"posts/{post_id}/thread?page={page}&per_page={per_page}")
-    return {"ok": True, "page": page, "posts": ordered_posts(data),
+    return {"ok": True, "page": page, "permalink": post_permalink(base_url, post_id),
+            "posts": ordered_posts(data),
             "next_post_id": data.get("next_post_id")}
 
 
@@ -292,6 +297,7 @@ def post_channel(channel, message, root=None, *, environ=None, home=None, reques
     if not USER_ID.fullmatch(post_id):
         raise ValueError("Mattermost did not return a post ID")
     return {"ok": True, "channel_id": channel_id, "post_id": post_id,
+            "permalink": post_permalink(base_url, post_id),
             "root_id": payload.get("root_id") or post_id}
 
 

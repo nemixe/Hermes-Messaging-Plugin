@@ -459,7 +459,8 @@ def continue_issue(root, issue, environ=None):
     state_path = state_root / (hashlib.sha256(f"{url}\n{bot_id}".encode()).hexdigest() + ".sqlite3")
     identity = enqueue_handoff(state_path, {
         "issue": issue, "profile": profile, "origin_channel": channel, "origin_root": root_id,
-        "origin_post": post_id, "origin_user": user, "origin_url": f"{mm_url}/pl/{root_id}",
+        "origin_post": post_id, "origin_user": user,
+        "origin_url": f"{mm_url}/_redirect/pl/{root_id}",
         "issue_url": issue_url, "request": message[:4000],
     })
     os.chmod(state_path, 0o600)
