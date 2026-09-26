@@ -32,4 +32,4 @@ Kalau card tidak punya konteks maupun permalink dan scope ambigu → NeedsContex
 
 **Memory selama Working** — Kegagalan yang berguna, hasil validasi, dan link commit/MR dicatat ke `memories/episodic/YYYY-MM-DD.md`. Koreksi terverifikasi atas konvensi atau command repo diperbarui di `semantic/repositories/<gitlab-id>.md` (ubah `Current`, simpan alasan lama di `History`). Percobaan yang gagal tetap berlabel gagal, bukan prosedur.
 
-Blocker teknis → Blocked. MR dibuat → AwaitingReview.
+Blocker teknis → Blocked. MR dibuat → AwaitingReview (`tools/awaiting-review.md`: minta review sebelum idle).
