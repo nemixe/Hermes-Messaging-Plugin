@@ -374,9 +374,10 @@ directly. Blockers name the missing input and where to provide it; recoverable
 failures are handled silently. Required approvals remain visible.
 
 Project setup and `gitlab sync-knowledge` apply the bundled quiet display settings
-to new and existing project profiles, with config backups. They preserve unrelated
-display preferences. Mattermost and GitLab disable response streaming so partial
-narration is not streamed to chat; interim replies stay enabled for the preamble.
+and mark the busy-input tip as seen in new and existing project profiles, with config
+backups. They preserve unrelated display and onboarding preferences. Mattermost and
+GitLab disable response streaming so partial narration is not streamed to chat;
+interim replies stay enabled for the preamble.
 Use a new conversation after syncing to load the updated SOUL instructions.
 
 Project implementation on every surface requires a verified GitLab issue currently

@@ -454,7 +454,13 @@ class ProjectSetup(unittest.TestCase):
                            "streaming": True, "tool_preview_length": 23},
             "gitlab": {"thinking_progress": True, "tool_progress": "all"},
         }}
+        config.pop("onboarding", None)
         path.write_text(yaml.safe_dump(config))
+        egg_path = self.root / "profiles/project-egg/config.yaml"
+        egg_config = yaml.safe_load(egg_path.read_text())
+        egg_config["display"].pop("busy_ack_enabled", None)
+        egg_config.pop("onboarding", None)
+        egg_path.write_text(yaml.safe_dump(egg_config))
         self.run_command("sync-knowledge")
         migrated = yaml.safe_load(path.read_text())
         self.assertTrue(migrated["display"]["show_cost"])
@@ -462,6 +468,8 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual(migrated["model"], config["model"])
         for target in (profile, self.root / "profiles" / "project-egg"):
             settings = yaml.safe_load((target / "config.yaml").read_text())
+            self.assertIs(settings["display"]["busy_ack_enabled"], False)
+            self.assertIs(settings["onboarding"]["seen"]["busy_input_prompt"], True)
             for platform in ("mattermost", "gitlab"):
                 for key in ("show_reasoning", "thinking_progress", "long_running_notifications", "streaming"):
                     self.assertFalse(resolve_display_setting(settings, platform, key), (target.name, platform, key))

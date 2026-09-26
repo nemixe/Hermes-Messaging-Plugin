@@ -48,7 +48,8 @@ def configure_project_display(profile):
     config = yaml.safe_load(path.read_text())
     if not isinstance(config, dict):
         raise ValueError("Project config.yaml must be a mapping")
-    defaults = yaml.safe_load((Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "config.yaml").read_text())["display"]
+    template = yaml.safe_load((Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "config.yaml").read_text())
+    defaults = template["display"]
     display = config.setdefault("display", {})
     if not isinstance(display, dict):
         raise ValueError("Project display settings must be a mapping")
@@ -62,6 +63,13 @@ def configure_project_display(profile):
             raise ValueError(f"Project display.platforms.{platform} must be a mapping")
         target.update(settings)
     display.update({key: value for key, value in defaults.items() if key != "platforms"})
+    onboarding = config.setdefault("onboarding", {})
+    if not isinstance(onboarding, dict):
+        raise ValueError("Project onboarding settings must be a mapping")
+    seen = onboarding.setdefault("seen", {})
+    if not isinstance(seen, dict):
+        raise ValueError("Project onboarding.seen must be a mapping")
+    seen["busy_input_prompt"] = template["onboarding"]["seen"]["busy_input_prompt"]
     if yaml.safe_dump(config) != before:
         backup_config(path, "gitlab-quiet-display")
         atomic_yaml_write(path, config, create_mode=0o600)
