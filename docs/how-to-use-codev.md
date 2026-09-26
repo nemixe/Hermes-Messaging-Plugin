@@ -11,8 +11,9 @@ Mattermost / Desktop          GitLab
 ─────────────────────         ──────────────────────────
 1. Brainstorm tugas
 2. Minta buat issue    →      Issue (kartu) terbuat
-3. Minta self-assign   →      Bot jadi assignee
-   atau assign manual  →      Sesi coding Codev mulai
+3. Jawab "ya" saat     →      Bot assign dirinya sendiri
+   Codev tanya lanjut,          Sesi coding Codev mulai
+   atau assign manual
                               Kerja di GitLab → merge request siap review
 ```
 
@@ -66,9 +67,11 @@ Konfirmasi bisa dilewati jika kamu sudah menyebut repo + judul dan langsung mint
 
 Deskripsi issue memuat request asli, konteks, dan kriteria selesai. Jangan taruh password, token, atau data rahasia di isi issue.
 
+Setelah issue dibuat, Codev bertanya sekali: lanjut implementasi sekarang, ya atau tidak? Jawab ya dan Codev meng-assign dirinya sendiri, sesi coding langsung mulai di issue. Jawab tidak dan kartu menunggu sampai ada yang meng-assign bot. Kalau kamu sudah bilang "jangan assign dulu", Codev tidak bertanya.
+
 ## 3. Task delegation
 
-Kerja coding dimulai ketika akun bot Codev menjadi assignee issue. Ada dua cara.
+Kerja coding dimulai ketika akun bot Codev menjadi assignee issue. Ada tiga cara: jawab ya saat Codev bertanya setelah membuat issue, assign manual di GitLab, atau minta self-assign lewat Mattermost.
 
 ### Assign manual di GitLab
 
@@ -161,6 +164,6 @@ Kalau Codev butuh input lagi di issue yang sama, mention bot di komentar baru. A
 | --- | --- | --- |
 | Brainstorm | “mari brainstorm untuk feature public tracking pengiriman” | Scope, opsi, pecahan kerja |
 | Buat task | “bikin issue dulu di frontend, jangan assign dulu” | Kartu issue, belum coding |
-| Delegasi | Assign bot di GitLab, atau “assign #42 ke kamu” | Sesi coding + merge request |
+| Delegasi | Jawab “ya” saat Codev tanya lanjut, assign bot di GitLab, atau “assign #42 ke kamu” | Sesi coding + merge request |
 
 Brainstorm → issue → assign bisa dalam satu thread. Boleh juga digabung setelah rencana disepakati: “buat issue dan assign ke kamu.”

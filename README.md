@@ -401,7 +401,9 @@ Use a new conversation after syncing to load the updated SOUL instructions.
 Project implementation on every surface requires a verified GitLab issue currently
 assigned to this profile's Codev bot; an MR must resolve to that issue. Questions,
 investigation and read-only reviews need no assignment. Issue-only requests do not
-assign the bot. An authorized assignment returns the issue link and leaves
+assign the bot; after creating a card the Mattermost session asks once whether to
+start, and a yes from an authorized user self-assigns the bot, which dispatches the
+issue session. An authorized assignment returns the issue link and leaves
 implementation with the GitLab worker, avoiding
 duplicate work from Desktop/TUI/CLI.
 

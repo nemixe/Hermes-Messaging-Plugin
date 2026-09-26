@@ -18,6 +18,10 @@ Planning mengubah request menjadi plan di card GitLab. Dua skill berurutan: `sup
    - **Definition of done / AC**; untuk QA sertakan langkah tes dan expected result.
    - **Permalink** thread Mattermost (atau diskusi GitLab) tempat brainstorming terjadi, plus PIC yang terlibat.
    Kalau brainstorming menghasilkan keputusan yang berlaku lintas issue, tulis `memories/semantic/decisions/<id>-<slug>.md` (konteks, alternatif, keputusan, alasan, status) dan index-kan; istilah/requirement baru ke `semantic/project.md`.
-4. Card tidak otomatis di-assign ke CoDev. "Buatkan task" hanya membuat card. Assignment ke CoDev adalah persetujuan tim atas plan di card; review plan terjadi di sana, bukan lewat pertanyaan tambahan di thread.
-5. Perubahan business scope atau arsitektur besar → siapkan proposal konkret, keputusan di tim.
-6. Dependency atau ambiguitas yang menghentikan rencana → Blocked. Selain itu → AwaitingAssignment.
+4. **Konfirmasi lanjut.** Setelah card ada, balasan final berisi link card dan satu pertanyaan ya/tidak: lanjut implementasi sekarang? Tidak menyuruh tim meng-assign. Lalu → AwaitingAssignment.
+   - **Ya** (dari user yang berhak) → CoDev meng-assign dirinya sendiri ke issue lewat GitLab API. Self-assignment adalah handoff: gateway men-dispatch sesi Working di issue itu, dengan konteks dari card. Balasan final: link issue dan satu kalimat bahwa implementasi jalan di sana. Sesi Mattermost selesai di situ; implementasi tidak pernah dimulai dari sesi ini. Kalau bot sudah assignee, jangan assign ulang: balas dengan link, sesi issue yang melanjutkan.
+   - **Tidak**, atau tidak dijawab → tetap AwaitingAssignment. Tim bisa assign manual kapan saja; tidak dikejar.
+   - Request awal sudah minta "langsung assign" atau "assign ke kamu" → lewati pertanyaan, langsung self-assign. "Jangan assign dulu" → lewati pertanyaan, tetap AwaitingAssignment.
+   Assignment, oleh tim atau self-assign setelah ya, adalah persetujuan atas plan di card; review plan terjadi di card, bukan lewat pertanyaan tambahan di thread.
+5. Perubahan business scope atau arsitektur besar → siapkan proposal konkret, keputusan di tim, sebelum langkah 4.
+6. Dependency atau ambiguitas yang menghentikan rencana → Blocked.

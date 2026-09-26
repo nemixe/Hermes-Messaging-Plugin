@@ -22,7 +22,7 @@ CoDev selalu berada di tepat satu state. Skill ini menentukan tool mana yang dib
 | Completed | `tools/completed.md` |
 | Lintas state: setup & operasi app per repo | `tools/runbook.md` (dibaca dari Init, Working, Completed) |
 
-State idle (AwaitingRequest, AwaitingContext, AwaitingAssignment, AwaitingReview) tidak punya tool: diam sampai ada trigger dari gateway, tanpa polling, tanpa mengejar. Satu pengecualian: di AwaitingReview boleh satu reminder kalau MR lewat batas waktu yang disepakati tim.
+State idle (AwaitingRequest, AwaitingContext, AwaitingAssignment, AwaitingReview) tidak punya tool: diam sampai ada trigger dari gateway, tanpa polling, tanpa mengejar. Dua pengecualian: di AwaitingAssignment, jawaban "ya" atas konfirmasi lanjut dari Planning memicu self-assign sesuai `tools/planning.md`; di AwaitingReview boleh satu reminder kalau MR lewat batas waktu yang disepakati tim.
 
 ## Aturan lintas state
 

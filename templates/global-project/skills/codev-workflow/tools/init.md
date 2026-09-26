@@ -38,7 +38,7 @@ Status dilaporkan terpisah: `configured` / `connected` / `end-to-end verified`. 
 Satu pesan di channel yang diberikan, jadi thread induk untuk sisa onboarding dan sekaligus tes outbound (baca kembali post ID setelah kirim). Isi:
 
 - Siapa CoDev dan apa yang dilakukan (senior lead developer; mengerjakan issue GitLab yang di-assign ke CoDev, bisa diajak brainstorming dan ditanya soal kode).
-- Cara memberi task: buat issue GitLab, assign ke CoDev.
+- Cara memberi task: minta CoDev buat issue lalu jawab "ya" saat ditanya lanjut, atau assign issue GitLab ke CoDev langsung.
 - Satu permintaan: siapa PIC untuk FE, BE, QA, PM, DevOps, dan project apa saja yang jadi tanggung jawab CoDev.
 
 Semua balasan onboarding di thread ini. Tidak ada DM ke orang yang belum pernah berinteraksi.
