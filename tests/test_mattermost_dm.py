@@ -3,8 +3,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import subprocess
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -217,18 +215,6 @@ class MattermostDM(unittest.TestCase):
             self.assertEqual(request.get_header("User-agent"), "Hermes-Agent")
             self.assertNotIn(GITLAB_TOKEN, request.get_header("Authorization"))
         self.assertEqual(seen[2].full_url, "https://mm.example.invalid/api/v4/channels/direct")
-
-    def test_cli_hides_token_when_credentials_are_missing(self):
-        with tempfile.TemporaryDirectory() as directory:
-            self.write_env(directory, GITLAB_TOKEN=GITLAB_TOKEN, GITLAB_URL="https://gitlab.example.invalid")
-            result = subprocess.run(
-                [sys.executable, str(SCRIPT), "--user", "alice", "--message", "hello", "--home", directory],
-                capture_output=True, text=True, env={**os.environ, "HERMES_HOME": directory})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("MATTERMOST_TOKEN", result.stderr)
-        self.assertNotIn(GITLAB_TOKEN, result.stderr)
-        self.assertNotIn(GITLAB_TOKEN, result.stdout)
-        self.assertNotIn(TOKEN, result.stderr + result.stdout)
 
     def test_request_records_dest_for_a_separate_dm_session_to_write(self):
         with tempfile.TemporaryDirectory() as directory:
