@@ -260,8 +260,9 @@ The GitLab bot PAT still belongs to the default profile's Messaging settings.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
 profile. Bundled `codev-workflow`, `tunnel-preview`, `close-worktree`,
-`mattermost-access` and `caveman` skills are seeded from `templates/global-project/skills/`. Put additional
-shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
+`mattermost-access`, `caveman` and `ponytail` skills, plus the `superpowers/` skill set, are seeded from `templates/global-project/skills/`. Put additional
+shared skills in `global-project/skills/<skill-name>/SKILL.md`, or one level under a
+category directory such as `superpowers/`. The
 plugin merges `../global-project/skills` into `project-egg`'s
 `skills.external_dirs`, preserving other skill directories and settings. New
 projects inherit this reference, so shared skills stay in one place. Existing
@@ -274,6 +275,19 @@ registered or deleted through GitLab Projects.
 `caveman` (from JuliusBrussee/caveman) is the shared reply-brevity skill. Reply
 style is controlled only through each profile's SOUL.md and this skill; the CLI
 no longer injects brevity lines into SOUL.md during sync.
+
+`ponytail` (from DietrichGebert/ponytail) is the shared lazy-senior-dev coding
+skill: YAGNI, stdlib first, the shortest solution that works.
+
+`superpowers/` is a verbatim copy of the obra/superpowers 6.4.1 skills. It is kept
+under a category directory because Hermes seeds its own `test-driven-development`,
+`systematic-debugging` and `requesting-code-review` into every profile and refuses
+a bare name that matches both; `skill_view("superpowers/<name>")` (and the
+`superpowers:<name>` references inside the skills) resolve unambiguously.
+`codev-workflow` wires them per state: `brainstorming` in Understanding,
+`writing-plans` in Planning, and `using-git-worktrees` → `executing-plans` →
+`test-driven-development` → `requesting-code-review` →
+`finishing-a-development-branch` in Working.
 
 `tunnel-preview` handles requested temporary public previews: one Pinggy SSH tunnel
 per web/API service, temporary application URL/origin environment settings, public

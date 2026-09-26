@@ -180,14 +180,21 @@ def sync_project_knowledge(profile, config=None, *, replace_soul=False):
             atomic_write_text(inventory, content, preserve_mode=True, create_mode=0o600)
 
 
+def bundled_skill_dirs(bundle):
+    """Skill directories in the bundle: top-level skills plus skills one level under a category."""
+    for entry in sorted(bundle.iterdir()):
+        if (entry / "SKILL.md").is_file():
+            yield entry
+        elif entry.is_dir() and not entry.name.startswith("."):
+            yield from (child for child in sorted(entry.iterdir()) if (child / "SKILL.md").is_file())
+
+
 def sync_project_skills(profile, *, overwrite=True):
     """Update bundled skill files, backing up changed copies before any replacement."""
     bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
     backup_root = profile / "backups" / "gitlab-skills"
     changes = []
-    for skill in sorted(bundle.iterdir()):
-        if not (skill / "SKILL.md").is_file():
-            continue
+    for skill in bundled_skill_dirs(bundle):
         for source in sorted(skill.rglob("*")):
             if (not source.is_file() or source.name == ".DS_Store" or "__pycache__" in source.parts
                     or source.suffix in {".pyc", ".pyo"}):
@@ -223,8 +230,8 @@ def migrate_shared_skills(profile):
     backup_root = profile / "backups" / "gitlab-skills"
     legacy = [profile / "skills" / name for name in RETIRED_SHARED_SKILLS]
     if profile.name != SHARED_PROFILE:
-        legacy.extend(profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
-                      if (skill / "SKILL.md").is_file())
+        legacy.extend(profile / "skills" / name for name in sorted(
+            {skill.relative_to(bundle).parts[0] for skill in bundled_skill_dirs(bundle)}))
     for path in [backup_root, *backup_root.parents, *(p for skill in legacy for p in (skill, *skill.parents))]:
         if path.is_relative_to(profile.parent) and path.is_symlink():
             raise ValueError(f"Skill migration paths must not be symlinked: {path}")

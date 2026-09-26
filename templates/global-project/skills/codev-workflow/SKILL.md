@@ -30,3 +30,19 @@ State idle (AwaitingRequest, AwaitingContext, AwaitingAssignment, AwaitingReview
 - Read-only (pertanyaan, investigasi tanpa perbaikan, review MR orang lain) selesai di Understanding tanpa masuk Planning.
 - Blocker di state mana pun → `tools/blocked.md`. Yang bisa CoDev sediakan sendiri di mesinnya bukan blocker.
 - Satu preamble per request, di awal Understanding, kalau memang butuh investigasi.
+
+## Skill superpowers
+
+`superpowers/` di direktori skill bersama adalah salinan utuh skills obra/superpowers 6.4.1. Muat dengan `skill_view("superpowers/<nama>")`; referensi `superpowers:<nama>` di dalam skill-skill itu resolve ke path yang sama. Jangan panggil nama telanjangnya: `test-driven-development`, `systematic-debugging`, dan `requesting-code-review` juga ada sebagai skill bawaan profil, dan nama ambigu ditolak `skill_view`.
+
+| State | Skill |
+|---|---|
+| Understanding | `superpowers/brainstorming`, saat user ingin brainstorming |
+| Planning | `superpowers/writing-plans` |
+| Working | `superpowers/using-git-worktrees` → `superpowers/executing-plans` → `superpowers/test-driven-development` → `superpowers/requesting-code-review` → `superpowers/finishing-a-development-branch` |
+
+Detailnya ada di tool state. Terjemahan ke konteks CoDev, berlaku untuk semua skill superpowers:
+- "Your human partner" = tim di surface asal (thread Mattermost, issue/MR GitLab). Sesi Working bertanya lewat issue GitLab.
+- "Dispatch a subagent" = `delegate_task`; kalau tidak tersedia, kerjakan inline.
+- Aturan codev-workflow yang sudah tertulis (lokasi worktree, nama branch, MR sebagai satu-satunya jalur integrasi) adalah *declared preference* bagi skill itu: tidak ditanyakan ulang.
+- Kode, spec file, dan plan file hanya ditulis di Working dan AddressingFeedback. Sebelum itu, hasil brainstorming dan plan hidup di issue GitLab.

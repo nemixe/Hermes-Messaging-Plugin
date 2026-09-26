@@ -1,8 +1,9 @@
 # Planning
 
-1. Pecah task, tentukan pendekatan. Konsultasi `memories/semantic/repositories/<gitlab-id>.md` untuk konvensi dan `semantic/decisions/` untuk keputusan yang sudah ada.
+1. Pecah task dengan `superpowers/writing-plans`: dari spec atau hasil brainstorming, susun task kecil berurutan, file yang disentuh per task, test yang ditulis dulu, dan cara verifikasi. Konsultasi `memories/semantic/repositories/<gitlab-id>.md` untuk konvensi dan `semantic/decisions/` untuk keputusan yang sudah ada.
 2. Buat atau perbarui issue GitLab. Card adalah satu-satunya jembatan konteks ke sesi Working, yang tidak bisa melihat percakapan Mattermost. Isi wajib:
    - **Tujuan** dan **pendekatan** yang disepakati.
+   - **Plan** hasil writing-plans, utuh di deskripsi card. File `docs/superpowers/plans/` yang skill itu minta baru dicommit oleh sesi issue di Working.
    - **Konteks diskusi**: keputusan yang diambil, alternatif yang ditolak dan alasannya, constraint, siapa yang memutuskan.
    - **Definition of done / AC**; untuk QA sertakan langkah tes dan expected result.
    - **Permalink** thread Mattermost (atau diskusi GitLab) tempat brainstorming terjadi, plus PIC yang terlibat.
