@@ -24,9 +24,9 @@ Kalau card tidak punya konteks maupun permalink dan scope ambigu → NeedsContex
 
 **Implementing** — Perubahan terkecil yang lengkap. Commit dengan pesan yang menjelaskan alasan, bukan hanya perubahan. Nilai secret tidak pernah masuk commit atau log.
 
-**Validating** — Jalankan app dari worktree sesuai runbook dan verifikasi perilaku baru langsung (endpoint, UI, atau job), lalu test dan SonarQube. Perubahan yang mengubah cara setup/jalan (dependency, env, migration, seed) wajib memperbarui runbook di MR yang sama. Findings diperbaiki, bukan didebat. Ulangi sampai quality gate lolos.
+**Validating** — Jalankan app dari worktree sesuai runbook dan verifikasi perilaku baru langsung (endpoint, UI, atau job), lalu test. Jalankan SonarQube dan perbaiki findings sampai quality gate lolos hanya jika repo sudah memiliki setup Sonar yang dapat dijalankan. Jika belum ada setup, catat status itu di runbook dan MR; Sonar bukan syarat kelulusan untuk repo tersebut. Perubahan yang mengubah cara setup/jalan (dependency, env, migration, seed) wajib memperbarui runbook di MR yang sama.
 
-**PreparingMergeRequest** — MR terikat ke satu issue. Deskripsi: apa yang berubah, kenapa, cara verifikasi, coverage gap kalau ada. Bukti kualitas = self-review diff + CI + Sonar; kalau belum lengkap, MR tetap Draft dan ditandai belum terverifikasi.
+**PreparingMergeRequest** — MR terikat ke satu issue. Deskripsi: apa yang berubah, kenapa, cara verifikasi, coverage gap kalau ada. Bukti kualitas = self-review diff + CI + Sonar jika repo sudah memiliki setup Sonar yang dapat dijalankan. Tanpa setup Sonar, tulis "Sonar belum dikonfigurasi" di MR; kondisi itu sendiri tidak menahan MR sebagai Draft. Jika pemeriksaan wajib lain belum lengkap, MR tetap Draft dan ditandai belum terverifikasi.
 
 **Memory selama Working** — Kegagalan yang berguna, hasil validasi, dan link commit/MR dicatat ke `memories/episodic/YYYY-MM-DD.md`. Koreksi terverifikasi atas konvensi atau command repo diperbarui di `semantic/repositories/<gitlab-id>.md` (ubah `Current`, simpan alasan lama di `History`). Percobaan yang gagal tetap berlabel gagal, bukan prosedur.
 

@@ -26,7 +26,7 @@ verified_at: <tanggal> @ <commit>
 6. Start: perintah jalan, port, URL lokal, cara stop; konflik port/data kalau dua worktree jalan bersamaan.
 7. Health check: cara tahu app benar-benar hidup (endpoint, log yang harus muncul).
 8. Akses app: akun uji/role yang tersedia dan di mana credential-nya disimpan (private runtime state), langkah login, batasan (mis. OTP, SSO).
-9. Test & lint: perintah unit/integration/e2e, quality gate Sonar, durasi kira-kira.
+9. Test & lint: perintah unit/integration/e2e dan durasi kira-kira; status setup Sonar, serta perintah dan quality gate-nya jika tersedia.
 10. Build & deploy: perintah build, environment tujuan, siapa yang berwenang, cara verifikasi hasil deploy.
 11. Jebakan yang sudah ditemui: gejala → penyebab → solusi.
 ## Sources
