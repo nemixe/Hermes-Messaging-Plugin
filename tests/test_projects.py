@@ -56,6 +56,22 @@ class ProjectSetup(unittest.TestCase):
             self.command["handler_fn"](args)
         return output.getvalue()
 
+    def test_removed_global_skills_are_archived_once(self):
+        cli = importlib.import_module(self.command["handler_fn"].__module__)
+        profile = self.root / "profiles/global-project"
+        skills = profile / "skills"
+        names = ("codev-handoff", "gitlab-cli", "gitlab-workflow", "mattermost-onboarding")
+        for name in names:
+            path = skills / name
+            path.mkdir()
+            (path / "SKILL.md").write_text(name)
+        cli.migrate_shared_skills(profile)
+        for name in names:
+            self.assertFalse((skills / name).exists())
+            self.assertEqual(next(profile.glob(f"backups/gitlab-skills/*/{name}/SKILL.md")).read_text(), name)
+        cli.migrate_shared_skills(profile)
+        self.assertEqual(len(list(profile.glob("backups/gitlab-skills/*"))), 1)
+
     def test_continue_queues_only_a_verified_assigned_mattermost_request(self):
         self.run_command("add-project", "commerce", "--repos", "42")
         state = {"assigned": True, "message": "@hermes-bot lanjutkan pekerjaan ini"}
@@ -185,16 +201,17 @@ class ProjectSetup(unittest.TestCase):
         bundle = Path(__file__).parents[1] / "templates/global-project/skills"
         profiles = [self.root / "profiles" / name for name in ("project-egg", "commerce")]
         shared = self.root / "profiles/global-project"
-        shared_skill = shared / "skills/gitlab-workflow/SKILL.md"
+        shared_skill = shared / "skills/close-worktree/SKILL.md"
         shared_skill.write_text("Shared custom instructions")
         cli.ensure_template()
         self.assertEqual(shared_skill.read_text(), "Shared custom instructions")
         for profile in profiles:
             shutil.copytree(bundle, profile / "skills", dirs_exist_ok=True)
-            (profile / "skills/gitlab-workflow/SKILL.md").write_text("Local custom instructions")
-            (profile / "skills/gitlab-workflow/SKILL.md").chmod(0o640)
-            (profile / "skills/gitlab-workflow/scripts/worktree.py").write_text("# old helper")
-            (profile / "skills/gitlab-cli/SKILL.md").unlink()
+            (profile / "skills/close-worktree/SKILL.md").write_text("Local custom instructions")
+            (profile / "skills/close-worktree/SKILL.md").chmod(0o640)
+            (profile / "skills/close-worktree/scripts").mkdir(exist_ok=True)
+            (profile / "skills/close-worktree/scripts/worktree.py").write_text("# old helper")
+            (profile / "skills/tunnel-preview/SKILL.md").unlink()
             (profile / "skills/custom").mkdir()
             (profile / "skills/custom/SKILL.md").write_text("Keep custom skill")
             (profile / "memories/INDEX.md").write_text("Keep learned knowledge")
@@ -202,20 +219,21 @@ class ProjectSetup(unittest.TestCase):
             config["skills"] = {"external_dirs": "../other-skills", "disabled": ["example"]}
             (profile / "config.yaml").write_text(yaml.safe_dump(config))
         cli.refresh_project_knowledge(self.root)
-        self.assertEqual((profiles[1] / "skills/gitlab-workflow/SKILL.md").read_text(), "Local custom instructions")
+        self.assertEqual((profiles[1] / "skills/close-worktree/SKILL.md").read_text(), "Local custom instructions")
         output = self.run_command("sync-knowledge")
-        shared_backup = list(shared.glob("backups/gitlab-skills/*/gitlab-workflow/SKILL.md"))
+        shared_backup = list(shared.glob("backups/gitlab-skills/*/close-worktree/SKILL.md"))
         self.assertEqual(len(shared_backup), 1)
         self.assertEqual(shared_backup[0].read_text(), "Shared custom instructions")
         for profile in profiles:
-            for relative in ("gitlab-workflow/SKILL.md", "gitlab-workflow/scripts/worktree.py", "gitlab-cli/SKILL.md"):
+            for relative in ("close-worktree/SKILL.md", "tunnel-preview/SKILL.md"):
                 self.assertFalse((profile / "skills" / relative).exists())
                 self.assertEqual((shared / "skills" / relative).read_bytes(), (bundle / relative).read_bytes())
+            self.assertFalse((profile / "skills/close-worktree/scripts/worktree.py").exists())
             self.assertEqual(yaml.safe_load((profile / "config.yaml").read_text())["skills"], {
                 "external_dirs": ["../other-skills", "../global-project/skills"], "disabled": ["example"]})
             self.assertEqual((profile / "skills/custom/SKILL.md").read_text(), "Keep custom skill")
             self.assertEqual((profile / "memories/INDEX.md").read_text(), "Keep learned knowledge")
-            backups = list((profile / "backups/gitlab-skills").glob("*/gitlab-workflow/SKILL.md"))
+            backups = list((profile / "backups/gitlab-skills").glob("*/close-worktree/SKILL.md"))
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(), "Local custom instructions")
             self.assertEqual(backups[0].stat().st_mode & 0o777, 0o640)
@@ -223,19 +241,19 @@ class ProjectSetup(unittest.TestCase):
             self.assertIn(str(backups[0].parent.parent), output)
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
-                for name in ("gitlab-workflow", "codev-handoff", "tunnel-preview", "close-worktree",
-                                 "mattermost-access", "mattermost-onboarding"):
+                for name in ("tunnel-preview", "close-worktree", "mattermost-access", "codev-workflow"):
                     viewed = json.loads(skill_view(name))
                     self.assertEqual(Path(viewed["_source_path"]).resolve(),
                                      (shared / "skills" / name / "SKILL.md").resolve())
                     self.assertFalse((profile / "skills" / name).exists())
         before = {p: p.stat().st_mtime_ns for profile in [*profiles, shared] for p in profile.rglob("*") if p.is_file()}
+        backup_dirs_before = set(profiles[1].glob("backups/gitlab-skills/*"))
         self.run_command("sync-knowledge")
         for path, mtime in before.items():
             self.assertEqual(path.stat().st_mtime_ns, mtime)
-        self.assertEqual(len(list(profiles[1].glob("backups/gitlab-skills/*"))), 1)
+        self.assertEqual(set(profiles[1].glob("backups/gitlab-skills/*")), backup_dirs_before)
         self.run_command("add-project", "finance", "--repos", "102")
-        self.assertFalse((self.root / "profiles/finance/skills/gitlab-workflow").exists())
+        self.assertFalse((self.root / "profiles/finance/skills/close-worktree").exists())
         self.assertFalse((self.root / "profiles/personal/skills").exists())
 
     def test_sync_renames_workflow_without_losing_retired_skill_customizations(self):
@@ -257,7 +275,7 @@ class ProjectSetup(unittest.TestCase):
                                "Use `mattermost-dm` for personal messages.\n")
         shared_config = (profiles[0] / "config.yaml").read_bytes()
         cli.ensure_template()
-        self.assertTrue(all((profile / "skills/codev-gitlab").exists() for profile in profiles))
+        self.assertFalse((profiles[0] / "skills/codev-gitlab").exists())
         self.run_command("sync-knowledge")
         for profile in profiles:
             self.assertFalse((profile / "skills/codev-gitlab").exists())
@@ -274,9 +292,9 @@ class ProjectSetup(unittest.TestCase):
                 self.assertNotIn("codev-gitlab", soul)
                 self.assertNotIn("mattermost-dm", soul)
                 self.assertIn("mattermost-access", soul)
-                self.assertIn("load `gitlab-workflow` with `skill_view` and follow its rules", soul)
+                self.assertNotIn("load `gitlab-workflow` with `skill_view`", soul)
         self.assertEqual((profiles[0] / "config.yaml").read_bytes(), shared_config)
-        self.assertTrue((profiles[0] / "skills/gitlab-workflow/scripts/worktree.py").is_file())
+        self.assertFalse((profiles[0] / "skills/close-worktree/scripts/worktree.py").exists())
         self.run_command("sync-knowledge")
         self.assertTrue(all(len(list(p.glob("backups/gitlab-skills/*/codev-gitlab/SKILL.md"))) == 1
                             for p in profiles))
@@ -291,11 +309,14 @@ class ProjectSetup(unittest.TestCase):
         (legacy / "notes.md").write_text("Custom supporting file")
         outside = self.root / "outside"
         outside.mkdir()
-        (profile / "backups/gitlab-skills").symlink_to(outside)
+        backup_dir = profile / "backups/gitlab-skills"
+        if backup_dir.exists():
+            backup_dir.rename(backup_dir.with_name("gitlab-skills-preexisting"))
+        backup_dir.symlink_to(outside)
         with self.assertRaisesRegex(ValueError, "symlink"):
             cli.migrate_shared_skills(profile)
         self.assertEqual(list(outside.iterdir()), [])
-        (profile / "backups/gitlab-skills").unlink()
+        backup_dir.unlink()
         with patch.object(Path, "rename", side_effect=OSError("Archive unavailable")):
             with self.assertRaisesRegex(OSError, "Archive unavailable"):
                 cli.migrate_shared_skills(profile)
@@ -309,11 +330,11 @@ class ProjectSetup(unittest.TestCase):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
         self.run_command("add-project", "commerce", "--repos", "101")
         profile = self.root / "profiles/global-project"
-        target = profile / "skills/gitlab-workflow/SKILL.md"
+        target = profile / "skills/close-worktree/SKILL.md"
         target.write_text("Keep local edits")
         outside = self.root / "outside"
         outside.mkdir()
-        for relative in ("skills", "skills/gitlab-workflow", "skills/gitlab-workflow/SKILL.md", "backups"):
+        for relative in ("skills", "skills/close-worktree", "skills/close-worktree/SKILL.md", "backups"):
             with self.subTest(relative=relative):
                 path = profile / relative
                 saved = path.with_name(path.name + ".saved")
@@ -357,7 +378,7 @@ class ProjectSetup(unittest.TestCase):
         cli.add_project(self.root, "commerce", ["102"], None, replace=True)
         self.assertEqual([r["id"] for r in yaml.safe_load(inventory.read_text())["repositories"]], ["102"])
         self.assertTrue((profile / "SOUL.md").read_text().startswith("Our custom instructions\n"))
-        self.assertIn("PROJECT.yaml", (profile / "SOUL.md").read_text())
+        self.assertEqual((profile / "SOUL.md").read_text(), "Our custom instructions\n")
         self.assertEqual((profile / "memories" / "INDEX.md").read_text(), "Our verified project notes\n")
         revision = hashlib.sha256(self.config_path.read_bytes()).hexdigest()
         cli.remove_project_registration(self.root, "commerce", revision=revision, confirmation="commerce")
@@ -380,39 +401,38 @@ class ProjectSetup(unittest.TestCase):
         self.assertEqual([r["id"] for r in yaml.safe_load(inventory.read_text())["repositories"]], ["101"])
         soul = (profile / "SOUL.md").read_text()
         self.assertTrue(soul.startswith("Custom personality\n"))
-        self.assertIn("Mattermost", soul)
+        self.assertEqual(soul, "Custom personality\n")
         self.run_command("sync-knowledge")
         self.assertEqual((profile / "SOUL.md").read_text(), soul)
         self.assertFalse((self.root / "profiles" / "personal" / "PROJECT.yaml").exists())
 
-    def test_sync_replaces_managed_persona_and_preserves_profile_knowledge(self):
+    def test_sync_preserves_existing_persona_and_profile_knowledge(self):
         from agent.skill_utils import _external_dirs_cache_clear
         from tools.skills_tool import skill_view
 
         self.run_command("add-project", "commerce", "--repos", "101")
         bundle = Path(__file__).parents[1] / "templates"
         start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
-        current = (bundle / "project-egg/SOUL.md").read_text()
-        managed = start + current.split(start, 1)[1].split(end, 1)[0] + end
         prefix, suffix = "Custom team conventions\n", "\n## Local delivery notes\nKeep our release policy.\n"
+        existing = prefix + start + "\nOlder persona\n" + end + suffix
         profiles = [self.root / "profiles" / name for name in ("project-egg", "commerce")]
         for profile in profiles:
-            (profile / "SOUL.md").write_text(prefix + start + "\nOlder persona\n" + end + suffix)
+            (profile / "SOUL.md").write_text(existing)
             (profile / "memories/INDEX.md").write_text("Our verified project notes\n")
         self.run_command("sync-knowledge")
         for profile in profiles:
-            self.assertEqual((profile / "SOUL.md").read_text(), prefix + managed + suffix)
+            self.assertEqual((profile / "SOUL.md").read_text(), existing)
             self.assertEqual((profile / "memories/INDEX.md").read_text(), "Our verified project notes\n")
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
-                for name in ("gitlab-workflow", "codev-handoff"):
+                for name in ("close-worktree", "tunnel-preview"):
                     viewed = json.loads(skill_view(name))
                     source = Path(viewed["_source_path"])
                     self.assertEqual(source.read_bytes(),
                                      (bundle / "global-project/skills" / name / "SKILL.md").read_bytes())
         self.run_command("sync-knowledge")
         for profile in profiles:
-            self.assertEqual((profile / "SOUL.md").read_text(), prefix + managed + suffix)
+            self.assertEqual((profile / "SOUL.md").read_text(), existing)
 
     def test_quiet_display_migrates_existing_profiles_without_losing_custom_settings(self):
         from gateway.display_config import resolve_display_setting
@@ -443,10 +463,10 @@ class ProjectSetup(unittest.TestCase):
         self.run_command("sync-knowledge")
         self.assertEqual(path.read_bytes(), before)
 
-    def test_workflow_nodes_are_available_to_profile_and_skills(self):
+    def test_workflow_nodes_stay_in_soul(self):
         bundle = Path(__file__).parents[1] / "templates"
         soul = (bundle / "project-egg/SOUL.md").read_text()
-        self.assertIn("```mermaid\nstateDiagram-v2", soul)
+        self.assertIn("```mermaid\nstateDiagram", soul)
         graph = soul.split("```mermaid\n", 1)[1].split("```", 1)[0]
         edges = re.findall(r"^\s*(\w+|\[\*\]) --> (\w+|\[\*\])", graph, re.MULTILINE)
         nodes = {node for edge in edges for node in edge} - {"[*]"}
@@ -454,74 +474,41 @@ class ProjectSetup(unittest.TestCase):
         self.assertIn(("Validating", "PreparingMergeRequest"), edges)
         self.assertIn(("AwaitingReview", "Completed"), edges)
         for path in [bundle / "project-egg/prompts/architecture.md",
+                     bundle / "project-egg/prompts/README.md",
+                     bundle / "project-egg/skills/README.md",
                      bundle / "project-egg/TAXONOMY.md",
-                     *sorted((bundle / "global-project/skills").glob("*/SKILL.md"))]:
+                     *sorted(path for path in (bundle / "global-project/skills").glob("*/SKILL.md")
+                             if path.parent.name != "codev-workflow")]:
             with self.subTest(path=path.name, skill=path.parent.name):
                 text = path.read_text()
-                self.assertIn("SOUL.md", text)
-                references = re.search(r"^Nodes: (.+)$", text, re.MULTILINE)
-                self.assertIsNotNone(references)
-                declared = set(re.findall(r"`([^`]+)`", references[1]))
-                self.assertTrue(declared)
-                self.assertTrue(declared <= nodes)
-                if path.name == "SKILL.md":
-                    route = next(line for line in soul.splitlines()
-                                 if line.startswith("| ") and f"`{path.parent.name}`" in line)
-                    routed = set(re.findall(r"`([^`]+)`", route.split("|")[1]))
-                    self.assertEqual(declared, routed, "SOUL and skill trigger nodes must agree")
-                    self.assertNotIn("stateDiagram", text)
+                self.assertNotRegex(text, r"(?m)^Nodes:")
+                self.assertFalse(set(re.findall(r"`([^`]+)`", text)) & nodes)
+                self.assertNotIn("stateDiagram", text)
         self.run_command("add-project", "commerce", "--repos", "101")
         copied = (self.root / "profiles/commerce/SOUL.md").read_text()
         self.assertIn(graph, copied)
         self.run_command("sync-knowledge")
         self.assertIn(graph, (self.root / "profiles/commerce/SOUL.md").read_text())
+        workflow = bundle / "global-project/skills/codev-workflow"
+        router = (workflow / "SKILL.md").read_text()
+        self.assertIn("`codev-workflow`", soul)
+        for relative in re.findall(r"`(tools/[a-z-]+\.md)`", router):
+            self.assertTrue((workflow / relative).is_file(), relative)
 
     def test_orientation_limits_visible_messages_across_surfaces(self):
         bundle = Path(__file__).parents[1] / "templates" / "project-egg" / "SOUL.md"
         text = bundle.read_text()
-        start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
-        block = " ".join(text.split(start, 1)[1].split(end, 1)[0].split())
-        self.assertIn("**Session workbench:**", block)
-        self.assertIn("**Messaging posts:**", block)
-        self.assertIn("**Preamble first:**", block)
-        self.assertIn("extended thinking", block)
-        self.assertIn("Mattermost", block)
-        self.assertIn("Desktop", block)
-        self.assertIn("### Assignment guard", block)
-        self.assertIn("codev-handoff", block)
-        self.assertIn("assigned to this profile's bot", block)
-        self.assertIn("mattermost-access", block)
-        self.assertIn("chat personally", block)
-        self.assertIn("confidential material", block)
+        self.assertIn("Maksimal sekali per request", text)
+        self.assertIn("Kode hanya lewat assignment GitLab", text)
+        self.assertIn("Secret hanya lewat DM Mattermost terverifikasi", text)
+        self.assertNotIn("codev-handoff", text)
         config = yaml.safe_load(
             (Path(__file__).parents[1] / "templates" / "project-egg" / "config.yaml").read_text())
         self.assertTrue(config["display"]["platforms"]["mattermost"]["interim_assistant_messages"])
         self.assertFalse(config["display"]["platforms"]["mattermost"]["tool_progress"])
         self.assertTrue(config["display"]["platforms"]["gitlab"]["interim_assistant_messages"])
         self.assertFalse(config["display"]["platforms"]["gitlab"]["tool_progress"])
-        self.assertIn("Keep visible replies concise:", text)
-        self.assertIn("keep reasoning and working notes internal", block)
-        self.assertIn("at most one preamble per user request", block)
-        self.assertNotIn("use interim commentary", block)
-        self.assertNotIn("Be brief. Keep responses concise and direct", text)
-        self.assertNotIn("Apply this communication rule across skills and platforms", block)
-
-        self.run_command("add-project", "commerce", "--repos", "101")
-        profile = self.root / "profiles" / "commerce" / "SOUL.md"
-        old = (
-            "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
-            "essential details are needed.\n"
-        )
-        new = "Keep visible replies concise: one preamble, the final result, or an actionable blocker.\n"
-        for legacy in (old, "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"):
-            with self.subTest(legacy=legacy):
-                profile.write_text(profile.read_text().replace(new, legacy, 1))
-                self.assertIn(legacy, profile.read_text())
-                self.run_command("sync-knowledge")
-                after = profile.read_text()
-                self.assertIn(new, after)
-                self.assertNotIn(legacy, after)
-                self.assertIn("**Session workbench:**", after)
+        self.assertIn("Proses berpikir tidak ditampilkan", text)
 
     def test_project_marker_preserves_metadata_and_survives_empty_registration(self):
         cli = importlib.import_module(self.command["handler_fn"].__module__)
@@ -630,7 +617,7 @@ class ProjectSetup(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("{}")
         cli.ensure_template()
-        self.assertTrue((egg / "SOUL.md").read_text().startswith(files["SOUL.md"] + "\n\n"))
+        self.assertEqual((egg / "SOUL.md").read_text(), files["SOUL.md"])
         files["SOUL.md"] = (egg / "SOUL.md").read_text()
         self.run_command("add-project", "commerce", "--repos", "101", "--description", "Commerce project")
         project = self.root / "profiles" / "commerce"
@@ -646,9 +633,9 @@ class ProjectSetup(unittest.TestCase):
         (project / "SOUL.md").write_text("Commerce personality")
         (egg / "SOUL.md").write_text("Next generation starter")
         self.run_command("add-project", "commerce", "--repos", "102")
-        self.assertTrue((project / "SOUL.md").read_text().startswith("Commerce personality\n\n"))
+        self.assertEqual((project / "SOUL.md").read_text(), "Commerce personality")
         self.run_command("add-project", "finance", "--repos", "103")
-        self.assertTrue((self.root / "profiles" / "finance" / "SOUL.md").read_text().startswith("Next generation starter\n\n"))
+        self.assertEqual((self.root / "profiles" / "finance" / "SOUL.md").read_text(), "Next generation starter")
         for name in ("default", "project-egg", "global-project"):
             with self.assertRaises(SystemExit):
                 self.run_command("add-project", name, "--repos", "104")

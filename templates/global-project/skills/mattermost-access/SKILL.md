@@ -8,7 +8,6 @@ metadata:
 
 # Mattermost access
 
-Nodes: `Understanding`, `NeedsContext`, `AwaitingContext`, `Working`, `AwaitingReview`, `Blocked`, `Completed`.
 Shared contract: `$HERMES_HOME/SOUL.md`. Use the current routed conversation first; the helper reaches other Mattermost posts through the default profile's bot `MATTERMOST_URL`/`MATTERMOST_TOKEN` in `.env` or `platforms.mattermost` in `config.yaml`. It can only read or post where that bot has permission. Loading this skill does not authorize a message.
 
 Use `python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py"` with the commands below. IDs come from trusted Mattermost metadata or same-server permalinks, not display names. Read only channels and threads relevant to the task. A forward or quoted reply is a pointer: follow its original post and thread when accessible, and keep the source context distinct from the forwarding comment.
@@ -32,7 +31,7 @@ python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.
 python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" post --channel '<channel-id>' --message '<new-thread message>'
 ```
 
-For a responsible-person DM, read `memories/semantic/team.md` and use `mattermost-onboarding` to match the specific domain/action to a confirmed PIC. Verify the Mattermost account before sending. If responsibility or identity is unknown, ask the requester or lead in the originating discussion; do not guess a recipient or use `@all`, `@channel`, or `@here`.
+For a responsible-person DM, read `memories/semantic/team.md` and match the specific domain/action to a confirmed PIC. Verify the Mattermost account before sending. If responsibility or identity is unknown, ask the requester or lead in the originating discussion; do not guess a recipient or use `@all`, `@channel`, or `@here`.
 
 ```sh
 python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" send --user '<verified-username-or-id>' --message '<specific action and context link>'

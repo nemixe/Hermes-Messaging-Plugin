@@ -8,14 +8,13 @@ metadata:
 
 # Tunnel preview
 
-Nodes: `Validating`, `AwaitingReview`, `Blocked`, `Completed`.
 Shared contract: `$HERMES_HOME/SOUL.md`.
 Close requests go directly to restoration.
 
-## Requested preview — `Validating`, `AwaitingReview`
+## Requested preview
 
 Inspect actual app commands, environment consumers/precedence and setup notes; use
-`gitlab-workflow`'s verified checkout. Identify requested HTTP services, health paths
+the verified issue checkout. Identify requested HTTP services, health paths
 and dependencies. Verify listener PID/process and HTTP response from the SSH runtime
 (`lsof -nP -iTCP -sTCP:LISTEN` or Linux `ss -ltnp`). Use actual bound ports, including
 auto-selected fallbacks and container host-published ports, not config defaults.
@@ -44,7 +43,7 @@ changes. Save actual output's HTTPS URL with service/port/process; a PID/QR is n
 reachability evidence. Obtain every required URL before configuring dependents.
 If any required tunnel fails, stop this attempt's tunnels and restore changes.
 
-## Public app configuration — `Validating`
+## Public app configuration
 
 Trace each setting to its consumer; use only supported settings:
 
@@ -73,14 +72,14 @@ browser behavior; disclose unavailable browser/authenticated coverage. Preview o
 service URLs, verified flows, expiry and exact stop/restore command. Keep active preview
 processes running; ephemeral URLs and handles stay in private state.
 
-## Expiry/reconnect — `AwaitingReview`, `Blocked`
+## Expiry/reconnect
 
 Record start/expiry; free tunnels have a 60-minute limit and new URLs on reconnect.
 Use an available supervisor/bounded cleanup job on exit/expiry; otherwise give manual
 cleanup without promising automatic restoration. Reconnect repeats URL propagation,
 restart/build and verification, never indefinite retries or stale dependent URLs.
 
-## Close/failure restoration — `Validating`, `AwaitingReview`, `Completed`, `Blocked`
+## Close/failure restoration
 
 1. Match private state to selected session/worktree and live identities; resolve
    ambiguous targets. Disable only its restart/reconnect/cleanup jobs, stop verified

@@ -259,9 +259,8 @@ out of the distributed plugin template.
 The GitLab bot PAT still belongs to the default profile's Messaging settings.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `gitlab-workflow`, `codev-handoff`, `gitlab-cli`, `tunnel-preview`,
-`close-worktree`, `mattermost-access` and `mattermost-onboarding` skills are seeded there from
-`templates/global-project/skills/`, including the worktree helper. Put additional
+profile. Bundled `codev-workflow`, `tunnel-preview`, `close-worktree` and
+`mattermost-access` skills are seeded from `templates/global-project/skills/`. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
 `skills.external_dirs`, preserving other skill directories and settings. New
@@ -281,11 +280,10 @@ and does not start tunnels merely by installing or syncing the skill.
 dedicated app processes, preview tunnels and Docker dependencies. It verifies
 ownership, preserves shared infrastructure and volumes, and stops on unresolved
 work/data or shutdown failures. Creating or syncing the skill performs no cleanup.
-The worktree helper records the runtime's creator session ID and a unique creation
-ID in the linked worktree's Git administrative directory. Reuse never transfers
-ownership. `close-worktree` checks these records before runtime shutdown/removal;
-an issue/MR conversation match alone is insufficient. Legacy worktrees without
-creator records are not automatically claimed or cleaned up.
+CoDev creates issue worktrees with native `git worktree add`. `close-worktree`
+checks the current request, Git registration, issue/branch identity and live runtime
+evidence before shutdown or removal. A matching issue number alone is insufficient;
+open cards retain their worktrees unless the requester explicitly overrides that rule.
 
 `mattermost-access` reads threads, follows forwarded post links, searches within a
 channel using Mattermost filters, and posts authorized replies, cross-thread notices,
@@ -299,15 +297,9 @@ Mattermost messaging settings: `MATTERMOST_URL` and `MATTERMOST_TOKEN` from
 `.env`, or `platforms.mattermost` `url`/`token` in `config.yaml`. Installing
 or syncing the skill does not send messages. Existing DM handoff records remain valid.
 
-`mattermost-onboarding` starts on the first Mattermost conversation routed to a
-project after connection, or when explicitly requested. It records PM/BE/FE/QA
-members, verified platform identities and domain/repository responsibilities in
-that profile's `memories/semantic/team.md`, linked from its memory index. Unknown
-roles remain explicit and only missing information is requested. Codev consults
-this map for relevant blocker, decision, review and testing mentions, using a
-separately verified GitLab identity for GitLab replies. This is skill guidance;
-connecting or syncing alone does not launch onboarding or send messages. Apply
-it to existing profiles with `hermes -p default gitlab sync-knowledge`.
+The profile's `memories/semantic/team.md` holds verified team identities and
+responsibilities for blocker, decision, review and testing mentions. Connecting
+or syncing does not launch onboarding or send messages.
 
 `TAXONOMY.md` defines durable project knowledge: small startup summaries, an index,
 topic pages for architecture/repositories/decisions/workflows, and dated observations.
@@ -324,8 +316,8 @@ and configured server let the agent discover them with available authenticated t
 Credentials are never included in this inventory.
 
 A managed **Project orientation and capabilities** block in `SOUL.md` defines
-the task lifecycle through one Mermaid state diagram. Prompts and shared skills cite
-its node IDs, retaining only personality, guards and operational details outside it.
+the task lifecycle through one Mermaid state diagram. Prompts and shared skills
+provide instructions for their specific tasks.
 Keeping the diagram in this block includes it in existing profile copy/sync behavior.
 The block tells the agent to read that inventory, consult saved knowledge, then
 inspect the README and code
@@ -334,7 +326,7 @@ Desktop conversations routed to the profile, and distinguishes supported tasks f
 the tools, credentials and permissions actually available. Mattermost still needs
 to reach the correct profile; a GitLab repository mapping does not route a chat channel.
 A Mattermost-triggered session answers questions and inspects code there. Implementation,
-code generation and task-doer work go through `codev-handoff`: confirm a GitLab issue,
+code generation and task-doer work require a confirmed GitLab issue:
 create or reuse it in a mapped repository, and assign this profile's Codev bot so the
 GitLab assignment session implements.
 
@@ -355,10 +347,11 @@ For a manual refresh after editing routes or updating the plugin, run
 `hermes -p default gitlab sync-knowledge`. This updates bundled skills once in
 `global-project`, backing up changed files under its `backups/gitlab-skills/sync-*/`.
 It links the installed `project-egg` starter and registered or retained GitLab
-profiles to the shared skills. Retired `codev-gitlab` folders in shared/project profiles
+profiles to the shared skills. Retired `codev-gitlab`, `codev-handoff`, `gitlab-cli`,
+`gitlab-workflow` and `mattermost-onboarding` folders in shared/project profiles
 and local copies of bundled skills are moved intact to each profile's
 `backups/gitlab-skills/sync-*/`, so they no longer shadow the shared versions.
-SOUL references are updated to `gitlab-workflow`. Printed backup paths retain customizations and supporting
+Printed backup paths retain customizations and supporting
 files for recovery. Other skills and learned knowledge stay in their profiles.
 Identical shared files are left alone; failed backups stop replacements. Automatic
 startup seeds missing shared files but preserves existing shared and local skills.
@@ -388,9 +381,9 @@ Use a new conversation after syncing to load the updated SOUL instructions.
 
 Project implementation on every surface requires a verified GitLab issue currently
 assigned to this profile's Codev bot; an MR must resolve to that issue. Questions,
-investigation and read-only reviews need no assignment. `codev-handoff` supports
-issue-only requests without assigning the bot. For an authorized assignment, it
-returns the issue link and leaves implementation with the GitLab worker, avoiding
+investigation and read-only reviews need no assignment. Issue-only requests do not
+assign the bot. An authorized assignment returns the issue link and leaves
+implementation with the GitLab worker, avoiding
 duplicate work from Desktop/TUI/CLI.
 
 A Mattermost mention about previous work can continue the owning GitLab issue session.
@@ -435,29 +428,23 @@ replies and evidence.
 The plugin supplies `card`, `conversation`, `clone`, `project`, `worktree`,
 `owned_repository_ids` and `gitlab_url` in each event. Clone paths are profile-relative
 `workspace/<numeric-repository-id>` locations; they do not imply a clone exists.
-The `gitlab-workflow` skill is bound to new GitLab sessions; later events reuse its full
-body in context. Call `skill_view` only if that body is missing or stale (for example,
-after a skill sync); a catalog description alone is insufficient. Other skill
-references follow the same rule, without skipping current task/account checks.
-It is written for this gateway's automatic
+The GitLab event supplies the current card context; the profile's `SOUL.md` defines
+assignment and worktree rules. This is written for the gateway's automatic
 discussion replies and does not depend on the older `gitlab-card` poller skill.
-`codev-handoff` prepares issues and authorized assignments on every surface;
-the Mattermost path ends with the verified link while the GitLab session implements.
+The Mattermost path ends with the verified issue link while the GitLab session implements.
 
-The agent follows that skill to verify or clone the repository with native Git
-over SSH, then runs its bundled `scripts/worktree.py` helper with a verified
-base commit. The helper uses native Git to prepare
-`.worktrees/<repository-id>-<issues|merge_requests>-<iid>` with a local `feature/`,
-`fix/`, or `chore/` branch based on the task, preserving existing worktrees and
-unfinished edits. It rejects paths
-outside the active profile's workspace. It changes no process-global working directory:
-the agent must use the returned directory for subsequent commands and file edits.
-Worktree preparation runs through the agent's terminal tool, not inside the poller.
+The agent verifies or clones the repository with native Git over SSH, then uses
+`git worktree add` with a verified base commit. New issue worktrees live under
+`workspace/<repository-id>/.worktrees/<conversation-key>` with a local `feature/`, `fix/`
+or `chore/` branch. The agent checks `git worktree list --porcelain` before creating
+or reusing one, keeps `/.worktrees/` in the clone's local Git exclude, preserves existing work and uses the verified worktree path for all
+subsequent edits and checks. Worktree preparation runs through the agent's terminal
+tool, not inside the poller.
 
 The key comes from the conversation, so a linked MR shares its issue's key. For a
 task spanning repositories, each owned clone gets a worktree with that same key.
 Standalone cards stay isolated. If an issue/MR link is added after work started,
-the skill preserves the older checkout and requires deliberate reconciliation of
+the agent preserves the older checkout and deliberately reconciles
 existing work; it never resets or deletes a branch to join the histories.
 
 Recurring setup procedures live in the profile's

@@ -664,7 +664,7 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Earlier context", event.text)
         self.assertNotIn("system context", event.text)
         self.assertFalse(event.allow_gateway_control)
-        self.assertEqual(event.auto_skill, "gitlab-workflow")
+        self.assertIsNone(event.auto_skill)
         self.assertIn("clone: workspace/42\n", event.text)
         self.assertIn("conversation: 42:issues:3\n", event.text)
         self.assertIn("worktree: workspace/42/.worktrees/42-issues-3\n", event.text)

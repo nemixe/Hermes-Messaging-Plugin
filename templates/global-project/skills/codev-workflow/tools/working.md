@@ -1,0 +1,33 @@
+# Working
+
+Prasyarat: issue GitLab benar-benar di-assign ke CoDev. Diverifikasi ulang setiap resume.
+
+**Runbook dulu.** Sebelum menyentuh kode, baca `memories/semantic/workflows/<gitlab-id>-runbook.md` (lihat `tools/runbook.md`). Kalau ada dan current: ikuti untuk setup, seed, start, login, test. Kalau tidak ada atau gagal: discovery, dan tulis runbook sambil jalan. App harus bisa dijalankan dan diakses CoDev sendiri sebelum Implementing dimulai; perubahan tidak dianggap terverifikasi kalau hanya lolos unit test tanpa pernah dilihat jalan.
+
+**Worktree.** Satu issue = satu worktree di `workspace/`, branch dinamai dari nomor issue. Dari sesi GitLab issue yang di-assign, verifikasi main clone di `PROJECT.yaml`, base commit, dan worktree yang sudah terdaftar dengan `git worktree list --porcelain`. Sebelum membuat worktree baru, pastikan `/.worktrees/` ada di local Git exclude main clone (`.git/info/exclude`) dan verifikasi dengan `git check-ignore -q .worktrees/`; ini mencegah checkout lain masuk ke `git add -A` pada main clone. Pilih prefix branch `feature`, `fix`, atau `chore` sesuai task, lalu gunakan native Git:
+
+```sh
+git -C "$HERMES_HOME/workspace/<project-id>" worktree add \
+  -b "feature/<project-id>-issues-<iid>" \
+  "$HERMES_HOME/workspace/<project-id>/.worktrees/<project-id>-issues-<iid>" \
+  '<verified-base-commit>'
+```
+
+Pastikan target kanonis tetap di workspace profil dan belum dipakai worktree lain. Verifikasi path dan branch hasilnya dengan `git worktree list --porcelain`, lalu gunakan path itu untuk semua edit, test, commit, dan MR. Jangan berbagi worktree antar issue. Saat resume, pakai worktree terdaftar yang sama; bila path hilang tetapi branch masih ada, periksa riwayat lalu tautkan kembali dengan `git worktree add <path> <existing-branch>` tanpa `-b`. Jangan jalankan `git clean -ffdx` dari main clone karena dapat menghapus worktree di bawah `.worktrees/`. Jangan force, reset, atau menghapus branch untuk mengatasi konflik.
+
+**InspectingRepository** — Sesi ini tidak punya memori percakapan Mattermost; konteks diambil dari artefak, urutannya:
+1. Deskripsi dan komentar issue: tujuan, keputusan, alternatif yang ditolak, AC.
+2. Permalink thread yang ditautkan di issue: buka lewat API Mattermost (baca saja), ambil detail yang belum tertulis di card.
+3. Memory: `semantic/repositories/<gitlab-id>.md` (konvensi, command), `semantic/decisions/` (keputusan lintas issue), `semantic/workflows/` (cara setup/test). Cek `verified_at` dan `status` sebelum mengandalkannya.
+4. Kode dan history GitLab yang relevan saja.
+Kalau card tidak punya konteks maupun permalink dan scope ambigu → NeedsContext, ditanyakan di issue GitLab, bukan di Mattermost. Detail yang ditemukan dari thread dan penting untuk MR dicatat ke issue supaya reviewer tidak perlu membuka Mattermost.
+
+**Implementing** — Perubahan terkecil yang lengkap. Commit dengan pesan yang menjelaskan alasan, bukan hanya perubahan. Nilai secret tidak pernah masuk commit atau log.
+
+**Validating** — Jalankan app dari worktree sesuai runbook dan verifikasi perilaku baru langsung (endpoint, UI, atau job), lalu test dan SonarQube. Perubahan yang mengubah cara setup/jalan (dependency, env, migration, seed) wajib memperbarui runbook di MR yang sama. Findings diperbaiki, bukan didebat. Ulangi sampai quality gate lolos.
+
+**PreparingMergeRequest** — MR terikat ke satu issue. Deskripsi: apa yang berubah, kenapa, cara verifikasi, coverage gap kalau ada. Bukti kualitas = self-review diff + CI + Sonar; kalau belum lengkap, MR tetap Draft dan ditandai belum terverifikasi.
+
+**Memory selama Working** — Kegagalan yang berguna, hasil validasi, dan link commit/MR dicatat ke `memories/episodic/YYYY-MM-DD.md`. Koreksi terverifikasi atas konvensi atau command repo diperbarui di `semantic/repositories/<gitlab-id>.md` (ubah `Current`, simpan alasan lama di `History`). Percobaan yang gagal tetap berlabel gagal, bukan prosedur.
+
+Blocker teknis → Blocked. MR dibuat → AwaitingReview.

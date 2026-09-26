@@ -26,6 +26,8 @@ from .adapter import ids, enqueue_handoff, _mattermost_access
 TEMPLATE_PROFILE = "project-egg"
 SHARED_PROFILE = "global-project"
 RESERVED_PROFILES = {"default", TEMPLATE_PROFILE, SHARED_PROFILE}
+RETIRED_SHARED_SKILLS = ("codev-gitlab", "mattermost-dm", "codev-handoff",
+                         "gitlab-cli", "gitlab-workflow", "mattermost-onboarding")
 PROJECT_MARKER = "hermes_gitlab_project"
 STARTER_BRIEF = (
     "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
@@ -110,20 +112,38 @@ def sync_project_knowledge(profile, config=None):
         raise ValueError("Project knowledge paths must not be symlinked")
     start, end = "<!-- hermes-gitlab:orientation:start -->", "<!-- hermes-gitlab:orientation:end -->"
     template = (Path(__file__).parent / "templates" / TEMPLATE_PROFILE / "SOUL.md").read_text()
-    block = start + template.split(start, 1)[1].split(end, 1)[0] + end
     before = soul.read_text() if soul.exists() else ""
-    if start in before or end in before:
-        if before.count(start) != 1 or before.count(end) != 1 or before.index(end) < before.index(start):
-            raise ValueError("Repair the managed project orientation markers in SOUL.md before syncing")
-        after = before[:before.index(start)] + block + before[before.index(end) + len(end):]
+    if start in template or end in template:
+        if template.count(start) != 1 or template.count(end) != 1 or template.index(end) < template.index(start):
+            raise ValueError("Repair the managed project orientation markers in the SOUL.md template")
+        block = start + template.split(start, 1)[1].split(end, 1)[0] + end
+        if start in before or end in before:
+            if before.count(start) != 1 or before.count(end) != 1 or before.index(end) < before.index(start):
+                raise ValueError("Repair the managed project orientation markers in SOUL.md before syncing")
+            after = before[:before.index(start)] + block + before[before.index(end) + len(end):]
+        else:
+            after = before + ("\n\n" if before else "") + block + "\n"
     else:
-        after = before + ("\n\n" if before else "") + block + "\n"
-    after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(use `skill_view` by name).")
-    after = after.replace("`codev-gitlab`", "`gitlab-workflow`").replace(
-        "skills/codev-gitlab/", "skills/gitlab-workflow/")
+        after = before or template
+    after = after.replace("(`skills/gitlab-cli/SKILL.md`).", "(using the configured GitLab host).")
+    after = after.replace("read `skills/codev-gitlab/SKILL.md` and follow its rules.",
+                          "Follow SOUL.md's assignment and worktree rules.")
     after = after.replace("mattermost-dm", "mattermost-access")
     after = after.replace("read `skills/gitlab-workflow/SKILL.md` and follow",
-                          "load `gitlab-workflow` with `skill_view` and follow")
+                          "follow SOUL.md and")
+    after = after.replace(
+        "For every GitLab event, load `gitlab-workflow` with `skill_view` and follow **Worktree**\n"
+        "before repository work. Each Card conversation",
+        "For every GitLab event, verify the assigned issue and use native `git worktree`\n"
+        "with a verified base commit to prepare or reuse its checkout before repository work.\n"
+        "Each Card conversation")
+    after = after.replace(
+        "For an assigned issue, use\n`codev-handoff` to queue this Mattermost mention into that issue's GitLab session;",
+        "For an assigned issue, run\n"
+        "`hermes -p default gitlab continue --issue '<project-id>:issues:<iid>'`\n"
+        "to queue this Mattermost mention into that issue's GitLab session;")
+    after = "".join(line for line in after.splitlines(keepends=True)
+                    if not (line.startswith("| ") and any(f"`{name}`" in line for name in RETIRED_SHARED_SKILLS)))
     after = after.replace(STARTER_BRIEF, STARTER_QUIET).replace(STARTER_SURFACES, STARTER_QUIET)
     data = None
     if config is not None:
@@ -190,7 +210,7 @@ def migrate_shared_skills(profile):
     """Archive retired skills and local copies; retain current shared skills."""
     bundle = Path(__file__).parent / "templates" / SHARED_PROFILE / "skills"
     backup_root = profile / "backups" / "gitlab-skills"
-    legacy = [profile / "skills/codev-gitlab", profile / "skills/mattermost-dm"]
+    legacy = [profile / "skills" / name for name in RETIRED_SHARED_SKILLS]
     if profile.name != SHARED_PROFILE:
         legacy.extend(profile / "skills" / skill.name for skill in sorted(bundle.iterdir())
                       if (skill / "SKILL.md").is_file())
@@ -302,6 +322,7 @@ def ensure_template():
             raise ValueError("The global-project profile is incomplete or its skills directory is symlinked")
         (shared / "skills").mkdir(exist_ok=True)
         sync_project_skills(shared, overwrite=False)
+        migrate_shared_skills(shared)
         if profile.is_symlink() or profile.parent.is_symlink():
             raise ValueError("The project-egg template profile must not be symlinked")
         if profile.exists():

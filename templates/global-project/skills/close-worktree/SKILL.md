@@ -8,40 +8,31 @@ metadata:
 
 # Close worktree
 
-Nodes: `Working`, `Completed`, `Blocked`.
 Shared contract: `$HERMES_HOME/SOUL.md`.
 Invoke `/close-worktree <path>`; omit path only for one unambiguous conversation
 checkout. Request authorizes normal cleanup, not unsaved-work loss, volume deletion
 or shared shutdown.
 
-## Target/creator check — `Working`, `Completed`, `Blocked`
+## Target and Git registration
 
-Before any shutdown, match runtime `HERMES_SESSION_ID` with `creator_session_id` in
-`codev-owner.json` under the target's `git rev-parse --absolute-git-dir`. Match profile,
-clone, worktree, conversation and creation ID against saved runtime/trigger records:
+Before any shutdown, resolve the requested path or one unambiguous conversation
+worktree. Require a current close request that identifies the target; a merge event
+or matching issue number alone does not authorize cleanup. For an open CoDev card,
+keep its worktree unless the requester explicitly overrides that retention rule.
 
-```sh
-python3 "$HERMES_HOME/../global-project/skills/gitlab-workflow/scripts/worktree.py" \
-  --clone '<verified-clone>' --card '<recorded-conversation>' \
-  --check-owner --creation-id '<recorded-creation-id>'
-```
+Use `git -C <verified-main-clone> worktree list --porcelain` and target-side
+`git rev-parse --show-toplevel`, `--git-common-dir` and branch inspection. Match
+the canonical target under this profile's `workspace/` to a registered linked
+worktree of the verified main clone and, for CoDev, to the current issue and branch.
+Accept registered worktrees inside the clone's `.worktrees/` or under
+`workspace/.worktrees/`. Reject symlink escapes, main clones, other profiles,
+unregistered directories and ambiguous targets. Git registration proves identity,
+not runtime ownership: match saved process/preview records to live handles before
+stopping anything. If path and registration are absent, use only a saved closure
+record matching the requested path, repository and issue, plus live resource evidence;
+never act on reused PIDs or names. Without that evidence, report uncertainty.
 
-Missing/corrupt evidence, mismatches or missing session ID leave checkout/runtime
-untouched. Report the recorded owner for routing to the original session; never
-rewrite ownership or export another ID. Conversation reuse and merge events do not
-transfer ownership. Legacy/non-Codev checkouts without evidence cannot auto-clean.
-Preserve ownership outside the worktree before removal; Git deletes its admin directory.
-Recheck immediately before removal for changed sessions/replaced checkouts.
-
-Resolve with `git -C <clone> worktree list --porcelain`; match canonical path, Git
-common directory, branch and conversation within this profile's `workspace/` clone's
-`.worktrees/`. Reject symlink escapes, main clones, other profiles and unregistered
-directories. Ambiguous targets require clarification. For an absent path/registration,
-use only the matching saved closure record for this creator/creation ID and verified
-live leftovers; old records cannot authorize reused PIDs, names or replacement
-checkouts. Without evidence, report uncertain ownership, not successful closure.
-
-## Unsaved data or live runtime — `Working`, `Completed`
+## Unsaved data or live runtime
 
 Inspect staged/unstaged/untracked/ignored files and submodules using metadata without
 secret contents. Preserve valuable changes, `.env`, uploads and local data outside
@@ -72,7 +63,7 @@ exports or a complete consistent snapshot after stopping writers; SQLite needs W
 and other required state, not just a copied live main file. Verify recovery artifacts
 outside checkout. External/shared volumes, networks and databases remain shared.
 
-## Teardown/retry — `Working`, `Completed`, `Blocked`
+## Teardown/retry
 
 1. Disable only owned restart/cleanup jobs. Use `tunnel-preview` for existing previews:
    restore settings without restarting this checkout's apps; cancel reconnect/restore
@@ -94,7 +85,7 @@ outside checkout. External/shared volumes, networks and databases remain shared.
 3. Verify targeted runtime stopped and no cwd/open files/mounts still depend on this
    directory. A shared service using it blocks removal until relocated. Recheck files
    and refresh verified final backups after shutdown, including restored env/uploads/
-   databases. Recheck creator gate, then normal Git removal:
+   databases. Recheck the close request, Git registration and active users, then normal Git removal:
 
    ```sh
    git -C <absolute-clone> worktree remove <absolute-worktree>
