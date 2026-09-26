@@ -30,7 +30,13 @@ Pindahkan status card ke testing (bukan closed), mention PIC QA di card. Isi han
 
 ## 3. Lapor di surface asal
 
-Catat handoff QA di issue GitLab. Jika request awal task berasal dari thread Mattermost dan permalink di issue cocok dengan channel/thread yang diverifikasi, SOUL mengizinkan satu ringkasan non-teknis di thread asal setelah deploy terverifikasi: apa yang sekarang bisa dilakukan, di environment mana, dan bahwa task siap QA. Gunakan `mattermost-access` untuk memeriksa tujuan sebelum posting. Jika asalnya GitLab, tidak terbukti, atau gateway sudah menyampaikan ringkasan itu di thread asal, jangan mengirim pesan Mattermost. Thread, channel, dan DM lain tetap memerlukan izin eksplisit.
+Catat handoff QA di issue GitLab. Untuk Mattermost, tentukan dulu **di mana sesi ini di-route**, karena itu menentukan mekanismenya:
+
+- **Sesi ini adalah thread Mattermost asal** → ringkasan non-teknis (apa yang sekarang bisa dilakukan, environment, siap QA) adalah **balasan final sesi**, dikirim gateway. Jangan `mattermost-access post`; hasilnya dobel.
+- **Sesi ini adalah GitLab issue** dan request awal datang dari thread Mattermost yang permalink-nya tercatat di issue dan terverifikasi → SOUL mengizinkan satu ringkasan ke thread itu lewat `mattermost-access post`, karena balasan final sesi ini pergi ke GitLab, bukan ke thread itu. Setelah post, balasan final di GitLab hanya merujuk permalink-nya, tidak mengulang isinya.
+- Asal tidak terbukti, atau ringkasan sudah pernah sampai di thread itu → tidak ada pesan Mattermost.
+
+Thread, channel, dan DM lain tetap memerlukan izin eksplisit.
 
 ## 4. Setelah handoff
 
