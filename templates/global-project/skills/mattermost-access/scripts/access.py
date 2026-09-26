@@ -280,6 +280,12 @@ def post_channel(channel, message, root=None, *, environ=None, home=None, reques
         raise ValueError("Supply the Mattermost post text")
     if len(message) > MAX_POST_LENGTH:
         raise ValueError(f"Mattermost post text must be at most {MAX_POST_LENGTH} characters")
+    env = os.environ if environ is None else environ
+    current_channel = (env.get("HERMES_SESSION_PLATFORM") == "mattermost"
+                       and env.get("HERMES_SESSION_CHAT_ID") == channel_id)
+    if current_channel and not root:
+        raise ValueError("The current Mattermost channel receives the final reply through Hermes; "
+                         "use the final response instead of access.py post")
     base_url, api = api_client(environ, home, request)
     payload = {"channel_id": channel_id, "message": message}
     if root:
@@ -287,6 +293,10 @@ def post_channel(channel, message, root=None, *, environ=None, home=None, reques
         if parent.get("channel_id") != channel_id:
             raise ValueError("The reply target belongs to another channel")
         payload["root_id"] = require_id(parent.get("root_id") or parent.get("id"), "reply root")
+        if (current_channel and payload["root_id"] ==
+                (env.get("HERMES_SESSION_THREAD_ID") or env.get("HERMES_SESSION_MESSAGE_ID"))):
+            raise ValueError("The current Mattermost thread receives the final reply through Hermes; "
+                             "use the final response instead of access.py post")
     post = api("POST", "posts", payload)
     post_id = str((post or {}).get("id") or "")
     if not USER_ID.fullmatch(post_id):

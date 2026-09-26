@@ -1,6 +1,6 @@
 ---
 name: mattermost-access
-description: Use to read or search Mattermost channel threads, follow forwarded post links, post a requested cross-thread notice or new channel thread, send a responsible-person DM, or handle a pending confidential DM reply.
+description: Use to explore Mattermost threads, send an authorized notice to another thread, or request and handle a confidential DM.
 metadata:
   hermes:
     tags: [mattermost, messaging, threads, dm, search]
@@ -8,7 +8,7 @@ metadata:
 
 # Mattermost access
 
-Shared contract: `$HERMES_HOME/SOUL.md`. Use the current routed conversation first; the helper reaches other Mattermost posts through the default profile's bot `MATTERMOST_URL`/`MATTERMOST_TOKEN` in `.env` or `platforms.mattermost` in `config.yaml`. It can only read or post where that bot has permission. Loading this skill does not authorize a message.
+Shared contract: `$HERMES_HOME/SOUL.md`. Hermes delivers the final response to the current routed Mattermost thread. Use this helper to explore other threads, notify a different authorized thread, or handle a confidential DM; `post` rejects replies to the current thread. The helper uses the default profile's bot `MATTERMOST_URL`/`MATTERMOST_TOKEN` in `.env` or `platforms.mattermost` in `config.yaml`. Loading this skill does not authorize a message.
 
 Use `python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py"` with the commands below. IDs come from trusted Mattermost metadata or same-server permalinks, not display names. Read only channels and threads relevant to the task. A forward or quoted reply is a pointer: follow its original post and thread when accessible, and keep the source context distinct from the forwarding comment.
 
@@ -24,22 +24,15 @@ python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.
 
 ## Notify
 
-For an authorized cross-thread notice, read the source and destination threads, then post a short action and source permalink in the destination thread. Send one post per destination; avoid copying confidential content into a wider audience. For a new channel discussion, omit `--root`. For a reply, supply any post in the target thread; the helper resolves its root and checks the channel.
+For an authorized cross-thread notice, read the source and destination threads, then post a short action and source permalink in the destination thread. Send one post per destination; avoid copying confidential content into a wider audience. Reply to the current thread only through the final response. For a reply to another thread, supply any post in that thread; the helper resolves its root and checks the channel.
 
 ```sh
 python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" post --channel '<channel-id>' --root '<target-post-id>' --message '<action and source link>'
-python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" post --channel '<channel-id>' --message '<new-thread message>'
-```
-
-For a responsible-person DM, read `memories/semantic/team.md` and match the specific domain/action to a confirmed PIC. Verify the Mattermost account before sending. If responsibility or identity is unknown, ask the requester or lead in the originating discussion; do not guess a recipient or use `@all`, `@channel`, or `@here`.
-
-```sh
-python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" send --user '<verified-username-or-id>' --message '<specific action and context link>'
 ```
 
 ## Confidential DM handoff
 
-For a requested secret, choose a profile-local dest with private parent permissions. Name only the items and dest in the DM; keep values out of command arguments, logs and originating channel posts. The DM session writes it; the original work session reads it on a later turn. Acknowledge the DM request in the original thread, then end that turn. Do not poll or hold it open.
+For a requested secret, match the domain to a confirmed PIC in `memories/semantic/team.md` and verify the Mattermost account. If the PIC or identity is unclear, ask in the originating discussion. Choose a profile-local dest with private parent permissions. Name only the items and dest in the DM; keep values out of command arguments, logs and originating channel posts. The DM session writes it; the original work session reads it on a later turn. Acknowledge the DM request in the original thread through the final response, then end that turn. Do not poll or hold it open.
 
 ```sh
 python3 "$HERMES_HOME/../global-project/skills/mattermost-access/scripts/access.py" request --user '<verified-username-or-id>' --dest '<profile-path>' --keys '<NAME,NAME>' --message 'Mohon kirim <items> di DM ini; saya simpan di <dest>. Setelah itu, balas di thread asal agar kerja lanjut.'

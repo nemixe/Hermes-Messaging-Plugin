@@ -358,6 +358,40 @@ class MattermostDM(unittest.TestCase):
             {"channel_id": CHANNEL_ID, "message": "New discussion"},
         ])
 
+    def test_post_helper_rejects_current_mattermost_thread(self):
+        reply_id = "r" * 26
+        other_id = "o" * 26
+        calls = []
+
+        def api(method, path, payload=None):
+            calls.append((method, path, payload))
+            if path == f"posts/{reply_id}":
+                return {"id": reply_id, "channel_id": CHANNEL_ID, "root_id": POST_ID}
+            if path == f"posts/{other_id}":
+                return {"id": other_id, "channel_id": CHANNEL_ID, "root_id": ""}
+            if path == "posts":
+                return {"id": "n" * 26}
+            raise AssertionError(path)
+
+        with tempfile.TemporaryDirectory() as directory:
+            self.write_env(directory, MATTERMOST_URL="https://mm.example.invalid", MATTERMOST_TOKEN=TOKEN)
+            for thread_id, message_id in ((POST_ID, reply_id), ("", POST_ID)):
+                environ = {"HERMES_SESSION_PLATFORM": "mattermost",
+                           "HERMES_SESSION_CHAT_ID": CHANNEL_ID,
+                           "HERMES_SESSION_THREAD_ID": thread_id,
+                           "HERMES_SESSION_MESSAGE_ID": message_id}
+                with self.assertRaisesRegex(ValueError, "current Mattermost thread"):
+                    self.dm.post_channel(CHANNEL_ID, "duplicate final", reply_id,
+                                         environ=environ, home=directory, request=api)
+                with self.assertRaisesRegex(ValueError, "current Mattermost channel"):
+                    self.dm.post_channel(CHANNEL_ID, "duplicate new thread",
+                                         environ=environ, home=directory, request=api)
+            posted = self.dm.post_channel(CHANNEL_ID, "notify another thread", other_id,
+                                          environ=environ, home=directory, request=api)
+
+        self.assertEqual(posted["root_id"], other_id)
+        self.assertEqual(sum(method == "POST" and path == "posts" for method, path, _ in calls), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
