@@ -29,15 +29,6 @@ RESERVED_PROFILES = {"default", TEMPLATE_PROFILE, SHARED_PROFILE}
 RETIRED_SHARED_SKILLS = ("codev-gitlab", "mattermost-dm", "codev-handoff",
                          "gitlab-cli", "gitlab-workflow", "mattermost-onboarding")
 PROJECT_MARKER = "hermes_gitlab_project"
-STARTER_BRIEF = (
-    "Be brief. Keep responses concise and direct; expand only when the user asks or\n"
-    "essential details are needed.\n"
-)
-STARTER_SURFACES = (
-    "Keep messaging posts concise. Keep the Hermes session as a detailed workbench.\n"
-)
-
-STARTER_QUIET = "Keep visible replies concise: one preamble, the final result, or an actionable blocker.\n"
 
 
 def configure_project_display(profile):
@@ -154,7 +145,6 @@ def sync_project_knowledge(profile, config=None, *, replace_soul=False):
         "to queue this Mattermost mention into that issue's GitLab session;")
     after = "".join(line for line in after.splitlines(keepends=True)
                     if not (line.startswith("| ") and any(f"`{name}`" in line for name in RETIRED_SHARED_SKILLS)))
-    after = after.replace(STARTER_BRIEF, STARTER_QUIET).replace(STARTER_SURFACES, STARTER_QUIET)
     if replace_soul:
         after = template
     data = None

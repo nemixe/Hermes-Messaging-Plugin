@@ -259,8 +259,8 @@ out of the distributed plugin template.
 The GitLab bot PAT still belongs to the default profile's Messaging settings.
 
 Installation also creates `~/.hermes/profiles/global-project/` as a shared skills
-profile. Bundled `codev-workflow`, `tunnel-preview`, `close-worktree` and
-`mattermost-access` skills are seeded from `templates/global-project/skills/`. Put additional
+profile. Bundled `codev-workflow`, `tunnel-preview`, `close-worktree`,
+`mattermost-access` and `caveman` skills are seeded from `templates/global-project/skills/`. Put additional
 shared skills in `global-project/skills/<skill-name>/SKILL.md`. The
 plugin merges `../global-project/skills` into `project-egg`'s
 `skills.external_dirs`, preserving other skill directories and settings. New
@@ -270,6 +270,10 @@ The relative path resolves from each
 profile's home, including on another backend. Reloading preserves shared profile
 files and avoids duplicate entries. Neither starter nor shared profile can be
 registered or deleted through GitLab Projects.
+
+`caveman` (from JuliusBrussee/caveman) is the shared reply-brevity skill. Reply
+style is controlled only through each profile's SOUL.md and this skill; the CLI
+no longer injects brevity lines into SOUL.md during sync.
 
 `tunnel-preview` handles requested temporary public previews: one Pinggy SSH tunnel
 per web/API service, temporary application URL/origin environment settings, public

@@ -241,7 +241,7 @@ class ProjectSetup(unittest.TestCase):
             self.assertIn(str(backups[0].parent.parent), output)
             with patch.dict(os.environ, {"HERMES_HOME": str(profile)}):
                 _external_dirs_cache_clear()
-                for name in ("tunnel-preview", "close-worktree", "mattermost-access", "codev-workflow"):
+                for name in ("tunnel-preview", "close-worktree", "mattermost-access", "codev-workflow", "caveman"):
                     viewed = json.loads(skill_view(name))
                     self.assertEqual(Path(viewed["_source_path"]).resolve(),
                                      (shared / "skills" / name / "SKILL.md").resolve())
