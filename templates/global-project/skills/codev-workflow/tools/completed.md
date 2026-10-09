@@ -30,10 +30,10 @@ Geser card ke list Testing sesuai peta `## Board` repo (`tools/board.md`; peta `
 
 ## 3. Lapor di surface asal
 
-Catat handoff QA di issue GitLab. Untuk Mattermost, tentukan dulu **di mana sesi ini di-route**, karena itu menentukan mekanismenya:
+Catat handoff QA di issue GitLab dan verifikasi status card sesuai langkah 2 lewat `tools/board.md`. Terapkan aturan **Laporan ke user** di `SKILL.md` untuk menentukan apakah perlu pesan dan formatnya; detail handoff tetap di card. Jika perlu laporan ke Mattermost, tentukan **di mana sesi ini di-route**, karena itu menentukan mekanismenya:
 
-- **Sesi ini adalah thread Mattermost asal** → ringkasan non-teknis (apa yang sekarang bisa dilakukan, environment, siap QA) adalah **balasan final sesi**, dikirim gateway. Jangan `mattermost-access post`; hasilnya dobel.
-- **Sesi ini adalah GitLab issue dengan `Mattermost origin:` di dispatch** → ringkasan lengkap menjadi balasan final; gateway meneruskannya ke thread asal. Jangan `mattermost-access post` dari sesi ini.
+- **Sesi ini adalah thread Mattermost asal** → laporan singkat adalah **balasan final sesi**, dikirim gateway. Jangan `mattermost-access post`; hasilnya dobel.
+- **Sesi ini adalah GitLab issue dengan `Mattermost origin:` di dispatch** → laporan singkat menjadi balasan final; gateway meneruskannya ke thread asal. Jangan `mattermost-access post` dari sesi ini.
 - **Sesi ini adalah GitLab issue tanpa relay tersebut**, tetapi permalink thread asal tercatat di issue dan terverifikasi → SOUL mengizinkan satu ringkasan ke thread itu lewat `mattermost-access post`. Verifikasi post berhasil; balasan final di GitLab merujuk permalink-nya.
 - Asal tidak terbukti, atau ringkasan sudah pernah sampai di thread itu → tidak ada pesan Mattermost.
 

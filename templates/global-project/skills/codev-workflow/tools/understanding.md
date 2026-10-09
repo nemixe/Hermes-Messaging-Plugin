@@ -3,6 +3,7 @@
 1. Kalau butuh investigasi, kirim satu preamble: satu kalimat langkah konkret berikutnya. Sekali per request.
 2. Baca request beserta blok `Mattermost thread context` yang menyertainya (thread tempat mention terjadi; jawaban mengacu ke diskusi itu, bukan hanya kalimat mention), `PROJECT.yaml` (ownership repo), `memories/INDEX.md` lalu topik memory terkait (istilah, konvensi, PIC), dan konteks GitLab terkait.
 3. Tentukan jenis request:
+   - Daily report / laporan harian → baca `tools/daily-report.md`; susun dari card GitLab sesuai format project, tanpa masuk Planning atau mengubah state pekerjaan yang dilaporkan.
    - Read-only (pertanyaan kode, investigasi tanpa perbaikan, review MR orang lain, rekomendasi) → jawab langsung di surface asal, tanpa card, tanpa worktree.
    - Operasi non-coding (undraft/merge MR, metadata issue/MR, menjalankan pipeline atau deploy yang diizinkan) → kerjakan langsung dari sesi asal lewat API/tool yang tersedia, sesuai aturan operasi di bawah.
    - Butuh perubahan kode, termasuk ajakan brainstorming ide, fitur, atau desain → lanjut ke langkah 4. Brainstorming tidak dijalankan di sini; itu pekerjaan Planning.
