@@ -4,7 +4,7 @@ Gunakan resep ini untuk membuat atau memperbarui card dengan deskripsi Markdown 
 
 ## Urutan eksekusi
 
-1. Susun payload dari template yang telah dibaca. Tetapkan title, description, label yang telah diverifikasi, confidentiality, issue type, dan assignee sesuai otorisasi; untuk card yang belum di-assign gunakan `assignee_ids: []` agar pembuatan card tidak memulai implementasi.
+1. Susun payload dari template yang telah dibaca. Tetapkan title, description, label yang telah diverifikasi, confidentiality, issue type, dan assignee sesuai otorisasi. Card dari request messaging di luar GitLab, termasuk child task/pecahan, mengikuti **Asal handoff** dan **Thread asal pada card** di `SKILL.md`: cantumkan permalink di setiap card, create dengan `assignee_ids: []`, lalu verifikasi sebelum assignment terpisah. Card lain yang belum di-assign juga memakai `assignee_ids: []`.
 2. Kirim JSON dengan header eksplisit `Content-Type: application/json` ketika memakai `--input -`; input JSON tanpa header ini dapat ditolak sebagai tipe media yang tidak didukung.
 3. Simpan project ID, IID, dan `web_url` dari response. Baca kembali issue berdasarkan project ID dan IID, lalu verifikasi deskripsi, label, assignee, dan status yang dimaksud.
 4. Untuk card berpasangan, buat card pertama dengan keterangan relasi sementara yang jujur, buat card kedua dengan URL pertama, lalu update deskripsi pertama memakai URL kedua. Baca kembali setiap target setelah write dan pastikan tidak ada placeholder tautan yang tersisa.

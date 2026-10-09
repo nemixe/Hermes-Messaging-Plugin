@@ -23,7 +23,7 @@ PIC tidak teridentifikasi → balasan final tetap berisi hal yang sama tanpa men
 
 Berlaku kalau permalink thread asal tercatat di issue (dari Planning) atau `origin_url` handoff terverifikasi, **terlepas dari PIC teridentifikasi atau tidak**.
 
-- Verifikasi dulu dengan `mattermost-access thread --post '<permalink>'`: thread ada, channel cocok dengan yang tercatat, dan laporan untuk revisi MR ini belum disampaikan.
+- Verifikasi dulu dengan `mattermost-access thread --post '<permalink>'`: thread ada, channel cocok dengan yang tercatat, dan hasil, pertanyaan, blocker, atau kesiapan revisi MR yang sama belum disampaikan. Mekanisme pengiriman ini juga dipakai state lain untuk laporan tanpa MR.
 - Pilih satu jalur pengiriman:
   - Sesi ini di-route ke thread Mattermost asal → laporan lengkap menjadi balasan final.
   - Sesi GitLab dengan `Mattermost origin:` di dispatch → laporan lengkap menjadi balasan final GitLab; gateway meneruskannya ke thread asal, termasuk fallback pengiriman. Jangan `mattermost-access post` dari sesi ini. Sesi Mattermost yang menerima relay wajib menyampaikan link dan kesiapan MR dalam balasan finalnya.
