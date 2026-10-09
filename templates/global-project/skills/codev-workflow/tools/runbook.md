@@ -26,7 +26,7 @@ verified_at: <tanggal> @ <commit>
 6. Start: perintah jalan, port, URL lokal, cara stop; konflik port/data kalau dua worktree jalan bersamaan.
 7. Health check: cara tahu app benar-benar hidup (endpoint, log yang harus muncul).
 8. Akses app: akun uji/role yang tersedia dan di mana credential-nya disimpan (private runtime state), langkah login, batasan (mis. OTP, SSO).
-9. Test & lint: perintah unit/integration/e2e dan durasi kira-kira; status setup Sonar, serta perintah dan quality gate-nya jika tersedia.
+9. Test & lint: status setup unit test dan E2E secara terpisah (tersedia, belum dikonfigurasi, atau tersedia tetapi gagal/terhambat), bukti konfigurasi/script/CI, serta perintah test/lint yang tersedia dan durasi kira-kira; status setup Sonar, serta perintah dan quality gate-nya jika tersedia.
 10. Build & deploy: perintah build, environment tujuan, siapa yang berwenang, cara verifikasi hasil deploy.
 11. Jebakan yang sudah ditemui: gejala → penyebab → solusi.
 ## Sources
@@ -34,6 +34,8 @@ verified_at: <tanggal> @ <commit>
 ```
 
 ## Aturan
+
+- Unit test dan E2E mengikuti aturan setup di [Working](working.md#kelas-verifikasi), termasuk saat onboarding. Catat setup yang belum tersedia; pembuatan setup baru hanya untuk scope yang diminta eksplisit.
 
 - Perintah ditulis persis seperti yang berhasil dijalankan, dengan working directory-nya.
 - Secret tidak pernah masuk runbook; hanya nama variabel dan lokasi. Credential akun uji disimpan di private runtime state profil CoDev dan runbook hanya menunjuk ke sana.

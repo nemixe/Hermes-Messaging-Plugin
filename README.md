@@ -504,19 +504,27 @@ team acceptance criteria; merge and deployment still require authorization.
 
 Verification follows the risk-based [CoDev classification](templates/global-project/skills/codev-workflow/tools/working.md#kelas-verifikasi).
 Static/visual changes use relevant static checks and rendered visual evidence;
-isolated behavior uses focused unit/component/integration tests and a UI smoke check
-when applicable. Automated E2E is required for cross-system or critical flows,
-including backend-only authorization or data-integrity changes. Run affected
-scenarios; a full suite is reserved for broad shared changes or explicit gates.
-Existing repository gates and acceptance criteria remain mandatory.
+isolated behavior uses focused tests with existing setup and a UI smoke check
+when applicable. Unit tests and automated E2E are written, updated and run only
+when the codebase already has setup for that test type; check each separately.
+Automated E2E is required for cross-system or critical flows only when E2E setup
+already exists, including backend-only authorization or data-integrity changes.
+Run affected scenarios; a full suite is reserved for broad shared changes or explicit gates.
+Verify acceptance criteria and existing repository gates with available checks.
+When setup is absent, record that status and coverage gaps in the runbook/MR,
+and use available lint/build/static checks and relevant smoke/manual checks.
+Missing setup alone does not block work or keep an MR draft. Create a new test
+framework, runner configuration or pipeline only when explicitly requested as task
+scope. Existing setup that fails or lacks environment prerequisites remains a
+failed/blocked check, not absent setup.
 Required E2E adds coverage only for gaps in the changed behavior. Start at the
 affected step using fixtures or a saved session; complete journeys across modules
 are needed only when those module relationships are affected or explicitly required.
 Running an existing full suite does not require adding full journeys.
 
 The MR records the class/reason, scenarios, commands/results, revision and coverage
-gaps, plus reviewer-accessible screenshots for UI changes. E2E setup and environment
-diagnosis have a 10-minute local budget per task; required checks remain incomplete
+gaps, plus reviewer-accessible screenshots for UI changes. Environment preparation
+and diagnosis for existing E2E setup have a 10-minute local budget per task; required checks remain incomplete
 if that budget is exhausted. Failed or missing mandatory evidence keeps the MR
 draft; optional E2E does not block review.
 

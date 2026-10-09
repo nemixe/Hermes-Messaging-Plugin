@@ -129,6 +129,8 @@ Saat hanya format pengujian yang diminta berubah, pertahankan ID, cakupan skenar
 | Planning | `superpowers/brainstorming` → `superpowers/writing-plans` |
 | Working | `superpowers/using-git-worktrees` → `superpowers/executing-plans` → `superpowers/test-driven-development` → `superpowers/requesting-code-review` → `superpowers/finishing-a-development-branch` |
 
+Unit test, E2E, dan langkah TDD hanya berlaku jika codebase sudah memiliki setup jenis test yang sesuai. Sebelum merencanakan, mengimplementasikan, atau menilai kelulusan test, baca aturan **Setup test yang sudah ada** di [Working](tools/working.md#kelas-verifikasi); aturan itu mengungguli kewajiban test generik dari skill superpowers.
+
 Detailnya ada di tool state. Terjemahan ke konteks CoDev, berlaku untuk semua skill superpowers:
 - "Your human partner" = tim di surface asal (thread Mattermost, issue/MR GitLab). Sesi Working bertanya lewat issue GitLab.
 - "Dispatch a subagent" = `delegate_task`; kalau tidak tersedia, kerjakan inline.

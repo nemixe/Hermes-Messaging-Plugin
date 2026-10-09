@@ -124,10 +124,18 @@ saat implementasi atau feedback mengubah perilaku, dan dirujuk saat handoff QA.
 
 CoDev memilih [kelas verifikasi](../templates/global-project/skills/codev-workflow/tools/working.md#kelas-verifikasi)
 dari dampak perubahan. Perubahan visual memakai cek statis dan bukti render;
-perilaku terisolasi memakai unit/component/integration test terfokus dan smoke UI
-bila relevan. E2E otomatis wajib untuk alur lintas sistem atau kritis, termasuk
-perubahan backend pada otorisasi atau integritas data. Skenario terdampak cukup;
-suite penuh mengikuti dampak luas atau gate eksplisit repo. AC dan gate repo tetap wajib.
+perilaku terisolasi memakai test terfokus dengan setup yang tersedia dan smoke UI
+bila relevan. Unit test dan E2E otomatis hanya ditulis, diperbarui, dan dijalankan
+jika codebase sudah memiliki setup jenis test tersebut; periksa masing-masing
+secara terpisah. E2E otomatis wajib untuk alur lintas sistem atau kritis hanya jika
+setup E2E sudah ada, termasuk perubahan backend pada otorisasi atau integritas data. Skenario terdampak cukup;
+suite penuh mengikuti dampak luas atau gate eksplisit repo. AC dan gate repo diverifikasi dengan pemeriksaan yang tersedia.
+Jika setup belum ada, catat status dan coverage gap di runbook/MR, lalu gunakan
+lint/build/cek statis yang tersedia serta smoke/manual check yang relevan.
+Ketiadaan setup sendiri tidak memblokir pekerjaan atau menahan MR sebagai Draft.
+Framework, konfigurasi runner, atau pipeline test baru hanya dibuat jika diminta
+secara eksplisit sebagai scope task. Setup yang ada tetapi gagal atau kekurangan
+prasyarat lingkungan tetap dicatat gagal/terhambat, bukan belum dikonfigurasi.
 E2E wajib hanya menambah coverage untuk gap perilaku yang berubah. Mulai langsung
 di langkah terdampak lewat fixture/session tersimpan; journey lengkap lintas modul
 hanya diperlukan jika hubungan antarmodul ikut berubah atau diwajibkan eksplisit.
@@ -136,7 +144,7 @@ Menjalankan suite penuh yang sudah ada tidak berarti menambah journey lengkap.
 MR mencatat kelas/alasan, skenario, perintah/hasil, revisi, dan coverage gap.
 Perubahan UI menyertakan screenshot render pada revisi yang diuji melalui upload
 GitLab atau artifact yang dapat diakses reviewer; path lokal saja tidak cukup.
-Setup dan diagnosis lingkungan E2E lokal dibatasi 10 menit per task. Jika bukti
+Persiapan lingkungan dan diagnosis setup E2E yang sudah ada dibatasi 10 menit per task. Jika bukti
 wajib belum lengkap, MR tetap Draft dan issue belum dipindah ke review; E2E opsional
 yang tidak tersedia tidak menahan review bila bukti minimum kelasnya sudah lulus.
 
