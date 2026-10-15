@@ -1,0 +1,60 @@
+Busy input acceptance and completion fix — 2026-10-15
+
+Status
+Implemented in /Users/saidulumam/Documents/ChatGPT/hermes-redirect-fix
+Branch: codex/fix-redirect-admission
+Base: 0e427d788d25 (same source revision inspected on Mac Mini).
+The live Mac Mini gateway has not been modified or restarted.
+
+Deliverables
+hermes-busy-input-lifecycle.patch: shared Hermes gateway change and regression tests.
+tests/test_gitlab.py: additional integration test using the real GitLab adapter,
+gateway busy handler, SQLite inbox, and a local fake GitLab HTTP API.
+No real GitLab comments or provider requests were needed for these tests.
+
+Behavior
+Successful redirects and steers report admission to durable connectors.
+Absorbed messages receive start/completion callbacks on their intake adapter.
+Completion follows the answering response's delivery result, including early
+delivery before the next queued turn. Cancellation uses the existing Base outcome.
+Hook execution is serialized per message; cancellation preserves unprocessed children.
+GitLab retains its inbox, completion checks, and retry behavior.
+
+Verification
+88 focused gateway tests passed on the final implementation.
+62 GitLab transport tests passed on the final implementation.
+12 repository lint checks passed (scripts/check --base HEAD).
+Desktop checks passed (node tests/check_desktop.mjs).
+The patch passed git apply --check against the unmodified base and
+git apply --reverse --check against the implementation checkout.
+The original admission test failed before the fix. Additional review regressions
+failed before their fixes, covering hook ordering, cancellation fanout, early
+delivery outcomes, and cancellation during first-response delivery.
+
+Broader checks and existing failures
+Gateway suite: 9,490 passed, 2 failed, 101 skipped across 1,018 test files.
+GitLab plugin suite: 119 passed, 1 failed across 120 tests.
+Full Hermes suite was started, then stopped after an unrelated LSP failure;
+the full 5,557-file suite was not completed.
+These failures also reproduce against the unchanged gateway base:
+
+1. tests/gateway/test_readiness.py::test_collect_runtime_readiness_reports_healthy_local_runtime
+   Readiness returns degraded rather than the fixture's expected ok.
+2. tests/gateway/test_update_streaming.py::TestCmdUpdateGatewayMode::test_gateway_flag_enables_gateway_prompt_for_stash
+   The test's home-I/O guard rejects a lookup under the existing test interpreter's
+   installation in the real Hermes home.
+3. tests/test_projects.py::ProjectSetup::test_orientation_limits_visible_messages_across_surfaces
+   An existing SOUL text expectation no longer matches the template.
+4. tests/agent/lsp/test_workspace.py::test_resolve_workspace_for_file_survives_deleted_cwd
+   Workspace resolution returns None after the current directory is deleted.
+
+Execution environment
+Core tests ran through scripts/run_tests.sh with the existing PM test interpreter,
+clean credentials, temporary HERMES_HOME, and per-file isolation.
+Plugin tests ran through unittest in a clean environment and temporary home, using
+the patched source and the existing installed PyYAML dependency. No environments
+or dependencies were mutated.
+
+Review
+Independent review identified three lifecycle issues plus a cancellation detail;
+all were reproduced, corrected, and reviewed again with no remaining material findings.

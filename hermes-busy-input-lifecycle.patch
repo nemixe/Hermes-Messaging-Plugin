@@ -1,0 +1,433 @@
+diff --git a/gateway/platforms/base.py b/gateway/platforms/base.py
+index 651743e88f0..1fdac0228d2 100644
+--- a/gateway/platforms/base.py
++++ b/gateway/platforms/base.py
+@@ -3551,13 +3551,8 @@ class BasePlatformAdapter(ABC):
+ 
+     async def _run_processing_hook(self, hook_name: str, *args: Any, **kwargs: Any) -> None:
+         """Run a lifecycle hook without letting failures break message flow."""
+-        hook = getattr(self, hook_name, None)
+-        if not callable(hook):
+-            return
+-        try:
+-            await hook(*args, **kwargs)
+-        except Exception as e:
+-            logger.warning("[%s] %s hook failed: %s", self.name, hook_name, e)
++        from gateway.platforms.processing import run_processing_hook
++        await run_processing_hook(self, hook_name, *args, **kwargs)
+ 
+     @staticmethod
+     def _is_retryable_error(error: Optional[str]) -> bool:
+@@ -4161,6 +4156,8 @@ class BasePlatformAdapter(ABC):
+                     event._gateway_accepted = self._start_session_processing(event, session_key)
+                     return
+             if handled:
++                from gateway.platforms.processing import start_absorbed_processing
++                await start_absorbed_processing(self, event)
+                 return
+         # Without a runner FIFO, do not merge a wake into an occupied human slot
+         # (or collapse distinct wakes into one turn). Its caller can retry admission.
+diff --git a/gateway/platforms/event.py b/gateway/platforms/event.py
+index 54ecff5519e..012fa91c412 100644
+--- a/gateway/platforms/event.py
++++ b/gateway/platforms/event.py
+@@ -4,6 +4,7 @@ A leaf module: adapters, helpers and the runner import it, so it must not import
+ gateway.platforms.*.
+ """
+ 
++import asyncio
+ import re
+ from dataclasses import dataclass, field
+ from datetime import datetime
+@@ -104,6 +105,12 @@ class MessageEvent:
+ 
+     # Process-local admission receipt, never routing metadata or execution acknowledgement.
+     _gateway_accepted: bool = field(default=False, init=False, repr=False, compare=False)
++    # Inputs absorbed by a live turn finish with its delivery, not with their busy acknowledgement.
++    _processing_followups: list[tuple[Any, "MessageEvent"]] = field(
++        default_factory=list, init=False, repr=False, compare=False)
++    _processing_deferred: bool = field(default=False, init=False, repr=False, compare=False)
++    _processing_started: bool = field(default=False, init=False, repr=False, compare=False)
++    _processing_lock: asyncio.Lock = field(default_factory=asyncio.Lock, init=False, repr=False, compare=False)
+     # Run-owned final presentation snapshot; never deserialized from ingress metadata.
+     _notification_reply_muted: Optional[bool] = field(default=None, init=False, repr=False, compare=False)
+ 
+diff --git a/gateway/platforms/processing.py b/gateway/platforms/processing.py
+new file mode 100644
+index 00000000000..66d7c904434
+--- /dev/null
++++ b/gateway/platforms/processing.py
+@@ -0,0 +1,46 @@
++"""Processing hooks for inbound messages, including inputs absorbed by an active turn."""
++
++import logging
++
++from gateway.platforms.event import MessageEvent
++
++
++logger = logging.getLogger("gateway.platforms.base")
++
++
++async def start_absorbed_processing(adapter, event: MessageEvent) -> None:
++    if event._processing_deferred:
++        await adapter._run_processing_hook("on_processing_start", event)
++
++
++async def run_processing_hook(adapter, hook_name: str, event: MessageEvent, *args, **kwargs) -> None:
++    if hook_name == "on_processing_complete" and event._processing_deferred:
++        return
++    async with event._processing_lock:
++        await _run_locked_processing_hook(adapter, hook_name, event, *args, **kwargs)
++
++
++async def _run_locked_processing_hook(adapter, hook_name: str, event: MessageEvent, *args, **kwargs) -> None:
++    if hook_name == "on_processing_start":
++        if event._processing_started:
++            return
++        event._processing_started = True
++    hook = getattr(adapter, hook_name, None)
++    if callable(hook):
++        try:
++            await hook(event, *args, **kwargs)
++        except Exception:
++            logger.warning("[%s] %s hook failed", adapter.name, hook_name, exc_info=True)
++    if hook_name == "on_processing_complete":
++        event._processing_started = False
++        await finish_absorbed_processing(event, *args, **kwargs)
++
++
++async def finish_absorbed_processing(event: MessageEvent, outcome, *, followups=None) -> None:
++    for entry in list(event._processing_followups) if followups is None else followups:
++        intake_adapter, followup = entry
++        followup._processing_deferred = False
++        # Cancellation during the busy acknowledgement can precede its start hook.
++        await intake_adapter._run_processing_hook("on_processing_start", followup)
++        await intake_adapter._run_processing_hook("on_processing_complete", followup, outcome)
++        event._processing_followups.remove(entry)
+diff --git a/gateway/run_busy.py b/gateway/run_busy.py
+index bf6d7d9ed27..cd56b9a60fb 100644
+--- a/gateway/run_busy.py
++++ b/gateway/run_busy.py
+@@ -679,10 +679,15 @@ class GatewayBusySessionMixin:
+         """The running turn now answers *event* too (steer, redirect): if *event* was addressed to
+         the bot, a bare silence marker must not end the turn. Returns the turn, or None when a newer
+         turn already owns the slot."""
++        event._gateway_accepted = True
+         turn = self._session_state(session_key).turn
+         if turn.agent is not running_agent:
+             return None
+         if turn.event is not None and turn.event is not event:
++            adapter = self._intake_adapter_for(event.source)
++            if adapter is not None and not event._processing_deferred:
++                event._processing_deferred = True
++                turn.event._processing_followups.append((adapter, event))
+             turn.event.absorb_reply_expected(event)
+             if turn.ctx is not None:
+                 turn.ctx.reply_expected = turn.event.reply_expected
+diff --git a/gateway/run_turn.py b/gateway/run_turn.py
+index d0f94d61615..44ff6ebaecb 100644
+--- a/gateway/run_turn.py
++++ b/gateway/run_turn.py
+@@ -74,8 +74,6 @@ def _tool_call_logger() -> logging.Logger:
+             tool_logger.addHandler(handler)
+     return tool_logger
+ 
+-
+-
+ _CONTEXT_OVERFLOW_ERROR_PHRASES = (
+     "context length", "context size", "context window",
+     "maximum context", "token limit", "too many tokens",
+@@ -3737,6 +3735,7 @@ class GatewayTurnMixin:
+         self, turn_ctx: TurnContext, adapter: Any, response: Any, result: Any, stream_task: Any,
+     ) -> None:
+         """Deliver the first response before a queued follow-up runs, unless streaming already did."""
++        from gateway.run_turn_followup_ack import deliver_absorbed_first_response
+         if turn_ctx.mute_notification_reply:
+             return
+         session_key = turn_ctx.session_key
+@@ -3777,7 +3776,7 @@ class GatewayTurnMixin:
+                 session_key or "?",
+             )
+             try:
+-                _text_delivered = await self._deliver_queued_first_response(
++                _text_delivered = await deliver_absorbed_first_response(self,
+                     first_response, source=turn_ctx.source, adapter=adapter,
+                     metadata=turn_ctx._status_thread_metadata, event_message_id=turn_ctx.event_message_id,
+                     text_already_delivered=_already_streamed,
+diff --git a/gateway/run_turn_followup_ack.py b/gateway/run_turn_followup_ack.py
+index a49fff1e3a8..ead3585f7e0 100644
+--- a/gateway/run_turn_followup_ack.py
++++ b/gateway/run_turn_followup_ack.py
+@@ -58,3 +58,24 @@ async def _run_followup_processing_hook(adapter, event: MessageEvent | None, hoo
+     if not callable(run_hook):
+         return
+     await run_hook(hook_name, event, *args)
++
++
++async def deliver_absorbed_first_response(runner, *args, **kwargs) -> bool:
++    """Settle absorbed inputs with their response, before the queued turn replaces its outcome."""
++    from gateway.platforms.processing import finish_absorbed_processing
++
++    state = runner._peek_session_state(kwargs.get("session_key"))
++    opening = state.turn.event if state is not None else None
++    followups = list(opening._processing_followups) if opening is not None else []
++    delivered = False
++    cancelled = False
++    try:
++        delivered = await runner._deliver_queued_first_response(*args, **kwargs)
++        return delivered
++    except asyncio.CancelledError:
++        cancelled = True
++        raise
++    finally:
++        if opening is not None and not cancelled:
++            await finish_absorbed_processing(opening,
++                ProcessingOutcome.SUCCESS if delivered else ProcessingOutcome.FAILURE, followups=followups)
+diff --git a/tests/gateway/test_absorbed_hook_ordering.py b/tests/gateway/test_absorbed_hook_ordering.py
+new file mode 100644
+index 00000000000..13f7255cbff
+--- /dev/null
++++ b/tests/gateway/test_absorbed_hook_ordering.py
+@@ -0,0 +1,107 @@
++"""Absorbed messages keep hook ordering and their own response's delivery result."""
++
++import asyncio
++
++import pytest
++
++from gateway.config import GatewayConfig, Platform
++from gateway.platforms.event import MessageEvent, ProcessingOutcome
++from gateway.run import GatewayRunner
++from gateway.session import SessionSource
++from gateway.turn_context import TurnContext
++from tests.gateway.test_absorbed_message_lifecycle import ActiveAgent, RecordingAdapter
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("cancel_during_start", [False, True])
++async def test_completion_waits_for_start_and_preserves_children_on_cancellation(cancel_during_start):
++    entered, release, parent_done = asyncio.Event(), asyncio.Event(), asyncio.Event()
++    order = []
++
++    class SlowStartAdapter(RecordingAdapter):
++        async def on_processing_start(self, event):
++            if event.message_id == "B":
++                entered.set()
++                await release.wait()
++                order.append("start B")
++            await super().on_processing_start(event)
++
++        async def on_processing_complete(self, event, outcome):
++            order.append(f"complete {event.message_id}")
++            if event.message_id == "A":
++                parent_done.set()
++            await super().on_processing_complete(event, outcome)
++
++    adapter = SlowStartAdapter()
++    opening = MessageEvent(text="first", message_id="A")
++    children = [MessageEvent(text="correction", message_id=mid) for mid in ("B", "C")]
++    for child in children:
++        child._processing_deferred = True
++        opening._processing_followups.append((adapter, child))
++    start_task = None
++    if not cancel_during_start:
++        start_task = asyncio.create_task(adapter._run_processing_hook("on_processing_start", children[0]))
++        await asyncio.wait_for(entered.wait(), 5)
++    completing = asyncio.create_task(adapter._run_processing_hook(
++        "on_processing_complete", opening, ProcessingOutcome.SUCCESS))
++    await asyncio.wait_for(entered.wait(), 5)
++    await asyncio.wait_for(parent_done.wait(), 5)
++    try:
++        if cancel_during_start:
++            completing.cancel()
++            await asyncio.gather(completing, return_exceptions=True)
++        else:
++            assert "complete B" not in order
++    finally:
++        release.set()
++        await asyncio.gather(completing, *([start_task] if start_task else []), return_exceptions=True)
++    if cancel_during_start:
++        await adapter._run_processing_hook("on_processing_complete", opening, ProcessingOutcome.CANCELLED)
++    else:
++        assert order.index("start B") < order.index("complete B")
++    assert [mid for mid, _ in adapter.completed if mid != "A"] == ["B", "C"]
++    assert all(not child._processing_deferred for child in children)
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("delivered", [False, True, None])
++async def test_absorbed_completion_uses_first_response_before_queued_turn(delivered):
++    adapter = RecordingAdapter(delivery_ok=delivered)
++    runner = GatewayRunner(config=GatewayConfig())
++    runner.adapters = {Platform.TELEGRAM: adapter}
++    source = SessionSource(platform=Platform.TELEGRAM, chat_id="123", chat_type="dm", user_id="7")
++    opening = MessageEvent(text="first", source=source, message_id="A")
++    incoming = MessageEvent(text="correction", source=source, message_id="B")
++    # Canonicalize through the real adapter to preserve its intake provenance.
++    key = adapter._event_session_key(incoming)
++    agent = ActiveAgent(accept=True)
++    turn = runner._session_state(key).turn
++    turn.event, turn.agent = opening, agent
++    runner._fold_into_running_turn(agent, key, incoming)
++    assert incoming._processing_deferred
++    ctx = TurnContext(source=source, session_key=key, event_message_id="B", inbound_message_id="B")
++    response = {"final_response": "first answer"}
++    if delivered is None:
++        entered = asyncio.Event()
++
++        async def blocked_send(*args, **kwargs):
++            entered.set()
++            await asyncio.Event().wait()
++
++        adapter.send = blocked_send
++        delivery = asyncio.create_task(runner._run_agent_deliver_first_response(
++            ctx, adapter, response, response, None))
++        await asyncio.wait_for(entered.wait(), 5)
++        delivery.cancel()
++        await asyncio.gather(delivery, return_exceptions=True)
++        assert adapter.completed == []
++        await adapter._run_processing_hook("on_processing_complete", opening, ProcessingOutcome.CANCELLED)
++        assert adapter.completed == [("A", ProcessingOutcome.CANCELLED), ("B", ProcessingOutcome.CANCELLED)]
++        return
++    await runner._run_agent_deliver_first_response(ctx, adapter, response, response, None)
++    expected = ProcessingOutcome.SUCCESS if delivered else ProcessingOutcome.FAILURE
++    assert adapter.completed == [("B", expected)]
++    # The next queued turn's opposite outcome must not overwrite the correction's receipt.
++    await adapter._run_processing_hook("on_processing_complete", opening,
++        ProcessingOutcome.FAILURE if delivered else ProcessingOutcome.SUCCESS)
++    assert adapter.completed.count(("B", expected)) == 1
+diff --git a/tests/gateway/test_absorbed_message_lifecycle.py b/tests/gateway/test_absorbed_message_lifecycle.py
+new file mode 100644
+index 00000000000..ce905eaf540
+--- /dev/null
++++ b/tests/gateway/test_absorbed_message_lifecycle.py
+@@ -0,0 +1,129 @@
++"""Busy inputs consumed by a running agent must not be retried or lose completion."""
++
++import asyncio
++
++import pytest
++
++from gateway.config import GatewayConfig, Platform, PlatformConfig
++from gateway.platforms.base import BasePlatformAdapter, SendResult
++from gateway.platforms.event import MessageEvent, ProcessingOutcome
++from gateway.run import GatewayRunner
++from gateway.session import SessionSource
++
++
++class RecordingAdapter(BasePlatformAdapter):
++    def __init__(self, delivery_ok=True):
++        super().__init__(PlatformConfig(enabled=True), Platform.TELEGRAM)
++        self.delivery_ok = delivery_ok
++        self.started, self.completed, self.sent = [], [], []
++
++    async def connect(self):
++        return True
++
++    async def disconnect(self):
++        pass
++
++    async def get_chat_info(self, chat_id):
++        return {"id": chat_id}
++
++    async def send(self, chat_id, content, reply_to=None, metadata=None):
++        self.sent.append((content, reply_to))
++        return SendResult(success=self.delivery_ok, error="refused")
++
++    async def on_processing_start(self, event):
++        self.started.append(event.message_id)
++
++    async def on_processing_complete(self, event, outcome):
++        self.completed.append((event.message_id, outcome))
++
++
++class ActiveAgent:
++    _supports_active_turn_redirect = True
++
++    def __init__(self, accept):
++        self.accept, self.inputs = accept, []
++
++    def redirect(self, text):
++        if self.accept:
++            self.inputs.append(text)
++        return self.accept
++
++    steer = redirect
++
++    def interrupt(self, text):
++        pass
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("mode", ["interrupt", "steer"])
++@pytest.mark.parametrize("terminal", ["delivered", "refused", "cancelled"])
++async def test_absorbed_inputs_finish_only_after_the_running_turn(mode, terminal, monkeypatch):
++    """Missing admission or completion leaves a durable connector retrying the same input."""
++    adapter = RecordingAdapter()
++    runner = GatewayRunner(config=GatewayConfig())
++    runner.adapters = {Platform.TELEGRAM: adapter}
++    runner._busy_input_mode, runner._busy_text_mode = mode, "interrupt"
++    monkeypatch.setattr(runner, "_is_user_authorized_for_source", lambda source: True)
++    entered, release = asyncio.Event(), asyncio.Event()
++    agent = ActiveAgent(accept=True)
++    source = SessionSource(platform=Platform.TELEGRAM, chat_id="123", chat_type="dm", user_id="7")
++    opening = MessageEvent(text="first request", source=source, message_id="A")
++    key = adapter._event_session_key(opening)
++
++    async def run(event):
++        turn = runner._session_state(key).turn
++        turn.event, turn.agent = event, agent
++        entered.set()
++        await release.wait()
++        return "final answer"
++
++    adapter.set_message_handler(run)
++    adapter.set_busy_session_handler(runner._handle_active_session_busy_message)
++    await adapter.handle_message(opening)
++    await asyncio.wait_for(entered.wait(), 5)
++    task = adapter._session_tasks[key]
++    try:
++        for message_id in ("B", "C"):
++            incoming = MessageEvent(text=f"correction {message_id}", source=source, message_id=message_id)
++            await adapter.handle_message(incoming)
++            assert incoming._gateway_accepted is True
++        assert len(agent.inputs) == 2
++        assert adapter.started == ["A", "B", "C"]
++        assert adapter.completed == []
++        assert adapter._pending_messages == {}
++    finally:
++        adapter.delivery_ok = terminal != "refused"
++        if terminal == "cancelled":
++            adapter._expected_cancelled_tasks.add(task)
++            task.cancel()
++        release.set()
++        await asyncio.wait_for(asyncio.gather(task, return_exceptions=True), 5)
++
++    outcome = {"delivered": ProcessingOutcome.SUCCESS, "refused": ProcessingOutcome.FAILURE,
++               "cancelled": ProcessingOutcome.CANCELLED}[terminal]
++    assert adapter.completed == [(message_id, outcome) for message_id in ("A", "B", "C")]
++    assert sum(content == "final answer" for content, _ in adapter.sent) == (terminal != "cancelled")
++    # Repeating completion cannot complete the absorbed messages twice.
++    await adapter._run_processing_hook("on_processing_complete", opening, outcome)
++    assert adapter.completed.count(("B", outcome)) == adapter.completed.count(("C", outcome)) == 1
++
++
++@pytest.mark.asyncio
++@pytest.mark.parametrize("mode", ["interrupt", "steer"])
++async def test_refused_injection_is_queued_without_claiming_execution(mode, monkeypatch):
++    adapter = RecordingAdapter()
++    runner = GatewayRunner(config=GatewayConfig())
++    runner.adapters = {Platform.TELEGRAM: adapter}
++    runner._busy_input_mode, runner._busy_text_mode = mode, "interrupt"
++    monkeypatch.setattr(runner, "_is_user_authorized_for_source", lambda source: True)
++    source = SessionSource(platform=Platform.TELEGRAM, chat_id="123", chat_type="dm", user_id="7")
++    incoming = MessageEvent(text="correction", source=source, message_id="B")
++    key = adapter._event_session_key(incoming)
++    runner._session_state(key).turn.agent = ActiveAgent(accept=False)
++    adapter._active_sessions[key] = asyncio.Event()
++    adapter.set_message_handler(lambda event: None)
++    adapter.set_busy_session_handler(runner._handle_active_session_busy_message)
++    await adapter.handle_message(incoming)
++    assert incoming._gateway_accepted is True
++    assert adapter._pending_messages[key] is incoming
++    assert adapter.started == adapter.completed == []

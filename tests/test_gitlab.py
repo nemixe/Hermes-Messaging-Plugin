@@ -1375,6 +1375,57 @@ class GitLabFlow(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.posts), 2)
         self.assertEqual(self.row(102)[0], 1)
 
+    async def test_redirected_mention_is_not_replayed_and_completes_after_delivery(self):
+        runner = await self.native_runner()
+        runner.adapters = {self.adapter.platform: self.adapter}
+        runner._busy_input_mode, runner._busy_text_mode = "interrupt", "interrupt"
+        runner._is_user_authorized_for_source = lambda source: True
+        entered, release = asyncio.Event(), asyncio.Event()
+        corrections = []
+
+        class ReceivingAgent:
+            _supports_active_turn_redirect = True
+
+            def redirect(self, text):
+                corrections.append(text)
+                return True
+
+        async def handler(event):
+            self.events.append(event)
+            event._heartbeat_execution_started = True
+            turn = runner._session_state(self.adapter._event_session_key(event)).turn
+            turn.event, turn.agent = event, ReceivingAgent()
+            entered.set()
+            await release.wait()
+            return "Review checked."
+
+        self.native_handler(handler)
+        self.adapter.set_busy_session_handler(runner._handle_active_session_busy_message)
+        self.discussions = [{"id": "original", "notes": [{"id": 901}]},
+                            {"id": "correction", "notes": [{"id": 902}]}]
+        self.todos = [self.todo(target_url="https://gitlab.example/#note_901")]
+        await self.adapter._poll_once()
+        await asyncio.wait_for(entered.wait(), 5)
+        try:
+            self.todos.append(self.todo(102, target_url="https://gitlab.example/#note_902"))
+            await self.adapter._poll_once()
+            self.assertEqual(self.row(102), (0, 1, None))
+            await self.adapter._poll_once()
+            await self.adapter._poll_once()
+            self.assertEqual(self.row(102), (0, 1, None))
+            self.assertEqual(len(corrections), 1)
+        finally:
+            release.set()
+            await self.finish_native()
+        self.assertEqual(self.row(101), (1, 1, None))
+        self.assertEqual(self.row(102), (1, 1, None))
+        await self.adapter._poll_once()
+        self.assertEqual(len(self.events), 1)
+        self.assertEqual(len(self.posts), 2)
+        self.assertIn("Redirected", self.posts[0][1]["body"])
+        self.assertEqual(self.posts[1], ("/api/v4/projects/42/issues/3/discussions/correction/notes",
+                                        {"body": "Review checked."}))
+
     async def test_native_delivery_failure_is_retried(self):
         async def handler(event):
             return "Reply"
